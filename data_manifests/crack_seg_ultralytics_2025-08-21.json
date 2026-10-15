@@ -1,0 +1,120 @@
+{
+  "manifest_version": "1.0",
+  "dataset": "crack-seg",
+  "supplier": "Ultralytics",
+  "dataset_version": "2025-08-21 archive (ultralytics/assets release v0.0.0)",
+  "admitted_task": "distress_engine_crack_mask_backup",
+  "decision": "ADMIT_CONDITIONAL",
+  "decision_date": "2026-10-15",
+  "decided_by": "ML role",
+  "provenance": {
+    "official_url": "https://docs.ultralytics.com/datasets/segment/crack-seg",
+    "download_url": "https://github.com/ultralytics/assets/releases/download/v0.0.0/crack-seg.zip",
+    "download_http_status": 200,
+    "archive_bytes": 96089865,
+    "archive_mib": 91.64,
+    "archive_sha256": "814b566d61e890024d15f22a3e6b14e252f781ab83f60a8d59e6684817efecdc",
+    "extracted_root": "data/external/crack-seg (gitignored, not committed)",
+    "upstream_ancestry": "NOT SHIPPED. Filenames follow the Roboflow export convention '<parent_id>.rf.<32-hex>', giving 1549 parent ids, but no upstream source list, per-image attribution or parent licence record is included in the archive.",
+    "ancestry_status": "UNTRACEABLE_FROM_ARTIFACT"
+  },
+  "licence": {
+    "docs_page_statement": "Public Domain",
+    "shipped_yaml_header_statement": "Ultralytics AGPL-3.0 License (https://ultralytics.com/license)",
+    "conflict": true,
+    "note": "The AGPL header sits on the crack-seg.yaml configuration file, not necessarily on the images, but no separate data licence is shipped. Combined with untraceable ancestry, redistribution is NOT authorised by this manifest.",
+    "redistribution_allowed_here": false,
+    "user_decision": {
+      "date": "2026-10-15",
+      "decided_by": "user",
+      "decision": "internal_use_only_no_redistribution",
+      "text": "The licence conflict and untraceable ancestry were accepted by scoping this dataset to internal method development only. No redistribution, and it must not be cited as an admitted public source."
+    }
+  },
+  "storage": {
+    "location": "data/external/crack-seg",
+    "gitignored": true,
+    "committed": false,
+    "user_approved": true,
+    "approval_note": "docs/ML_ROLE.md names no data/ directory, while .gitignore already ignores data/ and final plan section 16 requires raw data outside Git. The user explicitly approved keeping raw datasets under data/ on 2026-10-15."
+  },
+  "counts": {
+    "images": 4029,
+    "split_counts": { "train": 3717, "val": 200, "test": 112 },
+    "label_files": 4029,
+    "yaml_comment_discrepancy": "The shipped crack-seg.yaml comments state val 112 / test 200, which is swapped relative to both the docs page and the actual archive contents (val 200 / test 112). Actual file counts are authoritative."
+  },
+  "image_properties": {
+    "resolution_histogram": { "416x416": 4029 },
+    "distinct_resolutions": 1,
+    "channels": { "3": 4029 },
+    "decode_failures": 0,
+    "native_resolution_available": false,
+    "resize_history": "UNKNOWN. The uniform 416x416 size indicates a pre-export resize, so no native pixel scale survives.",
+    "scale_source": "unscaled",
+    "ground_sampling_distance_mm_per_px": null
+  },
+  "labels": {
+    "format": "YOLO instance-segmentation polygons (class_id then normalised x y pairs)",
+    "classes": { "0": "crack" },
+    "total_polygons": 5290,
+    "total_polygon_points": 667295,
+    "mean_points_per_polygon": 126.14,
+    "images_without_label": 0,
+    "orphan_label_files": 0,
+    "empty_label_files": 1,
+    "empty_label_policy": "kept as a possible valid negative; not deleted",
+    "unparsable_lines": 0,
+    "polygons_with_too_few_points": 0,
+    "polygons_out_of_normalised_range": 0,
+    "label_geometry_class": "real_width_outline",
+    "label_geometry_evidence": {
+      "method": "stroke width estimated as 2 * rasterised_area / polygon_perimeter",
+      "sampled_images": 400,
+      "median_stroke_width_px": 8.943,
+      "p10_stroke_width_px": 4.621,
+      "p90_stroke_width_px": 16.688,
+      "conclusion": "Well above the ~1 px that a centerline label collapses to, so these are actual-width outlines and may support defect extent. This is the check final plan section 4.3 demands for Crack-Seg."
+    }
+  },
+  "leakage_audit": {
+    "parent_prefix_grouping": {
+      "parents_found": 1549,
+      "parents_spanning_multiple_splits": 0,
+      "conclusion": "The export respected parent boundaries when splitting."
+    },
+    "exact_duplicates": {
+      "pairs": 1,
+      "location": "both files inside the test split (1979.rf.d3ee9d85b659ee844d1c26680f05d419.jpg, 1979.rf.dea5db582b997afc4acb0f68d74c3b84.jpg)",
+      "conclusion": "Within-test duplication only; it does not leak training data into test, but the test split holds 111 unique images rather than 112."
+    },
+    "cross_split_near_duplicates": {
+      "candidate_method": "64-bit dHash, Hamming distance <= 6",
+      "candidates_found": 18,
+      "confirmation_stage": "64x64 mean-centred grayscale Pearson correlation",
+      "verdicts": { "confirmed": 0, "probable": 0, "rejected": 18 },
+      "conclusion": "No confirmed cross-split near-duplicate leakage. The raw dHash candidates were all coarse-hash false positives, which is why an unconfirmed hash threshold must never be reported as leakage."
+    }
+  },
+  "permitted_use": [
+    "Crack-mask pretraining and pipeline/method development for the distress engine.",
+    "Non-metric crack presence and relative extent experiments on pixel-space masks."
+  ],
+  "forbidden_use": [
+    "Any claim about Indian road performance. It is not Indian data.",
+    "Any metric crack width, length or area in mm/cm. The imagery is unscaled.",
+    "Use as the known-good reference set, or as an aggregate/chip texture source.",
+    "Any redistribution, or use as the single 'at most one crack-mask backup' source in combination with another foreign crack set.",
+    "Treating the 112-image test split as 112 independent test items while the duplicate pair remains."
+  ],
+  "open_items": [
+    "RESOLVED 2026-10-15: ancestry and licence stay unresolved, and the dataset is therefore restricted to internal method development with no redistribution. Revisit only if Ultralytics supplies an upstream source list and a data licence.",
+    "The 416x416 pre-resize means fine cracks narrower than roughly 1 px in the source may already be lost; this cannot be recovered.",
+    "Splits must be regrouped by parent id before any training, because the shipped split is honoured here but parent groups must still stay intact under our own resampling."
+  ],
+  "audit_tooling": {
+    "command": "python -m eval.dataset_audit --path data/external/crack-seg --name \"crack-seg (Ultralytics, 2025-08-21 archive)\" --out reports/ml/crack_seg_audit.json",
+    "report_path": "reports/ml/crack_seg_audit.json (generated, gitignored)",
+    "tool": "eval/dataset_audit.py"
+  }
+}
