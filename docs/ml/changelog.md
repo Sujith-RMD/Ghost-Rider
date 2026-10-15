@@ -87,6 +87,74 @@ Notes:
 ---
 
 ## 3. Entries
+### 2026-10-16 - D8 + I16 implemented: distress measurements and eval harness
+Type: feature + tests + evaluation
+
+New ``backend/distress/features.py`` closes **D8**; new ``eval/distress_eval.py``
+closes the distress half of **I16**. The interim priority was distress because it
+is the only branch with real labelled data in hand: Crack-Seg ships 4,029 images
+and 5,290 polygons, with ``label_geometry_class: real_width_outline``.
+
+### D8
+
+``crack_skeleton_length_m``, ``defect_extent_fraction``, ``distress_metrics``,
+plus ``rasterize_polygon`` / ``rasterize_label_file`` for YOLO segmentation
+label files. 20 tests in ``tests/ml/test_distress_features.py``.
+
+Skeleton length sums **step distances**, not skeleton pixels. A 1-px diagonal
+line of ``n`` steps spans ``n * sqrt(2)`` px, so pixel counting reports 70.7% of
+the true length - a 29% under-report on every diagonal crack. Each adjacency is
+visited exactly once by inspecting only the forward neighbourhood (right, down,
+and the two forward diagonals). Verified against analytic ground truth:
+20 diagonal steps -> ``20 * sqrt(2) / 1000`` m, and the naive count is asserted
+to be meaningfully smaller.
+
+### I16 - distress evaluation on real data
+
+``python -m eval.distress_eval --labels <dir> [--gt <dir>]``. Scores any
+directory of YOLO segmentation polygons. GT-vs-GT self-check returns **1.0** on
+pixel IoU, precision, recall, Dice and instance IoU, which is the sanity floor.
+
+Real Crack-Seg **test** split (112 images, all with distress):
+
+| Metric | Value |
+|---|---|
+| extent mean | 1.98% of pixels |
+| extent median | 1.64% |
+| extent p90 | 3.88% |
+| extent max | 5.82% |
+| mask pixels mean | 3,428 |
+| skeleton pixels mean | 453 |
+
+Reported in pixels only, with the reason recorded in ``scale_note``: Crack-Seg
+is a uniform 416x416 with unknown resize history, so no native GSD survives and
+no metric length or area is claimed (final plan 6.1 item 7).
+
+### A limitation that changes what we can claim
+
+**Crack-Seg contains almost no negatives.** Across all 4,029 images there is
+**1** empty label file (0.025%); the test split has **zero**. So a distress
+model evaluated only on Crack-Seg cannot have its false-alarm behaviour
+measured at all - which is precisely the failure mode final plan 13.3 calls out
+(*"a detector tested only on damage images cannot establish false-alarm
+behaviour"*). Recorded rather than worked around.
+
+**This directly motivates a download:** the CRKWH100 **crack ground truth**
+link (task tracker A1.12, a separate OneDrive URL in the DeepCrack README that
+has never been fetched). CRKWH100 images without crack GT are the natural
+negative source, because CRKWH100 is one camera and one surface family, so a
+negatives set there is far more comparable than borrowed images. See the
+dataset download list sent to the user.
+
+### Recursion note
+
+This same harness is what E8 will be scored with once training runs, so the
+MetricBeforeModel ordering is preserved: the measurement and the scorer exist
+first, and a model is judged against them rather than scored by whatever metric
+it happens to print.
+
+**Not done / still open:** E4/E5/E8 training; CRKWH100 crack GT (A1.12); the
+chip-scale data question (A1.6/A1.9); J7/J8.
 ### 2026-10-16 - E6 / D9 implemented: tiled segmentation with instance merging
 Type: feature + tests
 
