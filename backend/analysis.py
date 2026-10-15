@@ -238,7 +238,11 @@ def build_segment_result(*, segment_id: int,
         feature_version=feature_version,
         scoring_version=scoring_version,
         created_at=created_at or datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        error=None,
+        error=next(
+            (reason for reason in measured.get("limitations", [])
+             if reason == "ml_stack_unavailable" or reason.startswith("measurement_error:")),
+            None,
+        ),
     )
 
 

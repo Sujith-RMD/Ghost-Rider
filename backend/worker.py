@@ -33,6 +33,7 @@ import hashlib
 import json
 import logging
 import os
+import tempfile
 import threading
 import time
 import uuid
@@ -313,7 +314,8 @@ def _claim_job(job_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
     return claimed
 
 
-def _complete_job(job_id: str, sample_id: str, note: Optional[str] = None) -> None:
+def _complete_job(job_id: str, sample_id: str, note: Optional[str] = None,
+                  status: str = "succeeded") -> None:
     now = _iso_now()
     versions = json.dumps(
         {"model": MODEL_VERSION, "feature": FEATURE_VERSION, "scoring": SCORING_VERSION}
@@ -322,13 +324,13 @@ def _complete_job(job_id: str, sample_id: str, note: Optional[str] = None) -> No
     try:
         with database.get_connection() as conn:
             conn.execute(
-                "UPDATE jobs SET status='succeeded', error_reason=NULL, completed_at=?, "
+                "UPDATE jobs SET status=?, error_reason=NULL, completed_at=?, "
                 "updated_at=?, lease_expires_at=NULL, versions_json=? WHERE job_id=?",
-                (now, now, versions, job_id),
+                (status, now, now, versions, job_id),
             )
             conn.execute(
-                "INSERT INTO job_events (job_id, status, detail, at) VALUES (?, 'succeeded', ?, ?)",
-                (job_id, detail, now),
+                "INSERT INTO job_events (job_id, status, detail, at) VALUES (?, ?, ?, ?)",
+                (job_id, status, detail, now),
             )
     except Exception as exc:  # pragma: no cover
         logger.exception("Could not complete job %s: %s", job_id, exc)
@@ -382,17 +384,45 @@ def run_upload_inference(job: Dict[str, Any]) -> Optional[SegmentResult]:
     image_path = None
     image_url = None
     raw_url = None
+    measured = None
     if object_key:
-        local_path = s3_service.to_local_path(object_key)
-        try:
+        if s3_service.is_s3_enabled():
+            client = s3_service.get_s3_client()
+            if client is None:
+                raise RuntimeError("s3_client_unavailable")
+            response = client.get_object(
+                Bucket=s3_service.get_s3_settings()["bucket"], Key=object_key
+            )
+            max_bytes = max(1, int(os.getenv("MAX_UPLOAD_MB", "25") or 25)) * 1024 * 1024
+            body = response["Body"]
+            try:
+                if int(response.get("ContentLength") or 0) > max_bytes:
+                    raise ValueError("upload_too_large")
+                with tempfile.TemporaryDirectory() as private_dir:
+                    temporary = Path(private_dir) / "upload.jpg"
+                    total = 0
+                    with temporary.open("wb") as target:
+                        while chunk := body.read(1024 * 1024):
+                            total += len(chunk)
+                            if total > max_bytes:
+                                raise ValueError("upload_too_large")
+                            target.write(chunk)
+                    measured = _measure_frame_from_path(str(temporary), metadata)
+            finally:
+                body.close()
+            signed_url = s3_service.get_presigned_url(object_key)
+            image_url = signed_url if signed_url and not signed_url.startswith("/uploads/") else None
+            raw_url = image_url
+        else:
+            local_path = s3_service.to_local_path(object_key)
             if local_path.exists() and local_path.is_file() and local_path.stat().st_size > 0:
                 image_path = str(local_path)
                 image_url = s3_service.to_local_url(local_path)
                 raw_url = image_url
-        except Exception as exc:
-            logger.debug("Could not inspect object for job %s: %s", job.get("job_id"), exc)
+                measured = _measure_frame_from_path(image_path, metadata)
 
-    measured = _measure_frame_from_path(image_path, metadata)
+    if measured is None:
+        return None
 
     return analysis.build_segment_result(
         segment_id=1,
@@ -420,7 +450,13 @@ def process_upload_job(job: Dict[str, Any]) -> Optional[str]:
                 "SELECT sample_id FROM processed_frames WHERE idempotency_key = ?", (key,)
             ).fetchone()
         if existing is not None and existing["sample_id"]:
-            _complete_job(job_id, existing["sample_id"], note="idempotent_replay")
+            with database.read_connection() as conn:
+                row = conn.execute(
+                    "SELECT score_json FROM samples WHERE sample_id = ?", (existing["sample_id"],)
+                ).fetchone()
+            prior_score = json.loads(row["score_json"]) if row and row["score_json"] else None
+            prior_status = "succeeded" if prior_score and prior_score.get("value") is not None else "partial"
+            _complete_job(job_id, existing["sample_id"], note="idempotent_replay", status=prior_status)
             return existing["sample_id"]
     except Exception as exc:  # pragma: no cover
         logger.debug("Could not check processed_frames for job %s: %s", job_id, exc)
@@ -452,7 +488,8 @@ def process_upload_job(job: Dict[str, Any]) -> Optional[str]:
             return None
         conn.execute(_SAMPLE_INSERT, _sample_row_values(sample_id, result))
 
-    _complete_job(job_id, sample_id, note=f"sha256={file_sha}" if file_sha else None)
+    status = "succeeded" if result.score is not None and result.score.value is not None else "partial"
+    _complete_job(job_id, sample_id, note=f"sha256={file_sha}" if file_sha else None, status=status)
     logger.info("Persisted sample %s for upload job %s", sample_id, job_id)
     return sample_id
 

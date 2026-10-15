@@ -1,5 +1,9 @@
 # RoadSight Phase 1 integration audit — 16 October 2026
 
+**Implementation update:** The audit below records the original baseline. The isolated `phase1-integration` worktree now fixes I-01 and the upload portion of I-03: S3-only bytes are read through a bounded private temporary file, missing/undecodable uploads fail, and analysed but unscored samples receive `partial`. S3 and local finalize enforce the configured size cap; live multipart reads are bounded. `docs/contracts/openapi.v1.json` is a generated snapshot of the running `1.0.0` API, and `docs/contracts/ML_INTEGRATION_HANDOFF.md` proposes the ML boundary. Backend verification after these changes: **62 passed, one Starlette/httpx deprecation warning**. This does not close I-02 (frontend owner integration), scientific ML gates, actual camera, live AWS, or Google Maps.
+
+The frontend owner patch is a separate review artifact. It connects the production Assess route to allocate → PUT → finalize → poll → sample, resumes a saved job after reload, and displays `partial` with nulls distinct from measured zero. It was tested in an isolated copy of the current `web/` tree: TypeScript passed, production build passed, 24 frontend tests passed. A local Chrome smoke run against the actual patched FastAPI service successfully uploaded and analysed a new JPEG, displayed the persisted partial sample, and resumed it after reload. The original teammate-owned `web/` tree was not modified. The frontend owner must review/apply the patch before calling the integrated team branch complete.
+
 Scope: read-only audit of the local Ghost-Rider checkout. No ML code or scientific definitions were changed. This is not a completion claim for Phase 1.
 
 ## Baseline and test evidence

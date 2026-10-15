@@ -1,0 +1,3305 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Ghost-Rider Road Quality API",
+    "description": "Automated visible road condition assessment for Indian roads. Exposes durable uploads, live camera capture, route aggregation, and Amazon Bedrock factual narration.",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/v1/uploads": {
+      "post": {
+        "tags": [
+          "v1"
+        ],
+        "summary": "Allocate an upload URL",
+        "description": "Create a private upload slot and return a presigned S3 or bounded local upload URL.",
+        "operationId": "create_upload_v1_uploads_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/uploads/{upload_id}/local": {
+      "put": {
+        "tags": [
+          "v1"
+        ],
+        "summary": "Upload bytes to a private slot (S3-less / local fallback)",
+        "description": "Bounded streaming upload used when no S3 bucket is configured, and by the local/replay demonstration path. The object is written under the media root at the slot's private object key and validated by magic header.",
+        "operationId": "upload_local_v1_uploads__upload_id__local_put",
+        "parameters": [
+          {
+            "name": "upload_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Upload Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Upload Local V1 Uploads  Upload Id  Local Put"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/uploads/{upload_id}/finalize": {
+      "post": {
+        "tags": [
+          "v1"
+        ],
+        "summary": "Finalize an upload and enqueue analysis",
+        "description": "Verify uploaded object existence, size and format, record metadata, and enqueue processing.",
+        "operationId": "finalize_upload_v1_uploads__upload_id__finalize_post",
+        "parameters": [
+          {
+            "name": "upload_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Upload Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/FinalizeRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinalizeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions": {
+      "post": {
+        "tags": [
+          "v1"
+        ],
+        "summary": "Create a live/replay session",
+        "description": "Start a capture session with explicit mode, camera and calibration.",
+        "operationId": "create_session_v1_sessions_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "type": "object",
+                "title": "Body"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionState"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions/{session_id}/frames": {
+      "post": {
+        "tags": [
+          "v1"
+        ],
+        "summary": "Accept a frame for a session",
+        "description": "Accept one frame with original reference, capture times and telemetry.",
+        "operationId": "ingest_frame_v1_sessions__session_id__frames_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionState"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions/{session_id}/finish": {
+      "post": {
+        "tags": [
+          "v1"
+        ],
+        "summary": "Close capture and request aggregation",
+        "description": "Close the capture session and request segment aggregation.",
+        "operationId": "finish_session_v1_sessions__session_id__finish_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionState"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/jobs/{job_id}": {
+      "get": {
+        "tags": [
+          "v1"
+        ],
+        "summary": "Return durable job state",
+        "description": "Return lifecycle state, error reason, attempt count and versions.",
+        "operationId": "get_job_v1_jobs__job_id__get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobState"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/samples/{sample_id}": {
+      "get": {
+        "tags": [
+          "v1"
+        ],
+        "summary": "Return sample evidence and metrics",
+        "description": "Return evidence, metrics, quality, score and narrative status.",
+        "operationId": "get_sample_v1_samples__sample_id__get",
+        "parameters": [
+          {
+            "name": "sample_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Sample Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SegmentResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions/{session_id}/segments": {
+      "get": {
+        "tags": [
+          "v1"
+        ],
+        "summary": "Return bin summaries and coverage truth",
+        "description": "Return 50 m bin summaries with coverage truth and unsampled stretches.",
+        "operationId": "get_session_segments_v1_sessions__session_id__segments_get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "bin_length_m",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "maximum": 5000.0,
+              "minimum": 5.0,
+              "default": 50.0,
+              "title": "Bin Length M"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SegmentList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/reports": {
+      "post": {
+        "tags": [
+          "v1"
+        ],
+        "summary": "Generate factual report and Bedrock wording",
+        "description": "Generate a structured report and optional Bedrock narrative from stored facts.",
+        "operationId": "generate_report_v1_reports_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "type": "object",
+                "title": "Body"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/health": {
+      "get": {
+        "tags": [
+          "v1"
+        ],
+        "summary": "v1-aligned service health",
+        "description": "State model/worker/storage/integration readiness in the v1 shape.",
+        "operationId": "v1_health_v1_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Liveness probe (no I/O)",
+        "description": "Cheap liveness probe - safe to poll from a target group every few seconds.",
+        "operationId": "health_liveness_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Health Liveness Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health/deep": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Deep dependency diagnostics",
+        "description": "Probe database, S3, Bedrock, the YOLO model and local storage.",
+        "operationId": "health_deep_health_deep_get",
+        "parameters": [
+          {
+            "name": "probe",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(auto|aws|none)$",
+              "description": "auto = cached AWS probes, aws = force fresh probes, none = configuration only",
+              "default": "auto",
+              "title": "Probe"
+            },
+            "description": "auto = cached AWS probes, aws = force fresh probes, none = configuration only"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Health Deep Health Deep Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Root Health",
+        "operationId": "root_health__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AggregatedMetrics": {
+        "properties": {
+          "chip_count": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chip Count",
+            "description": "Visible aggregate instance count (null if uncalibrated/unmeasured)"
+          },
+          "chip_density_per_m2": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chip Density Per M2",
+            "description": "Chip count density (null if area unknown)"
+          },
+          "min_chip_diameter_mm": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Chip Diameter Mm",
+            "description": "Minimum resolvable chip diameter (null if uncalibrated)"
+          },
+          "median_chip_diameter_mm": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Median Chip Diameter Mm",
+            "description": "Median chip diameter (null if uncalibrated)"
+          },
+          "chip_size_distribution": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "number"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chip Size Distribution",
+            "description": "Size distribution buckets"
+          },
+          "aggregate_coverage": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aggregate Coverage",
+            "description": "Aggregate union coverage ratio (null if unmeasured)"
+          },
+          "crack_skeleton_length_m": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Crack Skeleton Length M",
+            "description": "Crack skeleton length (null if unmeasured/uncalibrated)"
+          },
+          "pothole_count": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pothole Count",
+            "description": "Pothole instance count (null if unmeasured)"
+          },
+          "pothole_total_area_m2": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pothole Total Area M2",
+            "description": "Total pothole area (null if uncalibrated)"
+          },
+          "crack_total_area_m2": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Crack Total Area M2",
+            "description": "Total crack area (null if uncalibrated)"
+          },
+          "gap_median_mm": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gap Median Mm",
+            "description": "Adjacent-boundary gap median (null if uncalibrated)"
+          },
+          "gap_iqr_mm": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gap Iqr Mm",
+            "description": "Gap interquartile range (null if uncalibrated)"
+          },
+          "gap_p90_mm": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gap P90 Mm",
+            "description": "Gap 90th percentile (null if uncalibrated)"
+          },
+          "gap_sample_count": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gap Sample Count",
+            "description": "Number of qualifying gap sites measured"
+          },
+          "texture_deviation": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Texture Deviation",
+            "description": "Texture deviation T from known-good reference"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "AggregatedMetrics",
+        "description": "Aggregate and distress measurements for a segment."
+      },
+      "AreaResult": {
+        "properties": {
+          "observed_area_m2": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observed Area M2",
+            "description": "Total observed road area (null if scale unknown)"
+          },
+          "eligible_area_m2": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Eligible Area M2",
+            "description": "Texture-eligible area (null if scale unknown)"
+          },
+          "ignored_area_m2": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ignored Area M2",
+            "description": "Ignored area (null if scale unknown)"
+          },
+          "distress_area_m2": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Distress Area M2",
+            "description": "Distress area (null if scale unknown)"
+          },
+          "scale_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scale Source",
+            "description": "Scale source: rig_calibrated, source_calibrated, unscaled"
+          },
+          "scale_uncertainty": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scale Uncertainty",
+            "description": "Relative scale uncertainty ratio (null if unknown)"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "AreaResult",
+        "description": "Road area measurements."
+      },
+      "CanonicalSampleRecord": {
+        "properties": {
+          "identity": {
+            "$ref": "#/components/schemas/SampleIdentity"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/SampleProvenance"
+          },
+          "time": {
+            "$ref": "#/components/schemas/SampleTime"
+          },
+          "camera": {
+            "$ref": "#/components/schemas/SampleCamera"
+          },
+          "location": {
+            "$ref": "#/components/schemas/SampleLocation"
+          },
+          "geometry": {
+            "$ref": "#/components/schemas/SampleGeometry"
+          },
+          "quality": {
+            "$ref": "#/components/schemas/QualityResult"
+          },
+          "features": {
+            "items": {
+              "$ref": "#/components/schemas/MetricResult"
+            },
+            "type": "array",
+            "title": "Features"
+          },
+          "assessment": {
+            "$ref": "#/components/schemas/ScoreResult"
+          },
+          "coverage": {
+            "$ref": "#/components/schemas/SampleCoverage"
+          },
+          "audit": {
+            "$ref": "#/components/schemas/SampleAudit"
+          },
+          "narrative": {
+            "$ref": "#/components/schemas/SampleNarrative"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "identity",
+          "provenance",
+          "time",
+          "camera",
+          "location",
+          "geometry",
+          "quality",
+          "assessment",
+          "coverage",
+          "audit",
+          "narrative"
+        ],
+        "title": "CanonicalSampleRecord",
+        "description": "The canonical assessment record defined in Final Plan Section 11.5."
+      },
+      "DistressEvidence": {
+        "properties": {
+          "mask_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mask Url",
+            "description": "URL to defect mask overlay"
+          },
+          "mask_local_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mask Local Path",
+            "description": "Local disk path to mask overlay"
+          },
+          "crack_mask_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Crack Mask Url",
+            "description": "URL to crack-specific mask"
+          },
+          "pothole_mask_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pothole Mask Url",
+            "description": "URL to pothole-specific mask"
+          },
+          "overlay_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Overlay Url",
+            "description": "URL to combined evidence overlay"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "DistressEvidence",
+        "description": "Distress segmentation evidence."
+      },
+      "FinalizeRequest": {
+        "properties": {
+          "metadata": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FrameMetadata"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Frame metadata (GPS, IMU, grade, capture time)"
+          },
+          "source_mode": {
+            "$ref": "#/components/schemas/SourceMode",
+            "description": "Source mode for this upload",
+            "default": "upload"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "FinalizeRequest",
+        "description": "Request to finalize an upload and enqueue analysis."
+      },
+      "FinalizeResponse": {
+        "properties": {
+          "upload_id": {
+            "type": "string",
+            "title": "Upload Id",
+            "description": "Upload identifier"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Processing status: queued",
+            "default": "queued"
+          },
+          "job_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id",
+            "description": "Associated job ID for polling lifecycle"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message",
+            "description": "Human-readable status message"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "upload_id"
+        ],
+        "title": "FinalizeResponse",
+        "description": "Response returned after finalizing an upload."
+      },
+      "FrameMetadata": {
+        "properties": {
+          "gps": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GPSData"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "GPS fix if available"
+          },
+          "imu": {
+            "$ref": "#/components/schemas/IMUData",
+            "description": "IMU orientation data"
+          },
+          "grade": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GradeMeasurement"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Supporting road grade measurement"
+          },
+          "captured_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Captured At",
+            "description": "ISO 8601 capture timestamp (UTC)"
+          },
+          "monotonic_capture_time_ns": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monotonic Capture Time Ns",
+            "description": "Monotonic clock timestamp in nanoseconds"
+          },
+          "device_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Device Id",
+            "description": "Camera or device identifier"
+          },
+          "camera_profile_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Camera Profile Id",
+            "description": "Camera calibration profile identifier"
+          },
+          "source_mode": {
+            "$ref": "#/components/schemas/SourceMode",
+            "description": "How this frame was acquired",
+            "default": "upload"
+          },
+          "frame_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Frame Index",
+            "description": "Sequence number for live or replay"
+          },
+          "telemetry_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Telemetry Hash",
+            "description": "SHA256 hash of raw telemetry payload"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "FrameMetadata",
+        "description": "Metadata for a single frame."
+      },
+      "GPSData": {
+        "properties": {
+          "lat": {
+            "type": "number",
+            "maximum": 90.0,
+            "minimum": -90.0,
+            "title": "Lat",
+            "description": "Latitude in degrees"
+          },
+          "lon": {
+            "type": "number",
+            "maximum": 180.0,
+            "minimum": -180.0,
+            "title": "Lon",
+            "description": "Longitude in degrees"
+          },
+          "speed_mps": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Speed Mps",
+            "description": "Speed in meters per second (null if unknown)"
+          },
+          "heading_deg": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 360.0,
+                "minimum": -360.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heading Deg",
+            "description": "Heading in degrees (null if unknown)"
+          },
+          "accuracy_m": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accuracy M",
+            "description": "Horizontal accuracy in meters (null if unknown)"
+          },
+          "simulated": {
+            "type": "boolean",
+            "title": "Simulated",
+            "description": "True if GPS is simulated, not real hardware GPS",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "lat",
+          "lon"
+        ],
+        "title": "GPSData",
+        "description": "GPS fix attached to a frame."
+      },
+      "GradeMeasurement": {
+        "properties": {
+          "grade_percent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grade Percent",
+            "description": "Longitudinal road grade in percent: 100 * tan(angle). Null if unmeasured."
+          },
+          "grade_deg": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 90.0,
+                "minimum": -90.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grade Deg",
+            "description": "Longitudinal grade in degrees. Null if unmeasured."
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "description": "Source provenance: manual_sensor, calibrated_inclinometer, stationary_camera_imu"
+          },
+          "uncertainty_deg": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Uncertainty Deg",
+            "description": "Estimated uncertainty in degrees (null if unknown)"
+          },
+          "captured_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Captured At",
+            "description": "ISO 8601 capture timestamp of the sensor measurement"
+          },
+          "valid": {
+            "type": "boolean",
+            "title": "Valid",
+            "description": "Whether this grade reading is considered valid under current mounting",
+            "default": true
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes",
+            "description": "Clarifications: e.g. longitudinal vs crossfall, straightedge verification"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "source"
+        ],
+        "title": "GradeMeasurement",
+        "description": "Verified road inclination / grade measurement."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HealthStatus": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Overall service status: healthy, degraded, unhealthy",
+            "default": "healthy"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version",
+            "description": "API version"
+          },
+          "services": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Services",
+            "description": "Sub-service statuses: database, s3, bedrock, model, worker"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "version"
+        ],
+        "title": "HealthStatus",
+        "description": "Basic service health status."
+      },
+      "IMUData": {
+        "properties": {
+          "pitch_deg": {
+            "type": "number",
+            "maximum": 90.0,
+            "minimum": -90.0,
+            "title": "Pitch Deg",
+            "description": "Pitch in degrees",
+            "default": 0.0
+          },
+          "roll_deg": {
+            "type": "number",
+            "maximum": 180.0,
+            "minimum": -180.0,
+            "title": "Roll Deg",
+            "description": "Roll in degrees",
+            "default": 0.0
+          },
+          "yaw_deg": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 360.0,
+                "minimum": -360.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Yaw Deg",
+            "description": "Yaw in degrees (null if unknown)"
+          },
+          "accel_z": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accel Z",
+            "description": "Vertical acceleration (null if unknown)"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "IMUData",
+        "description": "Device orientation captured with the frame."
+      },
+      "JobState": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "title": "Job Id",
+            "description": "Unique job identifier"
+          },
+          "status": {
+            "$ref": "#/components/schemas/JobStatus",
+            "description": "Current job status: received -> validated -> queued -> processing -> succeeded/partial/failed"
+          },
+          "error_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Reason",
+            "description": "Error description if failed"
+          },
+          "attempt_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Attempt Count",
+            "description": "Number of processing attempts",
+            "default": 0
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At",
+            "description": "When processing began"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At",
+            "description": "When processing ended"
+          },
+          "updated_at": {
+            "type": "string",
+            "title": "Updated At",
+            "description": "Last state transition timestamp"
+          },
+          "versions": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Versions",
+            "description": "Model, feature, and scoring versions used"
+          },
+          "result_sample_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result Sample Id",
+            "description": "Sample id produced when the job succeeded (null until then). Retrieve via GET /v1/samples/{id}."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "job_id",
+          "status",
+          "updated_at"
+        ],
+        "title": "JobState",
+        "description": "Durable job lifecycle state."
+      },
+      "JobStatus": {
+        "type": "string",
+        "enum": [
+          "received",
+          "validated",
+          "queued",
+          "processing",
+          "succeeded",
+          "partial",
+          "failed"
+        ],
+        "title": "JobStatus",
+        "description": "Analysis job lifecycle states."
+      },
+      "MetricResult": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Metric identifier, e.g. chip_count_density, median_chip_diameter"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value",
+            "description": "Measured value (null = unknown, 0 = measured absence)"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit",
+            "description": "Unit of measurement: mm, m2, count/m2, unitless"
+          },
+          "valid": {
+            "type": "boolean",
+            "title": "Valid",
+            "description": "Whether the measurement is valid",
+            "default": true
+          },
+          "estimator_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimator Version",
+            "description": "Version of estimator that produced this"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes",
+            "description": "Human-readable notes about this metric"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "unit"
+        ],
+        "title": "MetricResult",
+        "description": "Single measured metric with validity information."
+      },
+      "NarrativeStatus": {
+        "type": "string",
+        "enum": [
+          "generated",
+          "fallback",
+          "not_requested"
+        ],
+        "title": "NarrativeStatus",
+        "description": "Bedrock narrative generation status."
+      },
+      "QualityResult": {
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/QualityStatus",
+            "description": "Overall quality status: accepted, limited, rejected"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Reasons",
+            "description": "Reason codes: e.g. blur_laplacian, glare, uncalibrated_scale"
+          },
+          "min_source_resolution": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Source Resolution",
+            "description": "Minimum detectable feature size in pixels"
+          },
+          "sharpness_score": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sharpness Score",
+            "description": "Sharpness metric value (null if uncomputed)"
+          },
+          "glare_present": {
+            "type": "boolean",
+            "title": "Glare Present",
+            "description": "Whether glare or clipping was detected",
+            "default": false
+          },
+          "ignored_fraction": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ignored Fraction",
+            "description": "Fraction of frame masked as ignore"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "QualityResult",
+        "description": "Image quality assessment."
+      },
+      "QualityStatus": {
+        "type": "string",
+        "enum": [
+          "accepted",
+          "limited",
+          "rejected"
+        ],
+        "title": "QualityStatus",
+        "description": "Image quality assessment status."
+      },
+      "ReferenceComparison": {
+        "properties": {
+          "reference_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Version",
+            "description": "Version of the reference model used"
+          },
+          "feature_count": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feature Count",
+            "description": "Number of features compared"
+          },
+          "deviation_robust": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deviation Robust",
+            "description": "Robust normalized deviation (null if uncomputed)"
+          },
+          "deviation_mahalanobis": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deviation Mahalanobis",
+            "description": "Mahalanobis distance (null if uncomputed)"
+          },
+          "supported_surface": {
+            "type": "boolean",
+            "title": "Supported Surface",
+            "description": "Whether the surface is in the supported domain",
+            "default": true
+          },
+          "domain_support_covered": {
+            "type": "boolean",
+            "title": "Domain Support Covered",
+            "description": "Whether domain support was explicitly checked",
+            "default": false
+          },
+          "difference_heatmap_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Difference Heatmap Url",
+            "description": "URL to difference heatmap (null if uncomputed)"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ReferenceComparison",
+        "description": "Comparison against known-good reference."
+      },
+      "ReportContent": {
+        "properties": {
+          "summary": {
+            "type": "string",
+            "title": "Summary",
+            "description": "Human-readable factual summary"
+          },
+          "evidence_references": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Evidence References",
+            "description": "References to evidence items (sample IDs, masks)"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Limitations",
+            "description": "Declared limitations (e.g. uncalibrated scale, partial route)"
+          },
+          "inspection_actions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Inspection Actions",
+            "description": "Recommended human inspection actions (never structural repair commands)"
+          },
+          "narrative_status": {
+            "$ref": "#/components/schemas/NarrativeStatus",
+            "description": "How narrative was produced: generated, fallback, not_requested",
+            "default": "not_requested"
+          },
+          "factual_template_used": {
+            "type": "boolean",
+            "title": "Factual Template Used",
+            "description": "True if deterministic fallback template was used",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "summary"
+        ],
+        "title": "ReportContent",
+        "description": "Structured report content containing verified facts and inspection actions."
+      },
+      "ReportResult": {
+        "properties": {
+          "report_id": {
+            "type": "string",
+            "title": "Report Id",
+            "description": "Unique report identifier"
+          },
+          "assessment_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assessment Id",
+            "description": "Assessment or session ID this report covers"
+          },
+          "content": {
+            "$ref": "#/components/schemas/ReportContent",
+            "description": "Structured report content"
+          },
+          "generated_at": {
+            "type": "string",
+            "title": "Generated At",
+            "description": "UTC generation timestamp"
+          },
+          "bedrock_model_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bedrock Model Id",
+            "description": "Exact AWS Bedrock model ID used (null if fallback/none)"
+          },
+          "factual_input_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Factual Input Hash",
+            "description": "SHA256 hash of structured facts used for caching and validation"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "report_id",
+          "content",
+          "generated_at"
+        ],
+        "title": "ReportResult",
+        "description": "Generated factual report with Bedrock narration metadata."
+      },
+      "SampleAudit": {
+        "properties": {
+          "model_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Hash",
+            "description": "Hash of ML model weights"
+          },
+          "code_commit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code Commit",
+            "description": "Git commit hash of running service"
+          },
+          "config_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Config Hash",
+            "description": "Hash of active configuration"
+          },
+          "reviewer_corrections": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewer Corrections",
+            "description": "Human reviewer audit annotations"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "SampleAudit"
+      },
+      "SampleCamera": {
+        "properties": {
+          "camera_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Camera Id",
+            "description": "Camera hardware ID"
+          },
+          "calibration_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calibration Id",
+            "description": "Calibration profile ID"
+          },
+          "width_px": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Width Px",
+            "description": "Native frame width in pixels"
+          },
+          "height_px": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Height Px",
+            "description": "Native frame height in pixels"
+          },
+          "exposure_ms": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exposure Ms",
+            "description": "Exposure duration in milliseconds"
+          },
+          "crop_state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Crop State",
+            "description": "Crop or digital zoom description"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "SampleCamera"
+      },
+      "SampleCoverage": {
+        "properties": {
+          "frame_interval_m": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Frame Interval M",
+            "description": "Distance spacing between consecutive frames"
+          },
+          "inspected_strip_m": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inspected Strip M",
+            "description": "Transverse width of inspected pavement strip"
+          },
+          "unique_area_m2": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unique Area M2",
+            "description": "Unique pavement area (null if registration unreliable)"
+          },
+          "coverage_method": {
+            "type": "string",
+            "title": "Coverage Method",
+            "description": "Method used to estimate coverage",
+            "default": "conservative_spacing"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "SampleCoverage"
+      },
+      "SampleGeometry": {
+        "properties": {
+          "scale_source": {
+            "type": "string",
+            "title": "Scale Source",
+            "description": "Scale determination: rig_calibrated, source_calibrated, unscaled"
+          },
+          "sx_sy_or_h": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sx Sy Or H",
+            "description": "x/y scale factors (mm/px) or 3x3 homography matrix H"
+          },
+          "valid_roi": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid Roi",
+            "description": "Bounding box [x, y, w, h] of valid road ROI"
+          },
+          "observed_area_m2": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observed Area M2",
+            "description": "Total valid area inspected (null if uncalibrated)"
+          },
+          "error_bound_pct": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Bound Pct",
+            "description": "Scale error bound percentage"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "scale_source"
+        ],
+        "title": "SampleGeometry"
+      },
+      "SampleIdentity": {
+        "properties": {
+          "sample_id": {
+            "type": "string",
+            "title": "Sample Id",
+            "description": "Unique sample ID"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id",
+            "description": "Parent session ID"
+          },
+          "source_dataset": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Dataset",
+            "description": "Dataset name and version if from benchmark"
+          },
+          "parent_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Id",
+            "description": "Parent image ID"
+          },
+          "sequence_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sequence Id",
+            "description": "Sequence index in route"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "sample_id"
+        ],
+        "title": "SampleIdentity"
+      },
+      "SampleLocation": {
+        "properties": {
+          "lat": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 90.0,
+                "minimum": -90.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lat",
+            "description": "Latitude (null if unlocated)"
+          },
+          "lon": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 180.0,
+                "minimum": -180.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lon",
+            "description": "Longitude (null if unlocated)"
+          },
+          "accuracy_m": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accuracy M",
+            "description": "GPS accuracy radius in meters"
+          },
+          "route_distance_m": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Route Distance M",
+            "description": "Traveled distance along route"
+          },
+          "distance_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Distance Source",
+            "description": "Source of route distance: odometry, gps_polyline"
+          },
+          "is_simulated": {
+            "type": "boolean",
+            "title": "Is Simulated",
+            "description": "True if simulated GPS coordinates",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "SampleLocation"
+      },
+      "SampleNarrative": {
+        "properties": {
+          "factual_input_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Factual Input Hash",
+            "description": "SHA256 hash of structured facts sent to Bedrock"
+          },
+          "bedrock_model_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bedrock Model Id",
+            "description": "Exact AWS Bedrock model ID used"
+          },
+          "status": {
+            "$ref": "#/components/schemas/NarrativeStatus",
+            "description": "Narrative status",
+            "default": "not_requested"
+          },
+          "generated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generated At",
+            "description": "UTC generation timestamp"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "SampleNarrative"
+      },
+      "SampleProvenance": {
+        "properties": {
+          "file_sha256": {
+            "type": "string",
+            "title": "File Sha256",
+            "description": "SHA256 hash of original image file"
+          },
+          "original_uri": {
+            "type": "string",
+            "title": "Original Uri",
+            "description": "Original URI or S3 object key"
+          },
+          "license_record": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "License Record",
+            "description": "License terms or attribution"
+          },
+          "split_group": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Split Group",
+            "description": "Evaluation split group (train, dev, test)"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "file_sha256",
+          "original_uri"
+        ],
+        "title": "SampleProvenance"
+      },
+      "SampleTime": {
+        "properties": {
+          "captured_at_utc": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Captured At Utc",
+            "description": "UTC capture timestamp (ISO 8601)"
+          },
+          "monotonic_capture_time_ns": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monotonic Capture Time Ns",
+            "description": "Monotonic clock reading in nanoseconds"
+          },
+          "received_at": {
+            "type": "string",
+            "title": "Received At",
+            "description": "UTC timestamp when server received the frame"
+          },
+          "processed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Processed At",
+            "description": "UTC timestamp when analysis completed"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "received_at"
+        ],
+        "title": "SampleTime"
+      },
+      "ScoreResult": {
+        "properties": {
+          "value": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 100.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value",
+            "description": "SQI value 0-100 (null = not scored/unknown)"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ScoreStatus",
+            "description": "Good, Bad, review, unknown",
+            "default": "unknown"
+          },
+          "reference_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Version",
+            "description": "Version of reference used for scoring"
+          },
+          "policy_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Policy Version",
+            "description": "Version of scoring policy used"
+          },
+          "texture_term": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Texture Term",
+            "description": "Texture deviation component T"
+          },
+          "distress_term": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Distress Term",
+            "description": "Distress burden component D"
+          },
+          "distribution_term": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Distribution Term",
+            "description": "Optional distribution term"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence",
+            "description": "Empirically calibrated confidence"
+          },
+          "confidence_state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence State",
+            "description": "Descriptive confidence state: high, medium, low, uncalibrated"
+          },
+          "severe_defect_flag": {
+            "type": "boolean",
+            "title": "Severe Defect Flag",
+            "description": "Inspection priority flag for severe observed defect",
+            "default": false
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Reasons",
+            "description": "Scoring reason codes"
+          },
+          "partial_rule": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Partial Rule",
+            "description": "Name of partial-input rule if applied"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ScoreResult",
+        "description": "Surface Quality Index (SQI) score."
+      },
+      "ScoreStatus": {
+        "type": "string",
+        "enum": [
+          "Good",
+          "Bad",
+          "review",
+          "unknown"
+        ],
+        "title": "ScoreStatus",
+        "description": "Surface condition scoring status."
+      },
+      "SegmentList": {
+        "properties": {
+          "route_id": {
+            "type": "string",
+            "title": "Route Id",
+            "description": "Route or session identifier"
+          },
+          "segments": {
+            "items": {
+              "$ref": "#/components/schemas/SegmentSummary"
+            },
+            "type": "array",
+            "title": "Segments",
+            "description": "Reporting bin summaries"
+          },
+          "total_distance_m": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Total Distance M",
+            "description": "Total route distance in meters",
+            "default": 0.0
+          },
+          "coverage_percentage": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 100.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coverage Percentage",
+            "description": "Percentage of route covered (null if unknown)"
+          },
+          "unsampled_stretches": {
+            "items": {
+              "additionalProperties": {
+                "type": "number"
+              },
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Unsampled Stretches",
+            "description": "Unsampled distance ranges [{'start_m': ..., 'end_m': ...}]"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "route_id"
+        ],
+        "title": "SegmentList",
+        "description": "List of segment summaries for a route."
+      },
+      "SegmentResult": {
+        "properties": {
+          "segment_id": {
+            "type": "integer",
+            "title": "Segment Id",
+            "description": "Segment identifier (1-based sequence or index)"
+          },
+          "route_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Route Id",
+            "description": "Parent route or session identifier"
+          },
+          "sample_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sample Id",
+            "description": "Unique sample identifier"
+          },
+          "image_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Path",
+            "description": "Path to original image"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url",
+            "description": "URL to original image"
+          },
+          "mask_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mask Url",
+            "description": "URL to mask overlay"
+          },
+          "raw_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raw Url",
+            "description": "URL to raw uploaded image"
+          },
+          "captured_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Captured At",
+            "description": "UTC capture timestamp"
+          },
+          "gps": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GPSData"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "GPS fix if available"
+          },
+          "grade": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GradeMeasurement"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Supporting road grade measurement"
+          },
+          "geometry_valid": {
+            "type": "boolean",
+            "title": "Geometry Valid",
+            "description": "Whether geometry and scale are valid",
+            "default": false
+          },
+          "observed_area": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AreaResult"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Area measurements (null if uncalibrated)"
+          },
+          "quality": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QualityResult"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Quality assessment"
+          },
+          "metrics": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AggregatedMetrics"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Aggregate and distress metrics"
+          },
+          "evidence": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DistressEvidence"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Visual evidence references"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ScoreResult"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Surface condition score"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReferenceComparison"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Known-good comparison"
+          },
+          "model_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Version",
+            "description": "ML model version used"
+          },
+          "feature_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feature Version",
+            "description": "Feature extraction version"
+          },
+          "scoring_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scoring Version",
+            "description": "Scoring version"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At",
+            "description": "Analysis completion timestamp"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error",
+            "description": "Error message if analysis failed"
+          },
+          "canonical": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CanonicalSampleRecord"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Canonical record if available"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "segment_id"
+        ],
+        "title": "SegmentResult",
+        "description": "Full analysis result for one route segment or uploaded frame."
+      },
+      "SegmentSummary": {
+        "properties": {
+          "segment_id": {
+            "type": "integer",
+            "title": "Segment Id",
+            "description": "Reporting bin sequence identifier"
+          },
+          "start_distance_m": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Start Distance M",
+            "description": "Start distance along route in meters"
+          },
+          "end_distance_m": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "End Distance M",
+            "description": "End distance along route in meters"
+          },
+          "center_lat": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 90.0,
+                "minimum": -90.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Center Lat",
+            "description": "Center GPS latitude (null if unlocated)"
+          },
+          "center_lon": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 180.0,
+                "minimum": -180.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Center Lon",
+            "description": "Center GPS longitude (null if unlocated)"
+          },
+          "gps_accuracy_m": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gps Accuracy M",
+            "description": "GPS accuracy at center (null if unknown)"
+          },
+          "simulated": {
+            "type": "boolean",
+            "title": "Simulated",
+            "description": "Whether position is simulated",
+            "default": false
+          },
+          "sample_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Sample Count",
+            "description": "Number of frames received in this bin",
+            "default": 0
+          },
+          "accepted_sample_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Accepted Sample Count",
+            "description": "Frames that passed QC checks",
+            "default": 0
+          },
+          "unique_area_m2": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unique Area M2",
+            "description": "Unique road area covered (null if registration unreliable)"
+          },
+          "strip_area_m2": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Strip Area M2",
+            "description": "Total inspected strip area sampled",
+            "default": 0.0
+          },
+          "median_score": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 100.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Median Score",
+            "description": "Median SQI (null if not enough samples)"
+          },
+          "lower_tail_score": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 100.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lower Tail Score",
+            "description": "Lower-tail SQI (p10/p25) (null if insufficient samples)"
+          },
+          "serious_defect_observed": {
+            "type": "boolean",
+            "title": "Serious Defect Observed",
+            "description": "Whether a severe defect flag was observed in this bin",
+            "default": false
+          },
+          "unknown_coverage": {
+            "type": "boolean",
+            "title": "Unknown Coverage",
+            "description": "Whether coverage is incomplete or unsampled",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "segment_id",
+          "start_distance_m",
+          "end_distance_m"
+        ],
+        "title": "SegmentSummary",
+        "description": "Summary for a configurable 50m reporting bin."
+      },
+      "SessionState": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id",
+            "description": "Unique session identifier"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/SourceMode",
+            "description": "Capture mode: live, replay, upload"
+          },
+          "camera_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Camera Id",
+            "description": "Camera hardware ID"
+          },
+          "calibration_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calibration Id",
+            "description": "Calibration profile ID"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At",
+            "description": "Session creation timestamp"
+          },
+          "frame_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Frame Count",
+            "description": "Frames received by API",
+            "default": 0
+          },
+          "processed_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Processed Count",
+            "description": "Frames processed by worker",
+            "default": 0
+          },
+          "rejected_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Rejected Count",
+            "description": "Frames rejected by QC or format validation",
+            "default": 0
+          },
+          "dropped_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Dropped Count",
+            "description": "Frames dropped due to bounded queue overflow",
+            "default": 0
+          },
+          "last_capture_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Capture At",
+            "description": "Last frame capture timestamp"
+          },
+          "last_processed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Processed At",
+            "description": "Last frame processed timestamp"
+          },
+          "is_stale": {
+            "type": "boolean",
+            "title": "Is Stale",
+            "description": "Whether current result is stale",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "session_id",
+          "mode",
+          "created_at"
+        ],
+        "title": "SessionState",
+        "description": "Live/replay capture session state."
+      },
+      "SourceMode": {
+        "type": "string",
+        "enum": [
+          "upload",
+          "live",
+          "replay"
+        ],
+        "title": "SourceMode",
+        "description": "How the image was acquired."
+      },
+      "UploadRequest": {
+        "properties": {
+          "filename": {
+            "type": "string",
+            "title": "Filename",
+            "description": "Original filename"
+          },
+          "content_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content Type",
+            "description": "MIME type (e.g. image/jpeg, image/png)"
+          },
+          "expected_size": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 52428800.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Size",
+            "description": "Expected file size in bytes (max 50MB)"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "filename"
+        ],
+        "title": "UploadRequest",
+        "description": "Request to allocate a private upload slot."
+      },
+      "UploadResponse": {
+        "properties": {
+          "upload_id": {
+            "type": "string",
+            "title": "Upload Id",
+            "description": "Unique upload identifier"
+          },
+          "upload_url": {
+            "type": "string",
+            "title": "Upload Url",
+            "description": "Presigned S3 upload URL or local upload endpoint"
+          },
+          "object_key": {
+            "type": "string",
+            "title": "Object Key",
+            "description": "Private object key path"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At",
+            "description": "Upload URL expiration timestamp (ISO 8601)"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Upload slot status",
+            "default": "ready"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "upload_id",
+          "upload_url",
+          "object_key"
+        ],
+        "title": "UploadResponse",
+        "description": "Response returned when an upload slot is allocated."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

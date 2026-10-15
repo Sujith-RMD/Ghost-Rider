@@ -11,6 +11,8 @@ deterministically via ``worker.process_job_by_id`` / ``process_frame``.
 import os
 import time
 import uuid
+import cv2
+import numpy as np
 
 # Keep the durable-job test deterministic: no background thread racing the test
 # for the same job. Must be set before the app lifespan runs.
@@ -26,8 +28,11 @@ from backend.queues import ensure_v1_tables
 
 
 def _jpeg_bytes(size_pad: int = 64) -> bytes:
-    """Minimal byte string with a valid JPEG magic header."""
-    return b"\xff\xd8\xff\xe0" + b"\x00" * size_pad
+    """A decodable road-like image, rather than a JPEG header alone."""
+    image = np.random.default_rng(42).integers(60, 180, (256, 256, 3), dtype=np.uint8)
+    ok, encoded = cv2.imencode(".jpg", image)
+    assert ok
+    return encoded.tobytes()
 
 
 @pytest.fixture(scope="module")
@@ -39,7 +44,7 @@ def client():
 def _allocate_upload(client, name: str = "slice_road.jpg") -> dict:
     response = client.post(
         "/v1/uploads",
-        json={"filename": name, "content_type": "image/jpeg", "expected_size": 68},
+        json={"filename": name, "content_type": "image/jpeg", "expected_size": len(_jpeg_bytes())},
     )
     assert response.status_code == 200, response.text
     return response.json()
@@ -108,7 +113,7 @@ def test_upload_job_sample_slice(client):
 
     # Process (as the deployed worker would).
     job = _wait_terminal(client, job_id)
-    assert job["status"] == "succeeded", job
+    assert job["status"] == "partial", job
     sample_id = job["result_sample_id"]
     assert sample_id
     assert job["attempt_count"] == 1
@@ -122,10 +127,10 @@ def test_upload_job_sample_slice(client):
     assert sample["model_version"]
     # No fabricated physics: uncalibrated geometry stays unknown.
     assert sample["geometry_valid"] is False
-    assert sample["observed_area"] is None
-    assert sample["metrics"] is None
+    assert sample["observed_area"] is None or sample["observed_area"]["observed_area_m2"] is None
+    assert sample["metrics"] is None or sample["metrics"]["chip_density_per_m2"] is None
     assert sample["score"] is None
-    assert sample["quality"] is None
+    assert sample["quality"] is not None
     # Capture time and GPS are preserved from the finalize telemetry.
     assert sample["captured_at"] == "2026-10-16T09:15:00+00:00"
     assert sample["gps"]["lat"] == 12.9716
@@ -139,7 +144,7 @@ def test_job_processing_is_idempotent(client):
     job_id = _finalize(client, upload_id)["job_id"]
 
     terminal = _wait_terminal(client, job_id)
-    assert terminal["status"] == "succeeded"
+    assert terminal["status"] == "partial"
     sample_id = terminal["result_sample_id"]
 
     # A second explicit attempt must not create another sample.
