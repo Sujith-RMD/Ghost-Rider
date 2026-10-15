@@ -87,6 +87,54 @@ Notes:
 ---
 
 ## 3. Entries
+### 2026-10-16 - Dataset acquisition plan written; Zou-unreachable recorded
+Type: documentation + decision
+
+New ``docs/ml/DATASET_PLAN.md``: every dataset the plan names, with its exact
+role, its download or request path, and a coverage matrix mapping each source to
+the branch it serves. Organised into four tiers so nothing is downloaded without
+a named consumer.
+
+### Constraint change: Dr. Zou is unreachable
+
+The licence question (D8) was previously resolved on the basis that Zou is the
+supervising professor. With contact now impossible:
+
+- ``A1.6`` (crop vs resize of the 512x512 delivery) can **never** be confirmed
+  from the author. CRKWH100 scale stays ``unverified`` and **no mm value may be
+  published from it.**
+- Native line-array originals cannot be requested.
+- ``CHIP_VISIBILITY_EVIDENCE.md`` already establishes chips are not resolvable in
+  the delivered files, so with the originals unavailable the chip requirement now
+  rests entirely on **ISTD-PDS7** (0.91 mm/px, documented) or **GAPs**
+  (1.2 mm/px). Both are request-gated, so the request latency is now the
+  schedule driver for the chip branch.
+
+Recorded rather than worked around: the plan is honest that a claim of
+calibrated chip measurement on Indian roads currently has **no** source it can
+stand on, and names the two requests that would fix it.
+
+### The finding that drove the priority order
+
+Crack-Seg carries **1 negative in 4,029 images** (0.025%), and the test split
+carries **zero**. So a distress model trained and evaluated on it cannot have
+its false-alarm behaviour measured, which final plan 13.3 explicitly requires.
+That makes the **CRKWH100 crack GT** link - a separate OneDrive URL in the
+DeepCrack README, never fetched - the highest-value single download available,
+because CRKWH100 images without crack GT are clean negatives from one camera and
+one surface family. It is Tier 1 item 1 for that reason.
+
+### Links
+
+Recorded verbatim from the DeepCrack README fetched earlier this session, not
+reconstructed from memory:
+
+- CRKWH100 images: ``https://1drv.ms/f/s!AittnGm6vRKLtylBkxVXw5arGn6R``
+- CRKWH100 GT: ``https://1drv.ms/u/s!AittnGm6vRKLglyfiCw_C6BDeFsP``
+- Baidu mirror (pass ``zfoo``): ``https://pan.baidu.com/s/1PWiBzoJlc8qC8ffZu2Vb8w``
+
+**Not done / still open:** no dataset downloaded this turn - the user fetches
+them. E4/E5/E8 training; the chip-scale request; J7/J8.
 ### 2026-10-16 - D8 + I16 implemented: distress measurements and eval harness
 Type: feature + tests + evaluation
 
