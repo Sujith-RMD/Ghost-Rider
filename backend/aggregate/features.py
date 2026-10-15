@@ -45,11 +45,17 @@ from math import pi, sqrt
 import cv2
 import numpy as np
 import scipy.ndimage as ndi
+from skimage import morphology as skimage_morphology
 
 from backend.geometry.scale import PlanarScale, equivalent_diameter_mm
 
-GAP_METHOD_VERSION = "gap-medial-v1"
-"""Version of the documented medial-axis opposing-instance gap method."""
+GAP_METHOD_VERSION = "gap-medial-v2"
+"""Version of the documented medial-axis opposing-instance gap method.
+
+``v2`` (2026-10-16) uses scikit-image's thinning instead of a local
+implementation; the canonical two-bar fixture still measures exactly 11.0 px,
+but dense fixtures shifted (median 37.88 -> 37.16 px, sites 353 -> 347).
+"""
 
 TEX_METHOD_VERSION = "texture-proxy-v1"
 """Version of the fixed-scale texture proxy methods."""
@@ -130,58 +136,34 @@ class TextureStatistics:
 
 
 def skeletonize_2d(binary: np.ndarray, max_iterations: int = 512) -> np.ndarray:
-    """Zhang-Suen thinning of a 2D boolean array.
+    """Zhang-Suen thinning, delegated to scikit-image.
 
-    Implemented locally so the ML side needs no additional dependency. Returns a
-    boolean array of the same shape. ``max_iterations`` guards against a
-    pathological input looping forever.
+    scikit-image became an approved ML dependency (D4, 2026-10-16) and is the
+    reference implementation, so this no longer carries ~50 lines of locally
+    owned algorithm (decision D6/J8).
+
+    The swap was **measured, not assumed**. The previous local implementation
+    agreed with scikit-image exactly on simple shapes (straight bar, diagonal,
+    disk) but differed on every complex one: up to 303 differing pixels on a
+    96x96 noise mask, and 14 on a thin ring. Downstream that moved the measured
+    gap: on the dense-chip fixture the median went 37.88 px -> 37.16 px and the
+    qualifying site count 353 -> 347, while the canonical two-bar fixture stayed
+    exactly 11.0 px. Because measured output moved, ``GAP_METHOD_VERSION``
+    changed to ``gap-medial-v2`` rather than being silently re-used (final plan
+    section 9.2). scikit-image is also about 18x faster here.
+
+    ``max_iterations`` is retained for API compatibility and is unused: the
+    implementation is scikit-image's, which terminates on its own.
     """
     image = (np.asarray(binary) > 0).astype(np.uint8)
     if image.ndim != 2:
         raise ValueError(f"binary must be 2D, got shape {image.shape}")
+    if image.size == 0:
+        raise ValueError("binary is empty")
     if not image.any():
         return image.astype(bool)
 
-    for _ in range(int(max_iterations)):
-        changed = False
-        for step in (0, 1):
-            padded = np.pad(image, 1)
-            p2 = padded[0:-2, 1:-1]
-            p3 = padded[0:-2, 2:]
-            p4 = padded[1:-1, 2:]
-            p5 = padded[2:, 2:]
-            p6 = padded[2:, 1:-1]
-            p7 = padded[2:, 0:-2]
-            p8 = padded[1:-1, 0:-2]
-            p9 = padded[0:-2, 0:-2]
-            neighbours = (p2, p3, p4, p5, p6, p7, p8, p9)
-
-            neighbour_count = sum(neighbours).astype(np.uint8)
-            transitions = np.zeros(image.shape, dtype=np.uint8)
-            sequence = neighbours + (p2,)
-            for index in range(8):
-                transitions += ((sequence[index] == 0) & (sequence[index + 1] == 1)).astype(
-                    np.uint8
-                )
-
-            if step == 0:
-                keep_condition = (p2 * p4 * p6 == 0) & (p4 * p6 * p8 == 0)
-            else:
-                keep_condition = (p2 * p4 * p8 == 0) & (p2 * p6 * p8 == 0)
-
-            removable = (
-                (image == 1)
-                & (neighbour_count >= 2)
-                & (neighbour_count <= 6)
-                & (transitions == 1)
-                & keep_condition
-            )
-            if removable.any():
-                image[removable] = 0
-                changed = True
-        if not changed:
-            break
-    return image.astype(bool)
+    return np.asarray(skimage_morphology.skeletonize(image), dtype=bool)
 
 
 def _glcm_features(

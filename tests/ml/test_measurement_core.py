@@ -17,12 +17,15 @@ from __future__ import annotations
 import json
 import math
 
+import cv2
 import numpy as np
 import pytest
 
 from backend.aggregate import (
     GAP_METHOD_VERSION,
+    TEX_METHOD_VERSION,
     MeasurementConfig,
+    TextureStatistics,
     WatershedConfig,
     aggregate_coverage,
     count_density_per_m2,
@@ -33,7 +36,9 @@ from backend.aggregate import (
     renumber_labels,
     segment_aggregate,
     skeletonize_2d,
+    texture_statistics,
 )
+from backend.aggregate.features import _glcm_features
 from backend.geometry import (
     PlanarScale,
     ScaleSource,
@@ -748,6 +753,32 @@ def test_skeletonize_empty_input_is_empty():
     assert skeletonize_2d(np.zeros((5, 5), dtype=bool)).sum() == 0
 
 
+def test_skeletonize_matches_scikit_image_exactly():
+    # scikit-image was approved as an ML dependency (D4) and is the reference
+    # implementation (J8/D6). Adopting it means our thinning must *be* scikit-
+    # image's, not a look-alike: the local Zhang-Suen differed from it by up to
+    # 303 pixels on a 96x96 noise mask, which silently changes medial sites.
+    from skimage.morphology import skeletonize
+
+    rng = np.random.default_rng(7)
+    cases = [
+        np.eye(40, 40, dtype=bool),
+        rng.random((64, 64)) < 0.25,
+        (rng.random((96, 96)) < 0.35),
+    ]
+    for case in cases:
+        assert np.array_equal(
+            skeletonize_2d(case), np.asarray(skeletonize(case), dtype=bool)
+        )
+
+
+def test_gap_method_version_bumped_when_the_skeleton_changed():
+    # Adopting scikit-image's thinning changed measured site counts on dense
+    # fixtures (n 353 -> 347, median 37.88 -> 37.16 px) even though the canonical
+    # 11 px bar fixture is unaffected, so the method version had to move.
+    assert GAP_METHOD_VERSION == "gap-medial-v2"
+
+
 def test_gap_between_two_bars_matches_known_separation():
     stats = gap_statistics(two_bar_labels(), SCALE_HALF_MM, min_gap_px=3.0)
     assert stats.sample_count > 50
@@ -889,7 +920,7 @@ def test_record_describes_versions_and_scale_provenance():
     assert described["config_version"] == "measure-v1"
     assert described["segmentation_version"] == "agg-classical-v2"
     assert described["geometry"]["scale_source"] == "source_calibrated"
-    assert described["gap"]["config_version"] == "gap-medial-v1"
+    assert described["gap"]["config_version"] == "gap-medial-v2"
     assert described["areas_m2"]["texture_eligible"] == record.eligible_area_m2
 
 
@@ -923,3 +954,192 @@ def test_scale_must_be_a_planar_scale():
 def test_bgr_image_is_accepted():
     bgr = np.repeat(_image()[:, :, None], 3, axis=2)
     assert measure_surface(bgr, _full_valid(), SCALE_1MM).n_instances_in_roi == N_DISKS
+
+# =============================================================================
+# D7 â€” fixed-scale texture proxies (final plan section 7.3)
+# =============================================================================
+
+
+def _scaled(mm_per_px: float = 1.0) -> PlanarScale:
+    return PlanarScale.calibrated(
+        sx_mm_per_px=mm_per_px,
+        sy_mm_per_px=mm_per_px,
+        source=ScaleSource.RIG_CALIBRATED,
+        provenance=f"test {mm_per_px} mm/px",
+    )
+
+
+def _flat() -> np.ndarray:
+    return np.full((128, 128), 128, dtype=np.uint8)
+
+
+def _checker() -> np.ndarray:
+    yy, xx = np.indices((128, 128))
+    return (((xx + yy) % 2) * 255).astype(np.uint8)
+
+
+def _stripes(period_px: int = 4) -> np.ndarray:
+    """Exact integer-period square wave, constant along y.
+
+    An exact period (not a sine with an irrational period) makes the expected
+    co-occurrence behaviour predictable: a shift of ``period_px`` is in phase,
+    ``period_px / 2`` is exactly out of phase, and a quarter period is
+    orthogonal.
+    """
+    yy, xx = np.indices((128, 128))
+    return (((xx % period_px) < (period_px // 2)) * 255).astype(np.uint8)
+
+
+def _noise() -> np.ndarray:
+    return (np.random.default_rng(7).random((128, 128)) * 255).astype(np.uint8)
+
+
+def test_flat_texture_has_zero_contrast_and_full_homogeneity():
+    result = texture_statistics(_flat(), _scaled())
+    assert result.glcm_contrast_mm == 0.0
+    assert result.glcm_homogeneity_mm == 1.0
+    assert result.gradient_energy_mm == 0.0
+    # Perfectly flat -> every LBP code is uniform
+    assert result.lbp_uniformity_mm == 1.0
+
+
+def test_checker_has_high_contrast_and_low_homogeneity():
+    result = texture_statistics(_checker(), _scaled())
+    assert result.glcm_contrast_mm > 1000.0
+    assert result.glcm_homogeneity_mm < 1.0
+    # Two equally likely level pairs -> energy exactly 0.5
+    assert abs(result.glcm_energy_mm - 0.5) < 1e-9
+    # A checkerboard is never an LBP-uniform code
+    assert result.lbp_uniformity_mm == 0.0
+
+
+def test_sobel_is_a_null_operator_at_nyquist_and_that_is_recorded():
+    # A 3x3 Sobel is exactly zero on a checkerboard. The metric must report the
+    # zero rather than hide it, because a near-pixel-scale surface could read as
+    # "smooth" when it is in fact the most textured case.
+    result = texture_statistics(_checker(), _scaled())
+    assert result.gradient_energy_mm == 0.0
+    assert result.limitation is None  # not an error, a genuine property of the operator
+
+
+def test_glcm_phase_response_matches_the_exact_period():
+    # Per-direction co-occurrence behaviour on the square wave. Measured before
+    # being asserted, so these are recorded facts rather than hoped-for values.
+    square = _stripes(4)
+    angles = (0.0, np.pi / 4, np.pi / 2, 3 * np.pi / 4)
+    x_dir = lambda d: _glcm_features(square, (d,), angles)["correlation"][0, 0]
+
+    assert x_dir(1) == pytest.approx(0.0, abs=0.05)   # quarter period -> orthogonal
+    assert x_dir(2) == pytest.approx(-1.0, abs=1e-9)  # half period -> antiphase
+    assert x_dir(3) == pytest.approx(0.0, abs=0.05)   # three quarters -> orthogonal
+    assert x_dir(4) == pytest.approx(1.0, abs=1e-9)   # full period -> in phase
+    assert x_dir(6) == pytest.approx(-1.0, abs=1e-9)  # 1.5 periods -> antiphase
+    assert x_dir(8) == pytest.approx(1.0, abs=1e-9)   # 2 periods -> in phase
+
+
+def test_glcm_reports_perfect_correlation_when_the_axis_is_constant():
+    # The square wave does not vary along y, so every pair is (v, v) and the
+    # GLCM is purely diagonal. That is a degenerate but correct +1.
+    square = _stripes(4)
+    angles = (0.0, np.pi / 4, np.pi / 2, 3 * np.pi / 4)
+    for d in (1, 2, 4, 8):
+        assert _glcm_features(square, (d,), angles)["correlation"][0, 2] == pytest.approx(
+            1.0, abs=1e-9
+        )
+
+
+def test_public_api_ranks_in_phase_above_antiphase():
+    # Averaged over four directions, a full-period offset must still score
+    # above a half-period offset. The per-direction values are verified
+    # separately; this checks the aggregate behaves sensibly.
+    in_phase = texture_statistics(_stripes(4), _scaled(), distances_mm=(4.0,))
+    antiphase = texture_statistics(_stripes(4), _scaled(), distances_mm=(2.0,))
+    assert (
+        in_phase.glcm_correlation_mm > antiphase.glcm_correlation_mm
+    )
+
+
+def test_noise_has_high_contrast_but_near_zero_correlation():
+    result = texture_statistics(_noise(), _scaled())
+    assert result.glcm_contrast_mm > 100.0
+    assert abs(result.glcm_correlation_mm) < 0.1
+
+
+def test_unscaled_returns_all_none_and_never_a_fabricated_number():
+    result = texture_statistics(_noise(), PlanarScale.unscaled("no calibration"))
+    assert result.glcm_contrast_mm is None
+    assert result.glcm_homogeneity_mm is None
+    assert result.glcm_energy_mm is None
+    assert result.glcm_correlation_mm is None
+    assert result.gradient_energy_mm is None
+    assert result.lbp_uniformity_mm is None
+    assert result.limitation is not None
+
+
+def test_unscaled_none_is_not_zero():
+    # Null-vs-zero discipline (final plan section 2): a missing scale must not
+    # be mistaken for a measured zero.
+    result = texture_statistics(_flat(), PlanarScale.unscaled(""))
+    assert result.glcm_contrast_mm is None
+    assert result.glcm_contrast_mm != 0.0
+
+
+def test_colour_and_grey_paths_agree():
+    grey = _stripes()
+    bgr = cv2.cvtColor(grey, cv2.COLOR_GRAY2BGR)
+    a = texture_statistics(grey, _scaled()).describe()
+    b = texture_statistics(bgr, _scaled()).describe()
+    for key in (
+        "glcm_contrast_mm",
+        "glcm_homogeneity_mm",
+        "glcm_energy_mm",
+        "glcm_correlation_mm",
+        "gradient_energy_mm",
+        "lbp_uniformity_mm",
+    ):
+        assert a[key] == b[key]
+
+
+def test_same_pixel_offset_gives_same_value_across_scales():
+    # The invariant: a physical offset quantises to a whole pixel count, so a
+    # request that resolves to the *same* offset must produce the *same* value
+    # regardless of the declared scale.
+    fine = _scaled(1.0)
+    coarse = _scaled(2.0)
+    for target_px in (1, 2, 3, 4, 6, 8):
+        mm_at_1 = float(target_px)
+        mm_at_2 = float(target_px * 2)
+        v1 = texture_statistics(
+            _stripes(), fine, distances_mm=(mm_at_1,)
+        ).describe()["glcm_correlation_mm"]
+        v2 = texture_statistics(
+            _stripes(), coarse, distances_mm=(mm_at_2,)
+        ).describe()["glcm_correlation_mm"]
+        assert v1 == v2
+
+
+def test_anisotropic_scale_is_accepted():
+    scale = PlanarScale.calibrated(
+        1.0, 3.0, ScaleSource.RIG_CALIBRATED, "anisotropic"
+    )
+    result = texture_statistics(_stripes(), scale)
+    assert result.glcm_contrast_mm is not None
+
+
+def test_deterministic_for_repeated_calls():
+    a = texture_statistics(_stripes(), _scaled()).describe()
+    b = texture_statistics(_stripes(), _scaled()).describe()
+    assert a == b
+
+
+def test_rejects_non_finite_and_bad_shapes():
+    with pytest.raises(ValueError):
+        texture_statistics(np.array([[np.nan, 1.0], [2.0, 3.0]]), _scaled())
+    with pytest.raises(ValueError):
+        texture_statistics(np.zeros((4, 4, 5), dtype=np.uint8), _scaled())
+
+
+def test_version_string_travels_with_the_result():
+    result = texture_statistics(_flat(), _scaled())
+    assert result.config_version == TEX_METHOD_VERSION
+    assert result.method == "fixed_scale_glcm_gradient_lbp"

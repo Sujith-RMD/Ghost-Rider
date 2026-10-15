@@ -3,6 +3,12 @@ uvicorn[standard]
 ultralytics
 opencv-python
 numpy
+scipy
+scikit-learn
+scikit-image
+torch
+torchvision
+segmentation-models-pytorch
 pydantic
 pydantic-settings
 boto3

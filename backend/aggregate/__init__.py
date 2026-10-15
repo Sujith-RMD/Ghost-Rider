@@ -7,12 +7,15 @@ from __future__ import annotations
 
 from backend.aggregate.features import (
     GAP_METHOD_VERSION,
+    TEX_METHOD_VERSION,
     GapStatistics,
+    TextureStatistics,
     aggregate_coverage,
     count_density_per_m2,
     gap_statistics,
     particle_size_stats,
     skeletonize_2d,
+    texture_statistics,
 )
 from backend.aggregate.measurement import (
     MeasurementConfig,
@@ -33,6 +36,8 @@ __all__ = [
     "InstanceProps",
     "MeasurementConfig",
     "SurfaceMeasurements",
+    "TEX_METHOD_VERSION",
+    "TextureStatistics",
     "WatershedConfig",
     "aggregate_coverage",
     "count_density_per_m2",
@@ -43,4 +48,5 @@ __all__ = [
     "renumber_labels",
     "segment_aggregate",
     "skeletonize_2d",
+    "texture_statistics",
 ]

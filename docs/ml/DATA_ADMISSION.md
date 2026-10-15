@@ -146,19 +146,58 @@ downloaded and **no size will be quoted as fact**.
 
 ## 4. Compliance against the plan's dataset roles
 
-| Source | Plan role (§4.2 / §4.3) | Our status |
-|---|---|---|
-| RDD2022 India subset | Primary Indian distress source | **Not obtained.** Still the primary Indian source. |
-| ISTD-PDS7 | First scaled aggregate-feasibility candidate, 0.91 mm/px, access by request | **Not requested.** The only candidate that addresses chips and gaps. |
-| DeepCrack CRKWH100 | Access fallback + independent chip-visibility pilot | Pending manual download (§3). |
-| GAPs original / 10m | Backup scaled imagery, 1.2 mm/px, academic form | Not requested. |
-| Pavementscapes | Optional distress-mask pretraining | Not obtained. Optional. |
-| Indian seasonal paved/unpaved | Indian robustness/challenge set | Not obtained. |
-| Crack-Seg | §4.3: *"at most one crack-mask backup"* | **Admitted conditionally** — this is that one backup. |
-| Mendeley RSCD, UAV-PDD2023, SDNET2018, loose-aggregate sets, generic texture sets | Explicitly not admitted (§4.3) | Not used. No silent promotion. |
+**Status key:** ✅ Admitted | ⏳ Downloaded, audit incomplete | ❌ Not obtained | 🔒 Access required | ⚠️ Blocked
 
-No candidate has been promoted silently, and Crack-Seg has **not** been promoted
-above its §4.3 backup role.
+### 4.1 Priority 1 — Core datasets required by final_plan.md §4.2
+
+| Source | Plan role | Status | Notes |
+|---|---|---|---|
+| **RDD2022 India subset** | **PRIMARY Indian distress source** | ❌ Not obtained | 47,420 total images; India subset needed. Ships bounding boxes; precise segmentation needs manual masks. **BLOCKS: every Indian distress claim.** |
+| **ISTD-PDS7** | **ONLY public scaled aggregate candidate** | 🔒 Access required | 18,527 images at 0.91 mm/px. Access by request. Existing labels are distress, not chips. **BLOCKS: if CRKWH100 scale fails, this is the entire chip task.** |
+| **Indian seasonal paved/unpaved** | **Indian robustness/challenge set** | ❌ Not obtained | 4,242 Nashik/Mumbai originals; wet/unsupported surfaces. **BLOCKS: wet-surface validation.** |
+
+### 4.2 Admitted or in progress
+
+| Source | Plan role | Status | Notes |
+|---|---|---|---|
+| Crack-Seg (Ultralytics) | At most one crack-mask backup (§4.3) | ✅ Admitted conditional | Non-metric, non-Indian, no redistribution. This occupies the one allowed backup slot. |
+| DeepCrack CRKWH100 | Access fallback + chip-visibility pilot | ⚠️ Downloaded, scale unverified | 100 images, 512×512. Licence resolved. Scale verification (A1.6) blocks all metric output. |
+
+### 4.3 Optional / backup sources
+
+| Source | Plan role | Status | Notes |
+|---|---|---|---|
+| Pavementscapes | Preferred optional distress-mask pretraining | ❌ Not obtained | 4,000 grayscale images, 6 damage categories. Optional. |
+| GAPs original images | Backup scaled imagery, 1.2 mm/px | 🔒 Access required | Academic form needed. 10m release has only 20 images, few independent scenes. |
+| StreetSurfaceVis | Optional scene-quality/map integration check | ❌ Not obtained | 9,122 German street-level images. Different viewpoint/task from chip analysis. Optional. |
+| Small comma2k19 excerpt | Optional sync/replay test only | ❌ Not obtained | Video + sensor metadata. Optional plumbing test only. |
+| CRKWH100 GT masks | Optional crack masks | ❌ Not obtained | Separate OneDrive link. Only needed if crack work requires more masks. |
+
+### 4.4 Explicitly excluded (final_plan §4.3)
+
+- Mendeley RSCD variants (27 surface-state categories, not PSCI grades)
+- RaymondAllen/asphalt-3d-laser-texture (unpaired height maps)
+- UAV-PDD2023 (UAV domain, not chip measurement)
+- SDNET2018 (concrete classification detour)
+- Roboflow loose-aggregate projects (physical size in name ≠ image scale)
+- Generic texture sets, synthetic Voronoi stones (not road-condition truth)
+- Multiple crack-mask backups (only one allowed; Crack-Seg occupies it)
+
+### 4.5 Critical gap analysis
+
+**What we have:** One foreign crack backup (Crack-Seg), one small unverified-scale pilot (CRKWH100).
+
+**What we're missing:**
+- ❌ Primary Indian distress data (RDD2022 India)
+- ❌ Scaled aggregate data (ISTD-PDS7)
+- ❌ Indian robustness data (seasonal dataset)
+
+**Impact:** Without these three, we cannot:
+- Make any claim about Indian road performance
+- Validate chip counting at known physical scale (unless CRKWH100 verifies)
+- Test wet/unsupported-surface robustness
+
+**Gate 0 status:** Cannot close until at least one scaled aggregate source admits and human review completes.
 
 ---
 

@@ -201,6 +201,39 @@ Decision needed from user:
   C11 (per-rig threshold calibration) needs camera access; A1.6 keeps every
   CRKWH100 frame metric-unavailable.
 
+### 2026-10-16 - Planning documents corrected to match final_plan.md authority
+Type: documentation
+Status: verified
+Files:
+  - `docs/ml/TASKS.md` (changed: A1.8-A1.13 expanded with final_plan citations, blocking priority reordered)
+  - `docs/ml/NEEDED_FROM_USER.md` (changed: items 7-9 expanded, summary table corrected with new priorities)
+  - `docs/ml/DATA_ADMISSION.md` (changed: section 4 restructured with status key, critical gap analysis added)
+Command / evidence:
+  Cross-referenced against `docs/final_plan.md` §4.2 "Selected sources and their
+  exact roles". Verified every dataset's stated role matches the authority document.
+What it does:
+  Corrects a critical planning error: TASKS.md was derived from final_plan.md but
+  understated the priority of three core datasets. RDD2022 India (PRIMARY Indian
+  distress source), ISTD-PDS7 (ONLY public scaled aggregate candidate), and Indian
+  seasonal (Indian robustness set) were listed as open items without emphasizing
+  that they block entire claim categories. The corrected documents now:
+  - Mark A1.8, A1.9, A1.11 as `[!]` blocked-on-user with BLOCKING annotations
+  - Reorder the user-facing priority table (RDD2022/ISTD-PDS7/seasonal now 1-2-3)
+  - Add a critical gap analysis showing we have 2 sources but are missing 3 core ones
+  - Cite final_plan section numbers for every dataset role
+Checks:
+  - Every dataset in final_plan §4.2 table now appears in TASKS.md and DATA_ADMISSION.md
+  - Blocking annotations match the plan's language ("primary", "only", "first conditional")
+  - No dataset has been promoted above its stated role
+  - The user priority summary reflects actual project blockers, not alphabetical order
+Limitations:
+  - Documentation only; no datasets obtained
+  - The three core datasets remain unavailable
+  - Gate 0 still cannot close without at least one scaled aggregate source
+Decision needed from user:
+  Download/request the three core datasets (RDD2022 India, ISTD-PDS7, Indian seasonal)
+  as the highest priority, before A1.6 or A2.2/A2.3.
+
 ### 2026-10-16 - A3.2: two real baseline defects fixed, the fixture made honest, marker depth chosen on held-out seeds
 Type: feature + run
 Status: verified
