@@ -617,7 +617,7 @@ def _get_sample(sample_id: str) -> Optional[SegmentResult]:
                 "SELECT sample_id, segment_id, route_id, image_path, image_url, mask_url, raw_url, "
                 "captured_at, gps_json, geometry_valid, area_json, quality_json, "
                 "metrics_json, evidence_json, score_json, reference_json, "
-                "model_version, feature_version, scoring_version, created_at, error "
+                "model_version, feature_version, scoring_version, created_at, error, canonical_json "
                 "FROM samples WHERE sample_id = ?",
                 (sample_id,),
             ).fetchone()
@@ -640,6 +640,7 @@ def _get_sample(sample_id: str) -> Optional[SegmentResult]:
             evidence = _parse_field(row["evidence_json"], schemas.DistressEvidence)
             score = _parse_field(row["score_json"], schemas.ScoreResult)
             reference = _parse_field(row["reference_json"], schemas.ReferenceComparison)
+            canonical = _parse_field(row["canonical_json"], schemas.CanonicalSampleRecord)
 
             return SegmentResult(
                 segment_id=int(row["segment_id"]),
@@ -658,6 +659,7 @@ def _get_sample(sample_id: str) -> Optional[SegmentResult]:
                 evidence=evidence,
                 score=score,
                 reference=reference,
+                canonical=canonical,
                 model_version=row["model_version"],
                 feature_version=row["feature_version"],
                 scoring_version=row["scoring_version"],

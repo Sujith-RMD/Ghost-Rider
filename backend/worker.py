@@ -97,14 +97,16 @@ def _measure_frame_from_path(image_path: Optional[str],
     return analysis.measure_frame(image, metadata)
 
 
-def run_inference(frame: QueueItem) -> Optional[SegmentResult]:
+def run_inference(frame: QueueItem, *, sample_id: Optional[str] = None,
+                  received_at: Optional[str] = None) -> Optional[SegmentResult]:
     """Invoke the road-assessment analysis for one live/replay frame.
 
     This is the single integration point between the backend and the ML AI's
-    modules: the image is decoded and run through the real quality gate and
-    aggregate measurement pipeline (:mod:`backend.analysis`). Physical
-    measurements stay ``None`` while the frame is uncalibrated; counts, ratios
-    and quality verdicts are real.
+    modules: the image is decoded and run through the real quality gate,
+    tiled aggregate measurement and distress path (:mod:`backend.analysis`).
+    Physical measurements stay ``None`` while the frame is uncalibrated;
+    counts, ratios and quality verdicts are real. When ``sample_id`` is
+    supplied the canonical record (final plan §11.5) is attached too.
     """
     metadata: Optional[FrameMetadata] = None
     if frame.metadata_json:
@@ -117,7 +119,7 @@ def run_inference(frame: QueueItem) -> Optional[SegmentResult]:
     image_url = s3_service.to_local_url(frame.image_path) if frame.image_path else None
     measured = _measure_frame_from_path(image_path, metadata)
 
-    return analysis.build_segment_result(
+    result = analysis.build_segment_result(
         segment_id=frame.frame_index,
         route_id=frame.session_id,
         metadata=metadata,
@@ -127,8 +129,25 @@ def run_inference(frame: QueueItem) -> Optional[SegmentResult]:
         model_version=MODEL_VERSION,
         feature_version=FEATURE_VERSION,
         scoring_version=SCORING_VERSION,
+        sample_id=sample_id,
         measured=measured,
     )
+
+    if sample_id and image_path:
+        result.canonical = analysis.build_canonical_record(
+            sample_id=sample_id,
+            route_id=frame.session_id,
+            sequence_id=frame.frame_index,
+            metadata=metadata,
+            measured=measured,
+            image_path=image_path,
+            file_sha256=_sha256_file(image_path),
+            received_at=received_at or frame.received_at,
+            model_version=MODEL_VERSION,
+            feature_version=FEATURE_VERSION,
+            scoring_version=SCORING_VERSION,
+        )
+    return result
 
 
 # --------------------------------------------------------------------------- #
@@ -139,8 +158,8 @@ _SAMPLE_INSERT = (
     "INSERT INTO samples (sample_id, segment_id, route_id, image_path, image_url, mask_url, raw_url, "
     "captured_at, gps_json, geometry_valid, area_json, quality_json, "
     "metrics_json, evidence_json, score_json, reference_json, "
-    "model_version, feature_version, scoring_version, created_at, error) "
-    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    "model_version, feature_version, scoring_version, created_at, error, canonical_json) "
+    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 )
 
 
@@ -172,6 +191,7 @@ def _sample_row_values(sample_id: str, result: SegmentResult) -> Tuple[Any, ...]
         result.scoring_version,
         result.created_at,
         result.error,
+        _json_or_none(result.canonical),
     )
 
 
@@ -197,12 +217,14 @@ def process_frame(frame: QueueItem) -> Optional[str]:
     except Exception as exc:  # pragma: no cover - read path is best-effort
         logger.debug("Could not check processed_frames for %s: %s", key, exc)
 
-    result = run_inference(frame)
+    # The sample id is allocated BEFORE inference so the canonical record can
+    # carry the same identity the row is stored under.
+    sample_id = str(uuid.uuid4())
+    result = run_inference(frame, sample_id=sample_id, received_at=frame.received_at)
     if result is None:
         logger.warning("Inference returned no result for %s:%d", frame.session_id, frame.frame_index)
         return None
 
-    sample_id = str(uuid.uuid4())
     processed_at = database._now()
 
     with database.get_connection() as conn:
@@ -259,7 +281,7 @@ def _claim_job(job_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
         "status IN ('queued','received','validated') "
         "OR (status = 'processing' AND (lease_expires_at IS NULL OR lease_expires_at < ?))"
     )
-    columns = "job_id, parent_type, parent_id, status, attempt_count, metadata_json"
+    columns = "job_id, parent_type, parent_id, status, attempt_count, received_at, metadata_json"
 
     with database.get_connection() as conn:
         if job_id is not None:
@@ -353,14 +375,17 @@ def _fail_job(job_id: str, reason: str) -> None:
         logger.exception("Could not fail job %s: %s", job_id, exc)
 
 
-def run_upload_inference(job: Dict[str, Any]) -> Optional[SegmentResult]:
+def run_upload_inference(job: Dict[str, Any], *, sample_id: Optional[str] = None,
+                         received_at: Optional[str] = None,
+                         file_sha256: Optional[str] = None) -> Optional[SegmentResult]:
     """Analyse one finalized upload.
 
     This is the ML integration seam for the upload path (mirrors
     :func:`run_inference` for live frames): the resolved local object is run
-    through the real quality gate and aggregate measurement pipeline.
+    through the real quality gate, tiled measurement and distress path.
     Provenance (the resolved media path/URL and capture time) is real; physical
-    units stay ``None`` while the frame is uncalibrated.
+    units stay ``None`` while the frame is uncalibrated. When ``sample_id`` is
+    supplied the canonical record (final plan §11.5) is attached too.
     """
     metadata: Optional[FrameMetadata] = None
     if job.get("metadata_json"):
@@ -407,9 +432,14 @@ def run_upload_inference(job: Dict[str, Any]) -> Optional[SegmentResult]:
                             if total > max_bytes:
                                 raise ValueError("upload_too_large")
                             target.write(chunk)
+                    # Hash while the private copy still exists, then measure.
+                    file_sha256 = file_sha256 or _sha256_file(str(temporary))
                     measured = _measure_frame_from_path(str(temporary), metadata)
             finally:
                 body.close()
+            # The canonical record's original URI is the S3 object key; the
+            # private temp copy is deleted with the context manager above.
+            image_path = object_key
             signed_url = s3_service.get_presigned_url(object_key)
             image_url = signed_url if signed_url and not signed_url.startswith("/uploads/") else None
             raw_url = image_url
@@ -424,7 +454,7 @@ def run_upload_inference(job: Dict[str, Any]) -> Optional[SegmentResult]:
     if measured is None:
         return None
 
-    return analysis.build_segment_result(
+    result = analysis.build_segment_result(
         segment_id=1,
         route_id=job.get("job_id"),
         metadata=metadata,
@@ -434,8 +464,25 @@ def run_upload_inference(job: Dict[str, Any]) -> Optional[SegmentResult]:
         model_version=MODEL_VERSION,
         feature_version=FEATURE_VERSION,
         scoring_version=SCORING_VERSION,
+        sample_id=sample_id,
         measured=measured,
     )
+
+    if sample_id and image_path:
+        result.canonical = analysis.build_canonical_record(
+            sample_id=sample_id,
+            route_id=job.get("job_id"),
+            sequence_id=1,
+            metadata=metadata,
+            measured=measured,
+            image_path=image_path,
+            file_sha256=file_sha256 or _sha256_file(image_path),
+            received_at=received_at or job.get("received_at"),
+            model_version=MODEL_VERSION,
+            feature_version=FEATURE_VERSION,
+            scoring_version=SCORING_VERSION,
+        )
+    return result
 
 
 def process_upload_job(job: Dict[str, Any]) -> Optional[str]:
@@ -461,8 +508,16 @@ def process_upload_job(job: Dict[str, Any]) -> Optional[str]:
     except Exception as exc:  # pragma: no cover
         logger.debug("Could not check processed_frames for job %s: %s", job_id, exc)
 
+    # The sample id is allocated BEFORE inference so the canonical record can
+    # carry the same identity the row is stored under.
+    sample_id = str(uuid.uuid4())
+
     try:
-        result = run_upload_inference(job)
+        result = run_upload_inference(
+            job,
+            sample_id=sample_id,
+            received_at=job.get("received_at"),
+        )
     except Exception as exc:
         _fail_job(job_id, f"inference_error:{type(exc).__name__}")
         logger.exception("Inference failed for job %s: %s", job_id, exc)
@@ -472,7 +527,6 @@ def process_upload_job(job: Dict[str, Any]) -> Optional[str]:
         _fail_job(job_id, "inference_returned_no_result")
         return None
 
-    sample_id = str(uuid.uuid4())
     now = _iso_now()
     file_sha = _sha256_file(result.image_path) if result.image_path else None
 

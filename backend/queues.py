@@ -119,7 +119,8 @@ def ensure_v1_tables() -> None:
             feature_version  TEXT,
             scoring_version  TEXT,
             created_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            error            TEXT
+            error            TEXT,
+            canonical_json   TEXT
         )
         """,
         """
@@ -161,6 +162,11 @@ def ensure_v1_tables() -> None:
                     _ensure_column(conn, "jobs", column, ddl_type)
                 except Exception as exc:
                     logger.warning("Could not migrate jobs.%s: %s", column, exc)
+            for column, ddl_type in (("canonical_json", "TEXT"),):
+                try:
+                    _ensure_column(conn, "samples", column, ddl_type)
+                except Exception as exc:
+                    logger.warning("Could not migrate samples.%s: %s", column, exc)
     except Exception as exc:
         logger.warning("Could not initialize v1 tables: %s", exc)
 

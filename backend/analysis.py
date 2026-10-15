@@ -33,8 +33,9 @@ algorithms themselves — this file only wires and translates them.
 from __future__ import annotations
 
 import logging
+import os
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 
@@ -52,7 +53,9 @@ logger = logging.getLogger("ghost_rider.analysis")
 try:  # pragma: no cover - import guard, exercised implicitly by the test suite
     import cv2
 
-    from .aggregate.measurement import measure_surface
+    from .aggregate.measurement import MeasurementConfig, measure_surface
+    from .aggregate.tiling import TilingConfig, measure_tiled
+    from .distress.features import DISTRESS_METHOD_VERSION, distress_metrics
     from .geometry.scale import PlanarScale
     from .quality.validity import classify_quality
 
@@ -60,10 +63,19 @@ try:  # pragma: no cover - import guard, exercised implicitly by the test suite
 except Exception as _exc:  # pragma: no cover - missing CV stack
     cv2 = None  # type: ignore[assignment]
     measure_surface = None  # type: ignore[assignment]
+    measure_tiled = None  # type: ignore[assignment]
+    distress_metrics = None  # type: ignore[assignment]
     PlanarScale = None  # type: ignore[assignment]
     classify_quality = None  # type: ignore[assignment]
     ML_AVAILABLE = False
     logger.warning("ML analysis stack unavailable (%s); results will be unknown-only.", _exc)
+
+
+# Real camera frames are far larger than one practical watershed tile; the ML
+# team's tiling entry point stitches native-resolution tiles and merges
+# straddling instances so nothing is counted twice. Frames at or below the tile
+# size degenerate to a single tile (no behavioural change).
+DEFAULT_TILING = TilingConfig() if ML_AVAILABLE else None
 
 
 def decode_image(path: Any) -> Optional[np.ndarray]:
@@ -150,13 +162,36 @@ def _metrics_result(measurements: Any) -> Optional[AggregatedMetrics]:
     )
 
 
+def _distress_metrics_result(measured_distress: Any) -> Dict[str, Optional[float]]:
+    """Translate a :class:`DistressMetrics` record into contract fields.
+
+    Only the fields the contract defines are filled; the remaining measures
+    (crack density, extent fraction) surface through the canonical record's
+    free-form feature list. Unscaled imagery yields ``None`` — never a
+    fabricated zero (the ML module guarantees this).
+    """
+    if measured_distress is None:
+        return {"crack_skeleton_length_m": None, "crack_total_area_m2": None}
+    return {
+        "crack_skeleton_length_m": measured_distress.skeleton_length_m,
+        "crack_total_area_m2": measured_distress.defect_area_m2,
+    }
+
+
 def measure_frame(image: np.ndarray,
-                  metadata: Optional[FrameMetadata] = None) -> Dict[str, Any]:
+                  metadata: Optional[FrameMetadata] = None,
+                  crack_mask: Optional[np.ndarray] = None,
+                  distress_mask: Optional[np.ndarray] = None) -> Dict[str, Any]:
     """Run the real pipeline on a decoded image. Never raises.
 
     Returns a dict with ``quality``, ``observed_area``, ``metrics``,
-    ``geometry_valid`` and ``limitations`` — ready to be spread into a
-    :class:`SegmentResult` alongside the worker's identifiers/provenance.
+    ``geometry_valid``, ``limitations`` and ``image_shape`` — ready to be
+    spread into a :class:`SegmentResult` / canonical record alongside the
+    worker's identifiers/provenance.
+
+    ``crack_mask`` / ``distress_mask`` are booleans masks of the same H×W as
+    the image. A runtime crack/pothole detector (the ML training track) will
+    supply them; until then they are ``None`` and distress fields stay ``null``.
     """
     outcome: Dict[str, Any] = {
         "quality": None,
@@ -164,6 +199,8 @@ def measure_frame(image: np.ndarray,
         "metrics": None,
         "geometry_valid": False,
         "limitations": [],
+        "image_shape": tuple(int(v) for v in image.shape[:2]),
+        "distress": None,
     }
 
     if not ML_AVAILABLE:
@@ -181,14 +218,29 @@ def measure_frame(image: np.ndarray,
             return outcome
 
         valid_surface = np.ones(image.shape[:2], dtype=bool)
-        measurements = measure_surface(image, valid_surface, scale)
+        measurements, _labels = measure_tiled(
+            image,
+            valid_surface,
+            scale,
+            tiling=DEFAULT_TILING,
+            distress_mask=distress_mask,
+        )
         outcome["observed_area"] = _area_result(measurements, scale)
-        outcome["metrics"] = _metrics_result(measurements)
+        metrics = _metrics_result(measurements)
+        outcome["metrics"] = metrics
         outcome["geometry_valid"] = bool(scale.is_scaled)
         outcome["limitations"].extend(measurements.limitations or [])
         outcome["limitations"].append(
             "valid_surface_mask_is_full_frame:no_plane_detector_yet"
         )
+
+        if crack_mask is not None:
+            distress_record = distress_metrics(crack_mask, scale, valid_surface)
+            outcome["distress_record"] = distress_record
+            outcome["distress"] = _distress_metrics_result(distress_record)
+            if metrics is not None:
+                for field, value in outcome["distress"].items():
+                    setattr(metrics, field, value)
     except Exception as exc:  # pragma: no cover - ML failure must not crash the worker
         logger.warning("measure_frame failed (%s: %s); recording unknown measurements.",
                        type(exc).__name__, exc)
@@ -246,8 +298,188 @@ def build_segment_result(*, segment_id: int,
     )
 
 
+# --------------------------------------------------------------------------- #
+# Canonical sample record (final plan §11.5)
+# --------------------------------------------------------------------------- #
+
+def _feature_list(metrics: Any, distress: Any, estimator_version: str) -> List[Any]:
+    """Flatten measured metrics into the canonical free-form feature list.
+
+    Each measured value becomes one feature row with an explicit unit; values
+    that are ``None`` (unknown/uncalibrated) are **omitted** rather than stored
+    as zero — the canonical record keeps null-vs-zero semantics at the row
+    level instead of inside a value.
+    """
+    from .schemas import MetricResult
+
+    if metrics is None and distress is None:
+        return []
+
+    def _row(name: str, value: Any, unit: str, notes: Optional[str] = None) -> Any:
+        return MetricResult(
+            name=name, value=float(value), unit=unit, valid=True,
+            estimator_version=estimator_version, notes=notes,
+        )
+
+    features: List[Any] = []
+
+    if distress is not None:
+        # Full distress record (density / extent) measured from a crack mask.
+        for field, name, unit in (
+            ("skeleton_length_m", "crack_skeleton_length", "m"),
+            ("crack_density_m_per_m2", "crack_density", "m/m2"),
+            ("defect_area_m2", "crack_area", "m2"),
+            ("extent_fraction", "crack_extent", "ratio"),
+        ):
+            value = getattr(distress, field, None)
+            if value is not None:
+                features.append(_row(name, value, unit))
+
+    if metrics is None:
+        return features
+
+    features.append(_row("chip_count", metrics.chip_count, "count"))
+    if metrics.chip_density_per_m2 is not None:
+        features.append(_row("chip_count_density", metrics.chip_density_per_m2, "count/m2"))
+    if metrics.aggregate_coverage is not None:
+        features.append(_row("aggregate_coverage", metrics.aggregate_coverage, "ratio"))
+    if metrics.median_chip_diameter_mm is not None:
+        features.append(_row("median_chip_diameter", metrics.median_chip_diameter_mm, "mm"))
+    if metrics.min_chip_diameter_mm is not None:
+        features.append(_row("min_resolvable_chip_diameter", metrics.min_chip_diameter_mm, "mm"))
+    for gap_field, gap_name in (
+        ("gap_median_mm", "gap_median"),
+        ("gap_iqr_mm", "gap_iqr"),
+        ("gap_p90_mm", "gap_p90"),
+    ):
+        value = getattr(metrics, gap_field, None)
+        if value is not None:
+            features.append(_row(gap_name, value, "mm"))
+    if metrics.gap_sample_count is not None:
+        features.append(_row("gap_sample_count", metrics.gap_sample_count, "count"))
+
+    return features
+
+
+def build_canonical_record(*, sample_id: str,
+                           route_id: Optional[str],
+                           sequence_id: Optional[int],
+                           metadata: Optional[FrameMetadata],
+                           measured: Dict[str, Any],
+                           image_path: Optional[str],
+                           file_sha256: Optional[str],
+                           received_at: Optional[str],
+                           model_version: Optional[str],
+                           feature_version: Optional[str],
+                           scoring_version: Optional[str]) -> Optional[Any]:
+    """Build the canonical sample record (final plan §11.5), or ``None``.
+
+    Returns ``None`` when the mandatory provenance (file hash + original URI)
+    is unavailable — the canonical record is then simply absent rather than
+    partially fabricated.
+    """
+    from .schemas import (
+        CanonicalSampleRecord,
+        MetricResult,
+        SampleAudit,
+        SampleCamera,
+        SampleCoverage,
+        SampleGeometry,
+        SampleIdentity,
+        SampleLocation,
+        SampleNarrative,
+        SampleProvenance,
+        SampleTime,
+        ScoreResult,
+    )
+
+    measured = measured or {}
+    original_uri = image_path
+    if not file_sha256 or not original_uri:
+        return None
+    quality = measured.get("quality")
+    if quality is None:
+        # The canonical record's quality field is mandatory: it is only built
+        # when the pipeline actually measured one (rejected frames included).
+        return None
+
+    metrics = measured.get("metrics")
+    area = measured.get("observed_area")
+    image_shape = measured.get("image_shape") or (None, None)
+    distress = measured.get("distress_record")
+
+    gps = metadata.gps if metadata else None
+    scale = resolve_scale(metadata)
+    location = SampleLocation(
+        lat=gps.lat if gps else None,
+        lon=gps.lon if gps else None,
+        accuracy_m=gps.accuracy_m if gps else None,
+        route_distance_m=None,          # no odometry/GPS polyline yet
+        distance_source=None,
+        is_simulated=bool(gps.simulated) if gps else False,
+    )
+    geometry = SampleGeometry(
+        scale_source=str(scale.source.value),
+        sx_sy_or_h=[scale.sx_mm_per_px, scale.sy_mm_per_px] if scale.is_scaled else None,
+        valid_roi=None,                  # full-frame ROI until a plane detector exists
+        observed_area_m2=area.observed_area_m2 if area else None,
+        error_bound_pct=(
+            max(scale.relative_area_uncertainty() or 0.0, 0.0) * 100.0
+            if scale.is_scaled else None
+        ),
+    )
+
+    features = _feature_list(metrics, distress, feature_version or "unknown")
+
+    return CanonicalSampleRecord(
+        identity=SampleIdentity(
+            sample_id=sample_id,
+            session_id=route_id,
+            source_dataset=None,
+            parent_id=image_path,
+            sequence_id=sequence_id,
+        ),
+        provenance=SampleProvenance(
+            file_sha256=file_sha256,
+            original_uri=original_uri,
+            split_group=None,
+        ),
+        time=SampleTime(
+            captured_at_utc=metadata.captured_at if metadata else None,
+            monotonic_capture_time_ns=metadata.monotonic_capture_time_ns if metadata else None,
+            received_at=received_at or datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            processed_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        ),
+        camera=SampleCamera(
+            camera_id=metadata.device_id if metadata else None,
+            calibration_id=metadata.camera_profile_id if metadata else None,
+            width_px=image_shape[1],
+            height_px=image_shape[0],
+            crop_state=None,
+        ),
+        location=location,
+        geometry=geometry,
+        quality=quality,
+        features=features,
+        assessment=ScoreResult(status="unknown"),  # scoring module not delivered yet
+        coverage=SampleCoverage(
+            frame_interval_m=None,        # needs GPS spacing between frames
+            inspected_strip_m=None,       # needs calibrated strip width
+            unique_area_m2=None,          # registration unreliable → unknown
+            coverage_method="conservative_spacing",
+        ),
+        audit=SampleAudit(
+            model_hash=None,
+            code_commit=os.getenv("GHOST_RIDER_COMMIT") or None,
+            config_hash=None,
+        ),
+        narrative=SampleNarrative(status="not_requested"),
+    )
+
+
 __all__ = [
     "ML_AVAILABLE",
+    "build_canonical_record",
     "build_segment_result",
     "decode_image",
     "measure_frame",

@@ -103,7 +103,7 @@ must be re-measured on the deployed instance type before any spend.
 
 | Resource | Control | Status |
 |---|---|---|
-| S3 raw frames | Lifecycle rule `ghost-rider-expire-raw-uploads` (expire `uploads/` after `S3_LIFECYCLE_EXPIRE_DAYS=7`, abort incomplete multiparts) | **Blocked**: `s3:PutLifecycleConfiguration` denied by IAM policy; must be applied by an admin. Until then raw frames accumulate — budget ~$0.023/GB-month |
+| S3 raw frames | Lifecycle rule `ghost-rider-expire-raw-uploads` (expire `uploads/` after `S3_LIFECYCLE_EXPIRE_DAYS=7`, abort incomplete multiparts) | **Blocked**: `s3:PutLifecycleConfiguration` denied by IAM policy; must be applied by an admin. The rule is ready at `infra/s3-lifecycle.json`: `aws s3api put-bucket-lifecycle-configuration --bucket ghost-rider-road-storage --lifecycle-configuration file://infra/s3-lifecycle.json`. Until then raw frames accumulate — budget ~$0.023/GB-month |
 | S3 storage class | Standard only; images are small (JPEG) | OK |
 | Presigned URLs | TTL bounded (`PRESIGNED_URL_TTL`, cap 5 min for upload slots) | OK |
 | Bedrock | Narrative cached by assessment/version hash; max 16–220 output tokens; fallback template on failure | OK |
