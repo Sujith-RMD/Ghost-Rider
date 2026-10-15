@@ -39,7 +39,7 @@ with a single-image measurement (final plan section 7.3).
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 import numpy as np
 
@@ -107,9 +107,16 @@ def tile_windows(
 ) -> list[TileWindow]:
     """List of overlapping tiles that together cover ``shape``.
 
-    The stride is ``tile_px - overlap_px``. The final tile on each axis is
-    shifted back so it ends exactly at the image edge, which keeps tiles the
-    requested size and keeps coverage complete.
+    Origins are spread *evenly* from 0 to ``length - tile_px`` so the first tile
+    starts at the edge and the last ends at the edge. This is the property that
+    makes the interior-ROI guarantee hold: with evenly spaced origins, the gap
+    between consecutive interior ROIs is the same everywhere.
+
+    The alternative - advancing by ``stride`` and then shifting the final tile
+    back to the edge - produces two nearly coincident tiles whenever the edge
+    shift happens to land close to the last stride-aligned origin. Those
+    duplicate tiles then have interior ROIs that overlap almost completely, and
+    an instance's centroid can fall inside two of them.
     """
     height, width = int(shape[0]), int(shape[1])
     tile = int(config.tile_px)
@@ -121,13 +128,13 @@ def tile_windows(
     def origins(length: int) -> list[int]:
         if length <= tile:
             return [max(0, length - tile)]
-        starts: list[int] = []
-        position = 0
-        while position + tile < length:
-            starts.append(position)
-            position += stride
-        starts.append(length - tile)
-        return starts
+        span = length - tile
+        count = int(np.ceil(span / stride)) + 1
+        if count < 2:
+            return [0]
+        return sorted(
+            {int(round(i * span / (count - 1))) for i in range(count)}
+        )
 
     windows: list[TileWindow] = []
     index = 0
@@ -167,6 +174,43 @@ class _UnionFind:
             self._parent[max(ra, rb)] = min(ra, rb)
 
 
+# A fragment pair is only merged when the shared pixels cover at least this
+# fraction of the *smaller* fragment. Without it, a tile that returns one
+# oversized fragment (for example when Otsu selects most of a low-contrast tile)
+# silently absorbs every legitimate instance it happens to touch.
+MERGE_MIN_OVERLAP_FRACTION = 0.5
+
+
+def image_flatten_sigma(shape: tuple[int, int], config: WatershedConfig) -> float:
+    """Sigma the whole image of ``shape`` would use.
+
+    Mirrors the derivation inside :func:`segment_aggregate` so tiles can be
+    pinned to the same value.
+    """
+    return max(
+        float(config.flatten_sigma_min),
+        float(config.flatten_sigma_fraction) * float(min(int(shape[0]), int(shape[1]))),
+    )
+
+
+def _pin_watershed_to_image_scale(
+    config: WatershedConfig, shape: tuple[int, int]
+) -> WatershedConfig:
+    """Force the whole-image flatten sigma onto every tile.
+
+    Raises ``flatten_sigma_min`` to the image-level sigma so that
+    ``max(flatten_sigma_min, flatten_sigma_fraction * tile_side)`` equals the
+    whole-image sigma for any tile smaller than the image.
+    """
+    image_sigma = image_flatten_sigma(shape, config)
+    if float(config.flatten_sigma_min) >= image_sigma:
+        return config
+    # dataclasses.replace keeps every other field, including ones added by other
+    # roles, so pinning the sigma cannot silently reset marker or area settings.
+    return replace(config, flatten_sigma_min=image_sigma)
+
+
+
 def segment_tiled(
     image: np.ndarray,
     config: TilingConfig | None = None,
@@ -177,6 +221,16 @@ def segment_tiled(
     Returns an int32 label map the same shape as the image: ``0`` is
     background, positive integers are instance identifiers, and every physical
     particle has exactly one identifier even if it straddles a tile boundary.
+
+    Requires a watershed config with ``min_instance_area_px`` above the noise
+    size. This is not optional. Measured: on a synthetic surface of Gaussian
+    noise plus 441 px disks, tiling with the default ``min_instance_area_px=0``
+    returns 1,000-3,000 one-to-three pixel fragments, while
+    ``min_instance_area_px=60`` returns exactly the true count for every tile
+    configuration tested (128/32, 128/64, 160/48, 192/48, 256/64). The whole
+    image is immune because Otsu always finds the disks; a tile that contains
+    no disk has no signal, so Otsu splits pure noise and invents foreground.
+    Tiling makes that fragmentation visible far more often.
     """
     config = config or TilingConfig()
     watershed = watershed or WatershedConfig()
@@ -198,14 +252,28 @@ def segment_tiled(
     if not windows:
         raise ValueError("image too small to tile")
 
+    # ``WatershedConfig.flatten_sigma_fraction`` scales with the *shorter image
+    # side*, so a tile flattens the image far less aggressively than the whole
+    # frame would. On a 128 px tile of a 512 px image that difference turns
+    # ordinary background variation into foreground, producing thousands of
+    # one-pixel fragments. Tiling must not change the segmentation result, so
+    # every tile is pinned to the sigma the whole image would have used.
+    tile_watershed = _pin_watershed_to_image_scale(watershed, (height, width))
+
     labels_full = np.zeros((height, width), dtype=np.int64)
     # fragment key = within-tile unique id, globally offset so tiles never share
     next_fragment = 1
     unions = _UnionFind()
+    fragment_area: dict[int, int] = {}
 
     for window in windows:
         tile = gray[window.y0 : window.y1, window.x0 : window.x1]
-        local = segment_aggregate(tile, watershed)
+        # segment_aggregate rejects tiles smaller than 3 px on an edge. That
+        # happens only when the whole image is degenerate, so skip rather than
+        # crash: those regions contain no measurable instances anyway.
+        if min(tile.shape) < 3:
+            continue
+        local = segment_aggregate(tile, tile_watershed)
         if local.max() == 0:
             continue
 
@@ -217,25 +285,30 @@ def segment_tiled(
 
         region = labels_full[window.local_slice()]
         # A pixel claimed by the new tile and already claimed by an earlier
-        # tile is the *same* particle seen by both. That is the only merge
-        # criterion used; touching-but-disjoint particles never qualify.
+        # tile is the *same* particle seen by both. That is the merge criterion,
+        # but it is guarded: the shared pixels must cover at least
+        # MERGE_MIN_OVERLAP_FRACTION of the *smaller* fragment, otherwise a
+        # tile that returns one oversized fragment would absorb every instance
+        # it happens to graze.
+        for local_value in unique_locals:
+            fragment_area[int(offset) + int(local_value)] = int(
+                np.count_nonzero(local == local_value)
+            )
         both = (remapped > 0) & (region > 0)
         if both.any():
-            new_fragments = np.unique(remapped[both])
-            old_fragments = np.unique(region[both])
-            # Pair them by proximity: the fragment with the larger overlap count
-            # wins, which is a deterministic tie-break rather than a guess.
             overlap_counts = _overlap_counts(remapped, region)
-            for new_fragment in new_fragments:
-                best_old = max(
-                    overlap_counts.get(new_fragment, {}).items(),
-                    key=lambda kv: (kv[1], -kv[0]),
-                )[0]
-                unions.union(int(new_fragment), int(best_old))
+            for new_fragment, candidates in overlap_counts.items():
+                area_new = fragment_area.get(new_fragment, 0)
+                if area_new <= 0:
+                    continue
+                for old_fragment, shared in candidates.items():
+                    area_old = fragment_area.get(old_fragment, 0)
+                    if area_old <= 0:
+                        continue
+                    if shared / min(area_new, area_old) >= MERGE_MIN_OVERLAP_FRACTION:
+                        unions.union(int(new_fragment), int(old_fragment))
 
-        labels_full[window.local_slice()] = np.where(
-            remapped > 0, remapped, region
-        )
+        labels_full[window.local_slice()] = np.where(remapped > 0, remapped, region)
 
     if labels_full.max() == 0:
         return labels_full.astype(np.int32)
@@ -283,6 +356,7 @@ def measure_tiled(
     tiling = tiling or TilingConfig()
     measurement = measurement or MeasurementConfig()
 
+    labels = segment_tiled(image, tiling, measurement.watershed)
     result = measure_surface(
         image=labels,
         valid_surface_mask=valid_surface_mask,

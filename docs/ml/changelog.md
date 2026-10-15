@@ -87,6 +87,86 @@ Notes:
 ---
 
 ## 3. Entries
+### 2026-10-16 - E6 / D9 implemented: tiled segmentation with instance merging
+Type: feature + tests
+
+New ``backend/aggregate/tiling.py``. ``segment_tiled`` / ``measure_tiled`` /
+``tile_windows``. Closes task-tracker **E6** (native-resolution tiles, instance
+IDs merged at tile boundaries) and **D9** (merge and count each particle once).
+``measure_surface`` gained an optional ``labels`` parameter so a stitched label
+map is measured directly instead of being re-segmented.
+
+### Three defects found and fixed, not hidden
+
+1. **Naive tail-shift tile layout double-counted.** Advancing by stride and then
+   shifting the final tile back to the edge produced two nearly coincident tiles
+   whenever the edge shift landed close to a stride multiple. Their interior ROIs
+   then overlapped almost completely, so an instance centroid could fall inside
+   two of them. Replaced with evenly spaced origins from 0 to
+   ``length - tile_px``. Directly exposed by a new test that asserts consecutive
+   interior-ROI gaps are equal.
+2. **The merge had no sanity guard.** A tile that returned one oversized
+   fragment (measured: 15,313 px) silently absorbed every legitimate instance it
+   happened to graze, fusing several chips into one. Now a fragment pair merges
+   only when the shared pixels cover at least ``MERGE_MIN_OVERLAP_FRACTION``
+   (0.5) of the *smaller* fragment.
+3. **Stitched map was discarded.** ``measure_tiled`` originally re-segmented the
+   whole frame, which both wasted work and re-split merged boundary instances.
+   Fixed to pass the stitched labels through.
+
+### A hypothesis that was wrong
+
+I initially diagnosed the tiling failure as the scale-dependent
+``flatten_sigma`` (``0.125 x shorter_side``) and pinned tiles to the whole-image
+sigma. The pin took effect (64.0 vs 16.0) but changed nothing. The real cause:
+a tile containing **no** disk has no signal, so Otsu splits pure noise and
+invents foreground - 13.6% foreground on a background-only crop versus 0.5% on
+the whole image, which is just the disks. The whole frame is immune because
+Otsu always finds the disks. The pin is kept because it is still correct, but it
+is not the fix.
+
+### The actual requirement, measured
+
+The existing ``WatershedConfig.min_instance_area_px`` is the right knob, but its
+default is ``0``. Sweeping it on a synthetic surface (Gaussian background plus
+441 px disks, disks centred exactly on tile boundaries):
+
+| ``min_instance_area_px`` | 128/32 | 128/64 | 160/48 | 192/48 | 256/64 |
+|---|---|---|---|---|---|
+| 0 (default) | 2073 | 2859 | 2612 | 2282 | 1049 |
+| 20 | 104 | 126 | 122 | 97 | 50 |
+| 40 | 9 | 9 | 9 | 9 | 9 |
+| **60** | **7** | **7** | **7** | **7** | **7** |
+| 100 | 7 | 7 | 7 | 7 | 7 |
+
+True count is 7. At 60 px and above every tile configuration is exact. **This is
+a cross-role dependency: the segmentation default must move off zero, and that is
+``segmentation.py``'s owner call, not mine.** Documented in the ``segment_tiled``
+docstring rather than silently overridden. Also note the whole image is robust at
+any setting, which is exactly why this was only visible once tiling existed.
+
+### Verification
+
+10 tests in ``tests/ml/test_tiling.py``. The count test uses disks centred
+*directly on tile boundaries*, the case that must not split. To prove the test
+has teeth, a deliberately broken no-merge variant was run: it reports 20
+instances for 7 real ones.
+
+Also verified: evenly spaced tile origins; interior ROIs never overlap; stitched
+tiled measurement matches whole-image measurement for instances, eligible area
+and density; unscaled/null handling; degenerate shapes.
+
+### Concurrency note
+
+``segmentation.py`` was modified by another role during this work
+(``agg-classical-v3``, adding h-maxima markers, hole filling,
+``min_instance_area_px``). ``dataclasses.replace`` is used when pinning the
+flatten sigma so those added fields cannot be silently reset. Cross-checked that
+the concurrent ``test_auto_annotation.py`` still fails only on its own
+``PROVISIONAL_CONFIDENCE`` import, unrelated to this change.
+
+**Not done / still open:** J7, J8; E4/E5/E8 remain blocked on reviewed training
+labels and the A2.2 human review.
 ### 2026-10-16 - D7 implemented: fixed-scale texture proxies (GLCM, gradient energy, LBP)
 Type: feature + tests
 

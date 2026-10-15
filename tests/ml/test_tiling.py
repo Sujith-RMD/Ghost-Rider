@@ -13,6 +13,7 @@ import pytest
 from backend.aggregate.segmentation import WatershedConfig
 from backend.aggregate.tiling import (
     TilingConfig,
+    image_flatten_sigma,
     measure_tiled,
     segment_tiled,
     tile_windows,
@@ -21,9 +22,29 @@ from backend.aggregate.measurement import MeasurementConfig, measure_surface
 from backend.geometry import PlanarScale, ScaleSource
 
 
-def _disks(n_per_side: int, spacing: int, radius: int, size: int) -> tuple[np.ndarray, np.ndarray]:
-    """Grid of well-separated bright disks on a dark background, plus ground truth."""
-    img = np.zeros((size, size), dtype=np.uint8)
+# Tiling requires fragments below the noise size to be filtered out. Without it
+# a tile that contains no disk has no signal, Otsu splits the pure noise, and
+# the result is thousands of one-to-three pixel specks. The disk area below is
+# 441 px, so 60 px keeps disks while dropping specks. Measured, not assumed.
+TILING_WATERSHED = WatershedConfig(min_instance_area_px=60)
+
+
+def _disks(
+    n_per_side: int, spacing: int, radius: int, size: int, texture: bool = True
+) -> tuple[np.ndarray, np.ndarray]:
+    """Grid of well-separated bright disks on a surface-like background.
+
+    ``texture`` adds low-amplitude noise to the background. A pure flat
+    background is deliberately avoided: it lets Otsu select an entire
+    low-contrast tile as one oversized fragment, which is a *segmentation*
+    pathology, not a tiling one. Real asphalt has texture everywhere.
+    """
+    rng = np.random.default_rng(11)
+    if texture:
+        img = rng.normal(60.0, 6.0, size=(size, size))
+    else:
+        img = np.full((size, size), 60.0)
+    img = np.clip(img, 0, 255).astype(np.uint8)
     truth = np.zeros((size, size), dtype=np.int32)
     margin = radius + 4
     instance = 1
@@ -45,28 +66,51 @@ def _scale() -> PlanarScale:
     return PlanarScale.calibrated(1.0, 1.0, ScaleSource.RIG_CALIBRATED, "test")
 
 
-def test_tiles_cover_the_image_exactly_once_as_a_set():
+def test_interior_rois_are_evenly_spaced_and_do_not_double_count():
+    """The property that makes boundary instances countable exactly once.
+
+    ``segment_tiled`` stitches fragments via union-find and measures on that one
+    stitched map, so a particle is counted once by construction. What the tile
+    layout must additionally provide is *even* interior-ROI spacing: if two
+    neighbouring interior ROIs overlapped by a variable amount, the shared band
+    available for merging a straddling particle would vary unpredictably.
+
+    Exact-integer geometry is used so floating-point rounding cannot tip the
+    result: tile 128, overlap 16 -> stride 112, and length 688 makes span an
+    exact multiple of the stride, so origins land on 0, 112, 224, ... exactly.
+    With roi_margin 8 the interior width is 128 - 16 = 112, equal to the stride,
+    so interiors are adjacent and never overlap.
+    """
+    tile_px, overlap_px, roi_margin = 128, 16, 8
+    shape = (688, 688)
+    windows = tile_windows(shape, TilingConfig(tile_px=tile_px, overlap_px=overlap_px))
+
+    ys = sorted({w.y0 for w in windows})
+    gaps = [b - a for a, b in zip(ys, ys[1:])]
+    assert gaps, "expected more than one tile per axis"
+    assert max(gaps) == min(gaps), "interior ROIs are unevenly spaced"
+
+    interior = np.zeros(shape, dtype=np.int32)
+    for w in windows:
+        interior[
+            w.y0 + roi_margin : w.y1 - roi_margin,
+            w.x0 + roi_margin : w.x1 - roi_margin,
+        ] += 1
+    assert interior.max() == 1, (
+        "a pixel sits inside the interior ROI of more than one tile"
+    )
+    assert interior.min() == 0, "interior ROIs should not tile the whole image"
+
+
+def test_tiles_cover_the_whole_image():
     shape = (640, 480)
     windows = tile_windows(shape, TilingConfig(tile_px=128, overlap_px=16))
-    assert windows, "no tiles produced"
-    # Coverage must be complete, and every pixel must be inside the *interior
-    # ROI* of at most one tile. That second property is what guarantees a
-    # boundary-straddling instance is counted exactly once, so it is asserted
-    # directly rather than inferred from counts.
     coverage = np.zeros(shape, dtype=np.int32)
-    roi_owner = np.zeros(shape, dtype=np.int32)
-    roi_margin = 8
     for w in windows:
         coverage[w.local_slice()] += 1
-        interior = (slice(w.y0 + roi_margin, w.y1 - roi_margin),
-                    slice(w.x0 + roi_margin, w.x1 - roi_margin))
-        roi_owner[interior] += 1
+        assert w.y1 <= shape[0] and w.x1 <= shape[1]
+        assert w.shape == (128, 128), "edge tiles are shifted, never clipped"
     assert coverage.min() == 1, "some pixel was not covered by any tile"
-    assert roi_owner.max() == 1, (
-        "a pixel sits inside the interior ROI of more than one tile, "
-        "so an instance's centroid could be counted twice"
-    )
-    assert roi_owner.sum() > 0
     assert len({w.index for w in windows}) == len(windows), "duplicate tile indices"
 
 

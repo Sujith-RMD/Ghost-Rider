@@ -581,8 +581,9 @@ def test_disconnected_regions_are_never_stolen_by_another_basin():
     labels = segment_aggregate(image)
     assert _count(labels) == 2
     areas = sorted(props.area_px for props in instance_properties(labels))
-    # each bar is 20 x 200 = 4000 px minus a couple of ridge pixels
-    assert all(3000 < area < 4000 for area in areas), areas
+    # each bar is 20 x 200 = 4000 px; a single-marker component is labelled
+    # directly, so nothing is eaten by a ridge line
+    assert all(3800 < area <= 4000 for area in areas), areas
 
 
 def test_the_segmentation_version_changed_when_the_basin_rule_changed():
@@ -940,7 +941,7 @@ def test_record_describes_versions_and_scale_provenance():
     record = measure_surface(_image(), _full_valid(), SCALE_1MM)
     described = record.describe()
     assert described["config_version"] == "measure-v1"
-    assert described["segmentation_version"] == "agg-classical-v2"
+    assert described["segmentation_version"] == "agg-classical-v3"
     assert described["geometry"]["scale_source"] == "source_calibrated"
     assert described["gap"]["config_version"] == "gap-medial-v2"
     assert described["areas_m2"]["texture_eligible"] == record.eligible_area_m2
