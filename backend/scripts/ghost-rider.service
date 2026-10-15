@@ -1,0 +1,44 @@
+# Ghost-Rider road quality backend - systemd unit (Ubuntu 22.04 LTS, no Docker)
+#
+# Install:
+#   sudo cp backend/scripts/ghost-rider.service /etc/systemd/system/ghost-rider.service
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now ghost-rider
+#
+# scripts/deploy_ec2_native.sh performs the copy and rewrites the four paths
+# below (User / WorkingDirectory / ExecStart / EnvironmentFile) automatically
+# when the checkout does not live in /home/ubuntu/Ghost-Rider.
+#
+# --workers 2 gives two independent Python processes: each one loads its own
+# YOLO model (~0.5 GB RSS with torch-CPU) and opens its own SQLite connection.
+# On a t3.micro / t2.micro (1 GB) set --workers 1, otherwise the OOM killer will
+# take the service down; t3.small (2 GB) or larger is comfortable.
+
+[Unit]
+Description=Ghost-Rider FastAPI Road Quality Backend
+Documentation=https://github.com/ghost-rider/docs
+After=network.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=/home/ubuntu/Ghost-Rider/backend
+ExecStart=/home/ubuntu/Ghost-Rider/backend/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000 --workers 2
+Restart=always
+RestartSec=5
+EnvironmentFile=/home/ubuntu/Ghost-Rider/backend/.env
+
+# --- operational hardening (safe defaults, remove if you need to tighten) ---
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONDONTWRITEBYTECODE=1
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ghost-rider
+# Give in-flight YOLO/Bedrock work a moment to finish before SIGKILL.
+TimeoutStopSec=30
+# If the service crash-loops, stop after 5 failures inside 60s instead of
+# burning CPU forever; `journalctl -u ghost-rider` then shows the real cause.
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Install]
+WantedBy=multi-user.target

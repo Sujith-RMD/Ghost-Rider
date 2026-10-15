@@ -1,6 +1,124 @@
-venv/
+# Python
 __pycache__/
-*.pyc
-uploads/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+PIPFILE.lock
+
+# Virtual Environment
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+
+# Environment variables
 .env
+.env.local
+.env.*.local
+
+# Database
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# Model weights and training artifacts
 *.pt
+*.pth
+*.ckpt
+*.h5
+*.pb
+*.onnx
+checkpoints/
+weights/
+
+# Datasets and raw data
+data/
+datasets/
+raw_images/
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+
+# Uploaded files
+uploads/
+temp_uploads/
+
+# Private/sensitive data
+**/gps_data/
+**/private/
+*.key
+*.pem
+*.crt
+credentials/
+secrets/
+
+# AWS/Cloud
+*.tfstate
+*.tfstate.*
+.terraform/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Node/Frontend
+node_modules/
+.npm/
+.yarn/
+yarn-error.log
+.pnp.*
+.next/
+out/
+dist/
+build/
+
+# Logs
+*.log
+logs/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Generated reports (keep structure)
+reports/**/*.csv
+reports/**/*.json
+reports/**/*.png
+reports/**/*.jpg
+reports/**/*.jpeg
+!reports/**/.gitkeep
+
+# Keep structure files
+!**/.gitkeep
