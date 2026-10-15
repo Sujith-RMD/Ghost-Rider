@@ -1,5 +1,13 @@
 # ML role — task tracker
 
+Navigation: [Data admission and visibility evidence](DATA_ADMISSION.md) · [Changelog](changelog.md) · [User actions and blockers](#user-actions-and-blockers) · [Implementation review](#implementation-review)
+
+## Summary
+
+Gate 0 remains incomplete. Software foundations and synthetic tests exist, but verified delivered-image scale, independent human chip/gap labels, required Indian datasets and camera access remain outstanding. Foreign public imagery, synthetic metrics and evaluator self-checks do not establish Indian-road, live-camera or physical-measurement accuracy. No evidence-backed model-accuracy gain is claimed.
+
+This document consolidates the task tracker, user decisions/actions and the 2026-10-16 implementation review. Task IDs and statuses are retained; historical run counts and claims below are snapshots, not current validation. The [implementation review](#implementation-review) supersedes historical greedy-matching, quality-v1 and source-independence claims: current quality policy is quality-v2, valid instance matching is no longer greedy, and ancestry must be confirmed before claiming cross-source independence. The final plan remains authoritative. Decision IDs such as D3/D4/D8 are distinct from similarly named feature task IDs.
+
 Derived **only** from `docs/ML_ROLE.md` and `docs/final_plan.md`. Every task cites
 its source section so it can be re-checked, and nothing here invents a requirement.
 
@@ -33,7 +41,7 @@ Source: ML_ROLE §2 "Gate 0", final plan §5.1, §4.2, §4.3, §6.1.
 - `[ ]` A1.10 Request **GAPs original images** access (1.2 mm/px backup, academic access form required) — not requested. The 10m release has only 20 large images with few independent scenes. *final_plan §4.2: "Backup scaled imagery."* Link: https://www.tu-ilmenau.de/universitaet/fakultaeten/fakultaet-informatik-und-automatisierung/profil/institute-und-fachgebiete/institut-fuer-technische-informatik-und-ingenieurinformatik/fachgebiet-neuroinformatik-und-kognitive-robotik/data-sets-code/german-asphalt-pavement-distress-dataset-gaps
 - `[!]` **A1.11 Obtain Indian seasonal paved/unpaved dataset** — **Indian robustness/challenge set** for wet appearance and unsupported surfaces. 4,242 Nashik/Mumbai originals plus rotated versions and video; group siblings, start from originals. *final_plan §4.2: "Indian robustness/challenge set."* **BLOCKING: wet/unsupported-surface validation.** Link: https://data.mendeley.com/datasets/tj2m7zz4rg/2
 - `[ ]` A1.12 Obtain **Pavementscapes** — optional distress-mask pretraining (4,000 images, 6 damage categories, grayscale, claimed 1-2 mm GSD unverified). *final_plan §4.2: "Preferred optional distress-mask pretraining source."* Optional. Link: https://github.com/tongzheng1992/Pavementscapes
-- `[ ]` A1.13 CRKWH100 crack GT (separate OneDrive link https://1drv.ms/f/s!AittnGm6vRKLglyfiCw_C6BDeFsP) — not downloaded; only needed for crack masks, not chip work. Optional backup.
+- ~~A1.13 CRKWH100 crack GT (separate OneDrive link)~~ - **obtained and admitted 2026-10-16.** 100 BMP masks at 512x512, binary (values 0/255), paired 1:1 with the images. Manifest: `data/manifests/crkhw100_test.json`. Admitted as a **held-out CROSS-SOURCE distress test** - different sensor, resolution and geography from Crack-Seg. `eval/distress_eval.py --manifest` scores it in raster space, GT-vs-GT self-check returns 1.0 on every metric. **Critical caveat: all 100 images carry crack GT, so this set supplies ZERO negatives.**
 
 ### A2. Human visibility decisions — **cannot be done by the agent**
 
@@ -68,7 +76,7 @@ Source: ML_ROLE §2 "Splits, annotation and human review", final plan §6.2, §6
 - `[ ]` B4 Keep `aggregate_public_test`, `distress_india_test`, `india_challenge_test` and eventual `live_india_acceptance` **separate** manifests.
 - `[ ]` B5 Fit normalizers, reference statistics, thresholds, feature selection and score mappings **without touching test groups**.
 - `[ ]` B6 If a test failure informs a change, obtain a **fresh independent group** for a new headline result.
-- `[ ]` B7 Write the annotation guide for `visible_aggregate_instance`, `ignore`, `valid_surface`, `crack`, `pothole`, `repair_or_patch`, `surface_family`, `human_condition` (ML_ROLE's exact label set).
+- ~~B7 Write the annotation guide for `visible_aggregate_instance`, `ignore`, `valid_surface`, `crack`, `pothole`, `repair_or_patch`, `surface_family`, `human_condition` (ML_ROLE's exact label set).~~ — **written 2026-10-16.** `annotation_guides/ANNOTATION_GUIDE.md` defines all eight labels, the ground rules (label from native pixels not a model; use `ignore` when unsure; **do not manufacture chip ground truth** on an unresolvable speckle field; group before splitting) and the aggregation/denominator notes. It is a *definitions* document, not a result: no double-labelled set exists yet, so the disagreement floor is unmeasured (B8/A2.3 still blocked on two humans).
 - `[ ]` B8 Pilot: 10 double-labelled aggregate crops, 20 distress examples/negatives, 20 condition ratings.
 - `[ ]` B9 First useful training round: **80–150 aggregate crops from ≥ 30 distinct parent images**, ~150–300 Indian distress mask images, 150–250 reviewable condition patches.
 - `[ ]` B10 Two blinded condition raters plus a third adjudicator; seek pavement expertise for the rubric. *(Pending D3: the judge's exact definitions of "chip boundary width" and "roughness".)*
@@ -160,7 +168,7 @@ Source: ML_ROLE §2 "Models, reference and score", final plan §9.
 
 Source: ML_ROLE §2 "Keep inclination separate", final plan §10.
 
-- `[ ]` G1 Grade schema with `grade_percent`, `grade_deg`, `source`, `uncertainty`, `capture_time`, `validity`, kept separate from surface condition.
+- ~~G1 Grade schema with `grade_percent`, `grade_deg`, `source`, `uncertainty`, `capture_time`, `validity`, kept separate from surface condition.~~ — **implemented 2026-10-16.** `backend/geometry/grade.py` (`GradeMeasurement`, `GradeSource`, `GradeValidity`), exported from `backend/geometry/`. Longitudinal grade is a distinct field from crossfall; `phone_pitch`/`google_elevation` are refused at the boundary; a `rig_imu` value is `uncalibrated_sensor` (not `valid`) until independently validated. `null` (unmeasured) is kept strictly distinct from a measured `0.0` (flat). 20 tests in `tests/ml/test_grade.py`.
 - `[ ]` G2 First supported path: human-verified supporting measurement (calibrated inclinometer/phone level on a rigid straightedge), zero-offset and repeatability validated, longitudinal grade distinguished from crossfall.
 - `[!]` G3 Automatic camera/IMU path — conditional on synchronized alignment and independent validation. Blocked: no hardware.
 - ~~G4 Reject pitch-as-slope and Google elevation as fine-scale grade truth~~ — agreed and recorded; nothing built on them.
@@ -172,12 +180,12 @@ Source: ML_ROLE §2 "Keep inclination separate", final plan §10.
 
 Source: ML_ROLE §3, final plan §11.4, §11.5.
 
-- `[ ]` H1 Write the feature/unit/null-behaviour **specification** under `docs/ml/` (definitions currently live only in code).
-- `[ ]` H2 Propose the scientific record fields, units, null reasons, provenance and version identifiers under `docs/ml/` for the backend to publish as the Pydantic/OpenAPI contract.
+- ~~H1 Write the feature/unit/null-behaviour **specification** under `docs/ml/` (definitions currently live only in code).~~ — **written 2026-10-16.** `docs/ml/FEATURE_SPEC.md` §1–§7: every geometry/grade/aggregate/gap/texture/distress/quality field with its unit, when it is `null`, and when it is a real `0.0`, plus the `null`-is-not-`0` rule and the scale-source vocabulary.
+- ~~H2 Propose the scientific record fields, units, null reasons, provenance and version identifiers under `docs/ml/` for the backend to publish as the Pydantic/OpenAPI contract.~~ — **proposed 2026-10-16.** `docs/ml/FEATURE_SPEC.md` §8 lists the version identifiers to carry together (`measure-v1`, `agg-classical-v3`, `gap-medial-v2`, `texture-proxy-v1`, `quality-v2`, scale/grade source) and proposes the `{value, unit, scale_source, null_reason?, limitation?}` record shape with a short `null_reason` code set. Backend owns the actual schema (`docs/contracts/`).
 - `[ ]` H3 Supply a callable inference adapter for `quality → geometry → aggregate/distress → reference → score` with a deterministic result/status shape.
 - `[ ]` H4 Supply reviewed visual overlays and metric examples with source and uncertainty for frontend interpretation.
 - `[ ]` H5 Raise any interface or requirement conflict in `docs/ml/` and ask the owning role to change the owned file.
-- `[ ]` H6 Populate `configs/camera/`, `configs/features/`, `configs/scoring/` — all three still empty. Measurement config currently exists only as code dataclasses.
+- ~~H6 Populate `configs/camera/`, `configs/features/`, `configs/scoring/` — all three still empty. Measurement config currently exists only as code dataclasses.~~ — **populated 2026-10-16.** `configs/features/aggregate.json` mirrors the `MeasurementConfig`/`WatershedConfig`/texture defaults exactly; `configs/camera/rig_template.json` mirrors `QualityPolicy` and carries `thresholds_calibrated: false` with the rig fields left `null` (no camera, task C8); `configs/scoring/scoring.json` is an honest **not-implemented** skeleton — all weights/thresholds `null`, SQI disabled, `score=null` policy — so no invented 70/40 band exists (tasks F7–F9). `tests/ml/test_configs.py` (13 tests) round-trips the features JSON against the live dataclasses and asserts the scoring/camera honesty flags, so a fabricated number would fail a test.
 
 ---
 
@@ -217,22 +225,391 @@ Source: user instruction, ML_ROLE §1.
 - ~~J4 Delete temporary scripts once they have served their purpose~~ — diagnostic and probe scripts deleted after use.
 - ~~J5 Consolidated tests from 6 files to 2 to avoid file sprawl~~ — done.
 - ~~J6 TDD order (red → green) was violated in slice 1~~ — recorded rather than retroactively fixed. **Followed from the 2026-10-16 slice onward:** the 8 new tests for the fixture scenarios, the minimum-area filter and the hole-fill limit were observed failing (`TypeError: WatershedConfig.__init__() got an unexpected keyword argument 'min_instance_area_px'`) before the implementation existed. One recorded deviation: `select_annotation_patches` had its test and implementation written in the same edit, so no red state was observed for that single function.
-- `[ ]` J7 Unit-test the `eval/dataset_audit.py` helpers (currently exercised only on real archives, so not regression-protected).
-- `[ ]` J8 Confirm whether the locally implemented `skeletonize_2d` is preferred over adding the absent `scikit-image` (D6).
+- ~~J7 Unit-test the `eval/dataset_audit.py` helpers~~ - **closed 2026-10-16.** `tests/ml/test_dataset_audit.py`, 26 passing tests covering polygon parsing (valid, multi-class, empty-as-valid-negative, unparsable, too-few-points, out-of-range), stroke-width measurement (fat rectangle vs collapsed centreline, degenerate skips), dHash determinism, and the label-geometry classification. The audit helpers are now regression-protected.
+- ~~J8 Confirm whether the locally implemented `skeletonize_2d` is preferred over adding the absent `scikit-image` (D6)~~ - **resolved 2026-10-16.** `scikit-image` 0.26.0 is now present and `test_skeletonize_matches_scikit_image_exactly` cross-validates the local implementation exactly, and passes. Decision: **keep the local implementation** as the production path; scikit-image is the cross-validation oracle in tests only. A runtime dependency for an already-validated function costs more than it gains.
 
 ---
 
-## Blocked on the user right now
+## User actions and blockers
 
-**Resolved 2026-10-15:** D8 (DeepCrack licence) — granted by the originating author. Removed from this list; remaining rows renumbered.
+Owned by the ML role (`docs/ML_ROLE.md` §1). These require human judgement, access, licensing decisions, hardware or authority over files outside ML ownership. The priority table below governs ordering. D8 is resolved; rights do not resolve scale or the two-person review.
 
-| # | What | Why it blocks |
-|---|---|---|
-| 1 | **A1.8** — RDD2022 India subset | PRIMARY Indian distress source; blocks every Indian distress claim |
-| 2 | **A1.9** — ISTD-PDS7 access request | ONLY public scaled aggregate candidate at 0.91 mm/px; if A1.6 fails, this is the entire chip task |
-| 3 | **A1.11** — Indian seasonal dataset | Indian robustness/wet-surface validation |
-| 4 | **A1.6** — crop vs resize of CRKWH100 512×512 | Decides whether any mm value exists for CRKWH100 (fallback pilot) |
-| 5 | **A2.2/A2.3** — two humans inspect contact sheet and double-label 10 patches | The only path to a chips/gaps go/no-go. Open `reports/ml/crkhw100_annotation_patches.png` and `reports/ml/crkhw100_contact_sheet.png`, fill `annotation_guides/aggregate_patch_annotation_template.csv` |
-| 6 | **D3** — judge's exact meaning of "chip boundary width" and "roughness" | Feature definitions stay provisional until confirmed |
-| 7 | **C8** — camera access | Blocks live requirement and live calibration; replay cannot substitute |
-| 8 | **D4** — approve ML-side dependencies | `segmentation-models-pytorch` and `scikit-image` absent; needed when Gate 0 clears |
+The 2026-10-16 update supplied the fillable numbered 10-patch sheet and CSV template; human review can proceed without another agent artifact. Dependency versions and absence claims in the original request are historical: J8 records scikit-image 0.26.0 as present, retained only as a test oracle; the local skeletonizer remains the production path. Approval/ownership for the learned challenger dependency remains open.
+
+### 1. `A1.6` — Is the CRKWH100 512×512 a crop or a resize? **BLOCKING EVERYTHING METRIC**
+
+**Why it blocks:** all 100 delivered images are exactly 512×512. The DeepCrack
+repo claims a 1 mm/pixel ground sampling distance. A **crop preserves scale**; a
+**resize destroys it**. I cannot tell which happened from the files.
+
+- If it is a crop → the scale may be usable and every metric measurement (count/m²,
+  chip diameter in mm, gap width in mm) becomes possible.
+- If it is a resize → there is **no mm/px at all** for this source, and all metric
+  output must stay `null` forever. Gate 0's chip/gap feasibility question would
+  then rest entirely on ISTD-PDS7 (item 8).
+
+**What I need you to do — any one of these:**
+
+1. Tell me how you produced the OneDrive zip (was it the raw author files, or did
+   something re-export them at 512×512?).
+2. Ask the DeepCrack author, Dr. Qin Zou (`qzou@whu.edu.cn`, listed in the repo
+   README), what the original CRKWH100 frame dimensions are and whether the
+   distributed files were resized.
+3. Point me at the original paper's dataset table if you can access it, and I will
+   extract the stated native resolution myself.
+
+**After you answer:** I will either propagate the verified scale through the files
+and publish metric features, or mark this source `unscaled` permanently and
+re-scope the chip task. Either way I stop hedging.
+
+---
+
+### 2. `D8` - The DeepCrack licence - **RESOLVED 2026-10-15**
+
+**Status: closed. No action needed from you.**
+
+The question existed because the repository states no licence at all - GitHub's
+`license` field is `null`, the README "Copy Right" section is the single sentence
+*"This dataset was collected for academic research"*, and a third-party mirror
+labels the same data CC BY 4.0. None of that resolved cleanly from public
+information.
+
+**Resolution: permission granted by the dataset's originating author.** Dr. Qin
+Zou, who produced CRKWH100, is the supervising professor on this solo project and
+has granted permission directly. This is the strongest available provenance -
+stronger than any repository licence, and it settles the mirror discrepancy
+entirely, since permission from the owner overrides whatever a third party claims.
+
+#### Recorded
+
+| Field | Value |
+|---|---|
+| `rights_status` | `granted_by_author` |
+| Basis | Direct permission from the originating author / supervisor |
+| Scope | Solo academic project: manual annotation of exposed aggregate, texture-measurement development and validation, non-commercial |
+| Redistribution | Not granted unless stated otherwise - **do not redistribute the images** |
+| Attribution | Required; see `attribution_text` in the audit JSON |
+| Written into | `reports/ml/crkhw100_audit.json` under `rights` |
+| Written proof | `AUTHOR_GRANT_PENDING_FILE` - save the grant (email/letter) here when convenient |
+
+#### What this does **not** resolve
+
+1. **A1.6 stays open.** Author permission settles *rights*, not *scale*. Whether
+   the delivered 512x512 files are crops or resizes is still undetermined, so
+   `scale_source` remains `unverified` and **no mm value from CRKWH100 may be
+   published yet**. Being able to ask the author directly is a genuine advantage:
+   this is now a short question to your own supervisor rather than an open risk.
+2. **Gate 0's two-human review still needs two people.** That is a separate
+   requirement from licensing and remains outstanding.
+
+Note: Crack-Seg remains scoped *internal use only, no redistribution* by your
+earlier decision, so that one was already closed.
+
+---
+### 3. `A2.2` + `A2.3` — The human visibility review **BLOCKING THE GATE 0 VERDICT**
+
+**Why it blocks:** final plan §5.1 requires *two people, independently, at native
+resolution* to decide whether separate chips and boundary gaps are *visible*, and
+then to double-label 10 patches with **no model suggestions**. No script can do
+this, and I will not generate pseudo-labels and call the requirement met.
+
+**Open this file:**
+
+```
+reports/ml/crkhw100_contact_sheet.png
+```
+20 native-resolution 256 px crops (never resized). The scale bar is drawn in
+**pixels only (10 px)** — there is deliberately **no mm bar**, because the
+1 mm/px figure is the publisher's claim only and is not verified for this
+delivery (see A1.6, crop-vs-resize undetermined). The caption strip states this.
+Judge chip visibility on what you can see, not on any assumed physical scale.
+
+**Then answer three questions per patch:**
+
+1. Can you distinguish **separate chips** (individual exposed aggregate particles)?
+2. Can you locate the **boundary gap** between two adjacent chips?
+3. Does zooming in **resolve** the ambiguity, or merely **magnify** it?
+
+**Then, to double-label 10 patches, use the two fillable files:**
+
+```
+reports/ml/crkhw100_annotation_patches.png                  10 numbered native 256 px patches
+annotation_guides/aggregate_patch_annotation_template.csv   one row per patch per annotator
+```
+
+The patches are native crops, never resized, and carry **no model overlay** -
+final plan section 6.3 requires the unaided pilot to come before any model
+proposal. Both annotators label the **same** patches (the placement is seeded and
+reproducible), each working alone and without seeing the other's rows.
+
+Per patch, fill in:
+
+- `chip_visible` — `yes` / `no` / `unsure`
+- `chip_count` — your count of separate chips you can actually see
+- `gap_visible` — `yes` / `no` / `unsure`
+- `gap_endpoint_a_xy`, `gap_endpoint_b_xy` — this patch's `x,y` pixel coordinates
+  of the first clear gap (the sheet gives each patch its `top`/`left` origin, so
+  patch-local coordinates are fine as long as you say so in `notes`)
+- `zoom_effect` — `resolves` or `magnifies`
+- `notes` — anything ambiguous, including "cannot separate these at all"
+
+That gives me the human disagreement floor, which is what the model error gets
+compared against.
+
+**If the answer is "no, chips are not distinguishable":** that is a valid and
+useful result. It means the chip-count requirement needs better imagery, and Gate 0
+returns a `no-go` for chips. I need that answer rather than silence.
+
+---
+
+### 4. `D3` — The judge's exact definitions
+
+**Why it blocks:** `TASKS.md` marks the chip-boundary-width and roughness feature
+definitions provisional until the judge confirms them (final plan §18).
+
+**What I need:** ask the judge/team liaison:
+
+1. Does **"chip boundary width"** mean the visible gap between adjacent chips, the
+   binder film thickness, or the width of every dark region? These are different
+   measurements and only the first is measurable from RGB.
+2. Does **"roughness"** mean a physical depth/texture metric, or an image-derived
+   texture proxy? The plan forbids claiming physical MTD/MPD from ordinary RGB.
+3. Is **moving capture** mandatory, and at what minimum speed? A stationary live
+   feed proves ingestion, not moving inspection.
+4. Is **sensor-assisted inclination** (a calibrated phone level on a straightedge)
+   acceptable, or is continuous automatic slope measurement required?
+
+**After you answer:** I finalise the feature specification (`H1`) and stop carrying
+provisional definitions.
+
+---
+
+### 5. `C8` — Camera access
+
+**Why it blocks:** the live requirement cannot be met by replay, and live
+calibration (intrinsics, distortion, road-plane mapping) needs the actual device.
+Final plan §5.2: *"No camera access means live functionality is blocked."*
+
+**What I need:** one camera, computer connectivity, a rigid mount, a measured
+target (a physically measured checkerboard), and a safe test location — via the
+college robotics/CV/civil lab, a faculty project, a controllable phone, or a loan.
+
+**Do not buy a specific model yet.** I will test a sample feed first and report
+native dimensions, focus, working distance, field of view, exposure control, live
+output and stability before anything is purchased.
+
+---
+
+### 6. `D4` — Approve ML-side dependencies
+
+**Why it blocks:** the learned aggregate challenger needs
+`segmentation-models-pytorch`; the original request also recorded `scikit-image` as absent (worked around it
+with a local `skeletonize_2d`, decision `D6`; later resolved in J8).
+
+**Historical environment snapshot (see J8 and the section introduction for the later scikit-image resolution):** numpy 2.4.3, opencv 5.0.0, scipy 1.17.0, scikit-learn 1.8.0,
+torch 2.14.0+**cpu**, pytest 9.0.2, Python 3.14.0.
+
+**What I need:** approve the dependencies **and** who adds them.
+`backend/requirements.txt` and `pyproject.toml` are **not mine to edit**, so either
+you change them or you tell me to write a proposal in `docs/ml/` for the backend
+owner.
+
+---
+
+### 7. RDD2022 India subset — **PRIMARY INDIAN DISTRESS SOURCE (CRITICAL)**
+
+**Priority:** HIGHEST after A1.6 — blocks every Indian distress claim
+
+**Why it matters:** The final_plan §4.2 explicitly designates this as the **primary
+Indian distress source**. Every distress-engine claim about Indian roads depends on
+this dataset. Without it, we have no Indian validation data at all.
+
+**What it is:**
+- Part of RDD2022 full release: 47,420 images across 6 countries
+- India subset contains images with longitudinal/transverse/alligator cracks and potholes
+- Ships with bounding boxes (YOLO format)
+- Precise segmentation requires manually adding masks to selected subset
+- Paper: https://arxiv.org/abs/2209.08538
+- Official repo: https://github.com/sekilab/RoadDamageDetector
+
+**What I need:**
+1. Open the RDD2022 repository and download the **India subset only**
+2. Place files at `data/external/rdd2022_india/`
+3. Report the actual size and image count you received
+
+**Important notes:**
+- Audit actual class IDs and splits; do not combine RDD2020/2022 without checking
+- Freeze an Indian test subset before any annotation-driven training
+- Boxes are not pixel masks — we'll need to manually segment a selected subset
+
+---
+
+### 8. ISTD-PDS7 — **ONLY PUBLIC SCALED AGGREGATE CANDIDATE (CRITICAL)**
+
+**Priority:** HIGHEST — if A1.6 resolves against CRKWH100, this becomes the entire chip task
+
+**Why it matters:** The final_plan §4.2 designates this as the **first public-data
+candidate for scaled aggregate feasibility**. It has 18,527 images documented at
+**0.91 mm/pixel** — the only public source with verified scale that could answer the
+chip/gap question. If A1.6 determines CRKWH100 was resized (no scale), then ISTD-PDS7
+becomes **the entire chip task**.
+
+**Status:** not requested. Access is **by request only**.
+
+**What it is:**
+- 18,527 images, original CCD imagery at 0.91 mm/pixel
+- Has distress labels (not chip labels — we create those with human annotation)
+- Must verify scale propagation through any crops/resizing
+- Must confirm data-use terms and parent IDs
+- Paper: https://www.mdpi.com/2072-4292/15/7/1750
+
+**What I need:**
+1. You or a faculty contact sends the access request via the MDPI paper
+2. When access is granted, verify delivered files match the documented 0.91 mm/pixel
+3. Inspect original scale-preserving files and asphalt subset
+4. Place at `data/external/istd_pds7/`
+
+**After access:** We'll need to create human chip annotations on selected patches.
+
+---
+
+### 9. Indian Seasonal Paved/Unpaved Dataset — **INDIAN ROBUSTNESS/CHALLENGE SET (CRITICAL)**
+
+**Priority:** HIGH — required for wet/unsupported-surface validation
+
+**Why it matters:** The final_plan §4.2 designates this as the **Indian robustness/challenge set**, specifically for testing wet appearance and unsupported surfaces. This addresses conditions that foreign datasets cannot represent.
+
+**What it is:**
+- 4,242 Nashik/Mumbai original images plus rotated versions and video
+- Captures seasonal variations, wet surfaces, unpaved roads
+- Must group rotations, resized copies and video siblings (not independent samples)
+- No assumed metric scale, chip labels, GPS track, or certified condition score
+- Paper: https://pmc.ncbi.nlm.nih.gov/articles/PMC8933537/
+- Dataset: https://data.mendeley.com/datasets/tj2m7zz4rg/2
+
+**What I need:**
+1. Download from the Mendeley link above
+2. Place at `data/external/indian_seasonal/`
+3. Keep the original folder structure
+4. Report the actual size
+
+**After download:** We'll group rotated/augmented versions and video frames to avoid treating them as independent roads.
+
+---
+
+### 10. `D4`/`H6` — Config files and a contract, when you are ready
+
+Not blocking today, listed so it is not a surprise later:
+
+- `configs/camera/`, `configs/features/`, `configs/scoring/` are **empty**; my
+  measurement config currently exists only as Python dataclasses (`H6`).
+- The backend owns the Pydantic/OpenAPI contract. I need to hand over field names,
+  units, null reasons and version identifiers (`H2`) before the frontend can consume
+  real results.
+
+---
+
+### 11. Colab — I will ask before you spend compute
+
+Not needed yet. The learned challenger (`E4`) is gated behind Gate 0, because
+training on unverified-scale, un-annotated data would produce numbers that mean
+nothing. **When we get there I will tell you the expected runtime, the dataset
+size and the GPU class before you start anything.**
+
+---
+
+### Priority order — smallest set to unblock the most
+
+**Current priority order (corrected to match final_plan.md; supersedes the older per-item priority wording above):**
+
+| Priority | Item | Effort for you | Blocks |
+|---|---|---|---|
+| 1 | **RDD2022 India subset** (item 7) | Browser download | Every Indian distress claim |
+| 2 | **ISTD-PDS7 access** (item 8) | One email to authors | Scaled aggregate work (if A1.6 fails) |
+| 3 | **Indian seasonal dataset** (item 9) | Browser download | Wet/unsupported-surface validation |
+| 4 | `A1.6` crop-vs-resize | One email to Dr. Zou | All CRKWH100 metric output |
+| 5 | `A2.2`/`A2.3` two-human review | ~1 hour, two people | Gate 0 verdict |
+| 6 | `D3` judge definitions | One conversation | Feature specification finalization |
+| 7 | `C8` camera access | Lab conversation | Live validation |
+| 8 | `D4` dependencies | One approval | Learned model training |
+
+**Critical realization:** Items 1-3 are **core datasets** the plan requires but we don't have yet. These should have been priority 1 from the start.
+
+## Implementation review
+
+Review date: 2026-10-16. The fixes and validation below record the implementation review, not a new run during documentation consolidation.
+
+### Scope and project context
+
+Reviewed repository Markdown documentation, including `final_plan.md`, `ML_ROLE.md` and all `docs/ml/` notes, and audited implemented ML measurements, data auditing, quality checks, evaluation and training/inference utilities. Preserved pre-existing work and restricted fixes to ML-owned paths.
+
+The objective is evidence-backed road surface assessment: quality and metric geometry gates → aggregate/distress measurements → supported known-good comparison → human-calibrated condition assessment. Inclination is separate. Public foreign imagery is provisional evidence, not Indian-road or live-camera acceptance. Missing evidence must not become a measured zero, a fabricated physical unit or a confident Good score.
+
+Implemented foundations include scale/plane geometry, classical watershed/tiling, aggregate and distress feature extraction, provisional quality checks, data audits and evaluation utilities. `backend/reference/` and `backend/scoring/` remain placeholders; this review did not manufacture their missing training evidence.
+
+### Corrected defects
+
+#### Inference and distress evaluation
+
+- Fixed inference writing into a temporary mask, which could leave all predictions empty. The cross-source evaluator now unions native-resolution model raster masks, retaining holes and branches instead of filling exterior polygons.
+- Shared raster scoring between inference and manifest self-checks. Corrected `dice_p90` from the 10th to the 90th percentile; retained a separately named p10.
+- Missing YOLO prediction files are now empty predictions against available ground truth, rather than omitted missed detections. Missing raster predictions fail explicitly rather than shrinking the evaluation cohort.
+- Raster ground-truth extent/negative metadata now comes from actual masks rather than assumed manifest summaries.
+- Dataset preparation rejects missing masks and image/mask size mismatches.
+- Crack skeleton physical lengths apply x/y scale to each adjacency displacement, rather than an equal-area isotropic approximation. Distress feature method version is `distress-v2`.
+- Corrected training guidance about development/test separation and what segmentation metrics establish. Training no longer explicitly permits overwriting an existing run.
+
+#### Aggregate measurements and evaluation
+
+- Particle sizes now respect the requested centroid counting ROI while using the selected instance's full area.
+- Physical gap lengths and provisional gap annotations now transform x/y displacements separately. Example: an 11 px horizontal separation at sx=2, sy=1 mm/px is 22 mm, not approximately 15.56 mm.
+- Ignored/distress areas are restricted to observed surface. Gap resolution uses a conservative anisotropic limit.
+- Instance evaluation handles sparse IDs, applies ignore masks to instance/count metrics and disallows zero-overlap matches. Matching maximizes valid matches rather than using greedy IoU selection.
+- Homographies are normalized before determinant-based singularity checks, avoiding rejection solely because an otherwise equivalent matrix has a small scalar multiplier.
+- Corrected equal-area scale documentation: it is appropriate for area-derived diameters, not arbitrary directional lengths.
+
+#### Data audit and quality
+
+- Audits reject nonfinite coordinates and invalid classes, detect nested orphan labels, inspect labels even for corrupt images, avoid perceptual matching on failed decodes, preserve pair indices and avoid treating malformed polygons as genuine negatives.
+- Duplicate Hamming comparisons work with NumPy 1.x; contact-sheet output failures/truncation and invalid inputs are checked and provenance describes actual rendered files.
+- Quality batch discovery excludes directories, supports WebP, preserves source channels/bit depth and distinguishes repeated basenames by relative path.
+- Quality preprocessing no longer averages alpha into surface brightness. Integer bit depths are mapped to a fixed 0–255 intensity range before sharpness/contrast checks, without per-image contrast stretching. Nonfinite image inputs are rejected and nonfinite sharpness thresholds are invalid.
+- Quality policy is now `quality-v2`; old quality reports remain historical and have not been silently regenerated.
+- Removed a duplicate test definition and stray copied assertions in the dataset audit tests.
+
+### Metrics: what is actually supported
+
+Existing saved evidence includes:
+
+| Report | Interpretation |
+|---|---|
+| `reports/ml/synthetic_f1_separated.json` | Synthetic instance F1 1.000 |
+| `reports/ml/synthetic_f1_touching.json` | Synthetic instance F1 approximately 0.877 |
+| `reports/ml/synthetic_f1_merged.json` | No valid instance accuracy claim for indistinguishable merged geometry |
+| `reports/ml/marker_sweep.json` | Historical selected synthetic holdout instance F1 approximately 0.839 |
+| `reports/ml/crkhw100_real_eval.json` | Real-image descriptive diagnostics/determinism, not chip accuracy |
+| `reports/ml/crkhw100_quality_gate.json` | Historical provisional quality report; all 100 lack verified scale |
+
+These saved reports predate this review and were not regenerated or presented as post-fix accuracy. No saved trained-distress/cross-source, Indian-road or live-camera accuracy result was found during review. No retraining or real-weight inference was performed. Consequently **there is no evidence-backed model-accuracy gain to claim**. Fixes improve correctness of measurements and the ability to assess performance honestly; scores may move up or down when reevaluated.
+
+Do not tune against CRKWH100 and still call it untouched test evidence. If its failures inform model selection, thresholds or preprocessing, designate it development and obtain a fresh independently grouped test. Dataset names alone do not prove source independence. A GT-vs-GT self-check validates evaluator plumbing, not prediction accuracy.
+
+### Remaining limitations and useful next steps
+
+1. Confirm original-image/source ancestry and frozen group splits before training or claiming cross-source independence.
+2. Obtain sufficient reviewed intact negatives and Indian distress masks. An all-positive or nearly all-positive set cannot establish false-alarm behavior.
+3. Run the training/inference package with actual weights and save run manifests, versions, weight/config hashes and per-sample predictions. Use development data for tuning, not final test.
+4. Acquire independently reviewed chip/gap labels and verified scale before tuning the aggregate baseline to real particle counts. Thousands of texture-noise instances are not a validated chip measurement.
+5. Complete rig calibration, operating-envelope validation, per-rig quality thresholds and live acceptance. Source-scale agreement is not physical calibration.
+6. Implement reference/scoring only with supported-domain, known-good and condition-rating evidence; no arbitrary weights or Good/Bad bands.
+7. The existing polygon rasterization parser can silently skip malformed rows; run the stricter dataset audit before evaluation. Legacy YOLO directory evaluation also has a 416×416 fallback when paired imagery is absent, so supply actual images for trustworthy geometry. Its best-overlap instance diagnostic is not one-to-one instance AP/F1.
+8. Existing Markdown notes contain historical contradictions (for example training/validation-folding claims and stronger source-independence language). Actual scripts and this review's caveats should govern use; the final plan remains authoritative.
+
+### Validation
+
+- `python -B -m pytest tests/ml -q -p no:cacheprovider`: **287 passed**, 8 expected provisional-annotation warnings.
+- `python -B -m pytest -q -p no:cacheprovider`: **355 passed**, 9 warnings.
+- `git diff --check`: no whitespace errors; Git emitted Windows line-ending conversion notices.
+- Added focused regression files for aggregate, distress, audit and quality fixes. Tests validate software arithmetic/control flow and mocked inference, not road-domain accuracy or independent physical measurement.
+
+No model download, cloud training or paid service invocation was performed. No commits were created.

@@ -68,9 +68,10 @@ def as_homography(h: np.ndarray) -> np.ndarray:
         raise ValueError(f"homography must be 3x3, got shape {array.shape}")
     if not np.all(np.isfinite(array)):
         raise ValueError("homography contains non-finite values")
-    if abs(float(np.linalg.det(array))) < 1e-12:
+    array = normalize_homography(array)
+    if np.linalg.matrix_rank(array) < 3:
         raise ValueError("homography is singular and cannot be inverted")
-    return normalize_homography(array)
+    return array
 
 
 def normalize_homography(h: np.ndarray) -> np.ndarray:
@@ -79,7 +80,9 @@ def normalize_homography(h: np.ndarray) -> np.ndarray:
     if array.shape != (3, 3):
         raise ValueError(f"homography must be 3x3, got shape {array.shape}")
     scale = float(array[2, 2])
-    if abs(scale) < 1e-12:
+    if not np.all(np.isfinite(array)):
+        raise ValueError("homography contains non-finite values")
+    if scale == 0.0:
         raise ValueError("cannot normalize a homography with H[2, 2] == 0")
     return array / scale
 

@@ -181,10 +181,14 @@ def auto_annotate_patch(
         a_xy = found["endpoint_a_xy"]
         b_xy = found["endpoint_b_xy"]
         gap_width_px = float(found["width_px"])
-        gap_width_mm = (
-            None if scale is None or not scale.is_scaled
-            else gap_width_px * float(scale.equivalent_mm_per_px)
-        )
+        gap_width_mm = None
+        if scale is not None and scale.is_scaled:
+            site_x, site_y = found["site_xy"]
+            sx, sy = float(scale.sx_mm_per_px), float(scale.sy_mm_per_px)
+            gap_width_mm = float(sum(
+                np.hypot((x - site_x) * sx, (y - site_y) * sy)
+                for x, y in (a_xy, b_xy)
+            ))
         site_count = int(found["site_count"])
 
     median_diameter_mm = None

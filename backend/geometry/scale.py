@@ -143,8 +143,9 @@ class PlanarScale:
     def equivalent_mm_per_px(self) -> float | None:
         """Equal-area isotropic scale: ``sqrt(sx * sy)``.
 
-        Used for direction-agnostic quantities such as a gap measured along an
-        arbitrary direction. ``None`` when unscaled.
+        Valid for area-derived equivalent diameters, not directional lengths.
+        Gap lengths must transform their x/y displacements separately.
+        ``None`` when unscaled.
         """
         if not self.is_scaled:
             return None

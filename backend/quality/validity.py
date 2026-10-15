@@ -77,7 +77,7 @@ _LIMIT_CLASS = {
 class QualityPolicy:
     """Provisional validity thresholds and the explicit calibration flag."""
 
-    policy_version: str = "quality-v1"
+    policy_version: str = "quality-v2"
 
     thresholds_calibrated: bool = False
     """``False`` means these numbers are engineering defaults, not a validated
@@ -107,7 +107,7 @@ class QualityPolicy:
     def __post_init__(self) -> None:
         if int(self.min_source_px) < 1:
             raise ValueError("min_source_px must be >= 1")
-        if float(self.min_laplacian_variance) < 0.0:
+        if not np.isfinite(self.min_laplacian_variance) or float(self.min_laplacian_variance) < 0.0:
             raise ValueError("min_laplacian_variance must be >= 0")
         if int(self.min_dynamic_range) < 0:
             raise ValueError("min_dynamic_range must be >= 0")
@@ -143,9 +143,11 @@ class QualityReport:
 
 
 def _to_gray_float(image: np.ndarray) -> np.ndarray:
-    """Mean-intensity 2D float view, so any channel count is measurable."""
+    """Mean colour intensity; alpha is metadata, not surface brightness."""
     arr = np.asarray(image)
     if arr.ndim == 3:
+        if arr.shape[2] == 4:
+            arr = arr[..., :3]
         return arr.astype(np.float64).mean(axis=2)
     return arr.astype(np.float64)
 
@@ -186,6 +188,9 @@ def image_metrics(image: np.ndarray | None) -> dict:
             "mean_intensity": None,
         }
 
+    if not np.issubdtype(arr.dtype, np.number) or not np.isfinite(arr).all():
+        return image_metrics(None)
+
     channels = 1 if arr.ndim == 2 else int(arr.shape[2])
     gray = _to_gray_float(arr)
 
@@ -202,6 +207,11 @@ def image_metrics(image: np.ndarray | None) -> dict:
     else:
         clipped_high = float(np.count_nonzero(gray >= high_limit) / gray.size)
         clipped_low = float(np.count_nonzero(gray <= low_limit) / gray.size)
+
+    # Keep policy units comparable across integer bit depths without adapting
+    # contrast to the observed image (which would hide genuinely poor contrast).
+    if low_limit is not None:
+        gray = (gray - low_limit) * (255.0 / (high_limit - low_limit))
 
     # Laplacian on an 8-bit source: this OpenCV build rejects a float32 source
     # with a CV_64F destination ("unsupported combination of source format"), and

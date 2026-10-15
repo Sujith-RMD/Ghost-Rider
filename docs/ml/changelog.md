@@ -1,1236 +1,529 @@
 # Ghost-Rider — ML Role Changelog
 
-Owner: ML role only (`docs/ml/` per `docs/ML_ROLE.md` §1 and `docs/PROJECT_SKELETON_SETUP.md` §3).
-Scope of this log: `backend/{quality,geometry,aggregate,distress,reference,scoring}/`,
-`training/`, `data_manifests/`, `annotation_guides/`, `eval/`,
-`configs/{camera,features,scoring}/`, `tests/ml/`, `reports/ml/`, `docs/ml/`.
+Historical record of ML implementation, runs, decisions and defects; not a live
+status tracker. Authority: `../final_plan.md`; ownership: `../ML_ROLE.md` and
+`../PROJECT_SKELETON_SETUP.md`. Scope includes ML backend modules, training,
+evaluation, manifests, annotation guides, ML configs, tests and reports.
 
-Authoritative scope: `docs/final_plan.md`. This log records what was actually done,
-what was actually run, and what was actually observed. It is not a plan document.
+## Current navigation
 
----
+- [TASKS.md](TASKS.md): task status, user actions and implementation review.
+- [DATA_ADMISSION.md](DATA_ADMISSION.md): dataset acquisition, provenance,
+  permissions, visibility evidence and admission decisions.
+- This file: standalone history and experimental evidence.
 
-## 1. Maintenance rules
+The former `NEEDED_FROM_USER.md` and `IMPLEMENTATION_REVIEW.md` now belong in
+`TASKS.md`; the former `DATASET_PLAN.md` and `CHIP_VISIBILITY_EVIDENCE.md` now
+belong in `DATA_ADMISSION.md`. Old names below identify historical artifacts,
+not current navigation. Paths outside this directory are repository-relative.
 
-An entry is added **after** each of these events, never before:
+## Recording conventions and environment
 
-1. A feature, module, config, manifest, guide or evaluation script is added or changed.
-2. A training or evaluation run is executed (even a failed or aborted one).
-3. A Gate 0 / data-admission decision is made (admit, quarantine, defer).
-4. A test or benchmark is run, including runs that fail.
+Record work after it happens, including failed/aborted runs. Keep evidence and
+limitations; unavailable measurements are `null`, never measured zero. Statuses:
+`verified` (observed execution), `implemented-unverified`, `blocked`, `failed`,
+`deferred`. A historical passing run is not a claim about today's suite. Shared
+contracts, dependencies, units and scientific meanings require owner review.
+Temporary diagnostic scripts are deleted after use; lasting checks belong in tests.
 
-Rules:
+Initial baseline, observed 2026-10-15 via version/import commands:
 
-- **No entry without evidence.** Each entry states the exact command(s) run and the
-  observed result. If something was not run, it is written as "not run", not as passing.
-- **`null` is not `0`.** Never record an unavailable measurement as a measured value.
-- **Failed results are kept.** A failing gate stays in the log; it is not rewritten
-  after a later success. Superseded entries get a `Superseded by:` pointer instead.
-- **Temporary scripts are deleted** once they have served their purpose, and the entry
-  says so. `tests/ml/` holds only checks worth keeping (final plan §13.4).
-- **Status vocabulary** is fixed: `verified` (command run, result observed),
-  `implemented-unverified` (code written, not run), `blocked` (dependency missing),
-  `failed` (run and did not meet its stated check), `deferred`.
-- Anything that changes a shared contract, dependency, unit or scientific meaning is
-  *proposed* under `docs/ml/` for the owning role — never edited directly in their area.
-
-### Entry template
-
-```text
-### YYYY-MM-DD — <short title>
-Type: feature | run | data-admission | decision-request | calibration | eval
-Status: verified | implemented-unverified | blocked | failed | deferred
-Files:
-  - <path> (added|changed|removed)
-Command / evidence:
-  <exact command(s) and observed output summary>
-What it does:
-  <2-4 sentences>
-Checks:
-  <what was asserted and what passed/failed>
-Limitations:
-  <what this does NOT establish>
-Decision needed from user:
-  <exact question, or "none">
-```
-
----
-
-## 2. Environment baseline
-
-Recorded once, at first run, because every later "verified" claim depends on it.
-
-| Item | Value | Verified how |
-|---|---|---|
-| OS | win32, bash (Git Bash) shell | host system info |
-| Python | 3.14.0 | `python --version` |
-| numpy | 2.4.3 | `python -c "import numpy; print(numpy.__version__)"` |
-| opencv | 5.0.0 | `python -c "import cv2; print(cv2.__version__)"` |
-| scipy | 1.17.0 | import check |
-| scikit-learn | 1.8.0 | import check |
-| PyTorch | 2.14.0+cpu | import check — **CPU build, no local CUDA** |
-| pytest | 9.0.2 | `python -m pytest --version` |
-| scikit-image | **absent** | `ModuleNotFoundError` |
-| segmentation-models-pytorch | **absent** | `ModuleNotFoundError` |
-
-Notes:
-
-- The final plan (§11.2) assumes Python 3.11 "where compatible" and lists
-  scikit-image, scikit-learn, PyTorch + `segmentation-models-pytorch`. The local
-  interpreter is 3.14, and PyTorch is a CPU build. Training is planned on Colab
-  (final plan §1), so the local interpreter only has to run classical CV, geometry,
-  unit tests and evaluation scripts.
-- `backend/requirements.txt` is backend-owned and is **not** modified by this role.
-  Missing ML-side dependencies are requested in `docs/ml/` instead.
-- Local CUDA absence is not a blocker for Gate 0 or for the classical baseline.
-
----
-
-## 3. Entries
-### 2026-10-16 - Dataset acquisition plan written; Zou-unreachable recorded
-Type: documentation + decision
-
-New ``docs/ml/DATASET_PLAN.md``: every dataset the plan names, with its exact
-role, its download or request path, and a coverage matrix mapping each source to
-the branch it serves. Organised into four tiers so nothing is downloaded without
-a named consumer.
-
-### Constraint change: Dr. Zou is unreachable
-
-The licence question (D8) was previously resolved on the basis that Zou is the
-supervising professor. With contact now impossible:
-
-- ``A1.6`` (crop vs resize of the 512x512 delivery) can **never** be confirmed
-  from the author. CRKWH100 scale stays ``unverified`` and **no mm value may be
-  published from it.**
-- Native line-array originals cannot be requested.
-- ``CHIP_VISIBILITY_EVIDENCE.md`` already establishes chips are not resolvable in
-  the delivered files, so with the originals unavailable the chip requirement now
-  rests entirely on **ISTD-PDS7** (0.91 mm/px, documented) or **GAPs**
-  (1.2 mm/px). Both are request-gated, so the request latency is now the
-  schedule driver for the chip branch.
-
-Recorded rather than worked around: the plan is honest that a claim of
-calibrated chip measurement on Indian roads currently has **no** source it can
-stand on, and names the two requests that would fix it.
-
-### The finding that drove the priority order
-
-Crack-Seg carries **1 negative in 4,029 images** (0.025%), and the test split
-carries **zero**. So a distress model trained and evaluated on it cannot have
-its false-alarm behaviour measured, which final plan 13.3 explicitly requires.
-That makes the **CRKWH100 crack GT** link - a separate OneDrive URL in the
-DeepCrack README, never fetched - the highest-value single download available,
-because CRKWH100 images without crack GT are clean negatives from one camera and
-one surface family. It is Tier 1 item 1 for that reason.
-
-### Links
-
-Recorded verbatim from the DeepCrack README fetched earlier this session, not
-reconstructed from memory:
-
-- CRKWH100 images: ``https://1drv.ms/f/s!AittnGm6vRKLtylBkxVXw5arGn6R``
-- CRKWH100 GT: ``https://1drv.ms/u/s!AittnGm6vRKLglyfiCw_C6BDeFsP``
-- Baidu mirror (pass ``zfoo``): ``https://pan.baidu.com/s/1PWiBzoJlc8qC8ffZu2Vb8w``
-
-**Not done / still open:** no dataset downloaded this turn - the user fetches
-them. E4/E5/E8 training; the chip-scale request; J7/J8.
-### 2026-10-16 - D8 + I16 implemented: distress measurements and eval harness
-Type: feature + tests + evaluation
-
-New ``backend/distress/features.py`` closes **D8**; new ``eval/distress_eval.py``
-closes the distress half of **I16**. The interim priority was distress because it
-is the only branch with real labelled data in hand: Crack-Seg ships 4,029 images
-and 5,290 polygons, with ``label_geometry_class: real_width_outline``.
-
-### D8
-
-``crack_skeleton_length_m``, ``defect_extent_fraction``, ``distress_metrics``,
-plus ``rasterize_polygon`` / ``rasterize_label_file`` for YOLO segmentation
-label files. 20 tests in ``tests/ml/test_distress_features.py``.
-
-Skeleton length sums **step distances**, not skeleton pixels. A 1-px diagonal
-line of ``n`` steps spans ``n * sqrt(2)`` px, so pixel counting reports 70.7% of
-the true length - a 29% under-report on every diagonal crack. Each adjacency is
-visited exactly once by inspecting only the forward neighbourhood (right, down,
-and the two forward diagonals). Verified against analytic ground truth:
-20 diagonal steps -> ``20 * sqrt(2) / 1000`` m, and the naive count is asserted
-to be meaningfully smaller.
-
-### I16 - distress evaluation on real data
-
-``python -m eval.distress_eval --labels <dir> [--gt <dir>]``. Scores any
-directory of YOLO segmentation polygons. GT-vs-GT self-check returns **1.0** on
-pixel IoU, precision, recall, Dice and instance IoU, which is the sanity floor.
-
-Real Crack-Seg **test** split (112 images, all with distress):
-
-| Metric | Value |
+| Component | Recorded value |
 |---|---|
-| extent mean | 1.98% of pixels |
-| extent median | 1.64% |
-| extent p90 | 3.88% |
-| extent max | 5.82% |
-| mask pixels mean | 3,428 |
-| skeleton pixels mean | 453 |
+| Platform | win32, Git Bash |
+| Python | 3.14.0 |
+| NumPy / OpenCV | 2.4.3 / 5.0.0 |
+| SciPy / scikit-learn | 1.17.0 / 1.8.0 |
+| PyTorch | 2.14.0+cpu; no local CUDA |
+| pytest | 9.0.2 |
+| scikit-image / segmentation-models-pytorch | Both initially absent (`ModuleNotFoundError`) |
 
-Reported in pixels only, with the reason recorded in ``scale_note``: Crack-Seg
-is a uniform 416x416 with unknown resize history, so no native GSD survives and
-no metric length or area is claimed (final plan 6.1 item 7).
+The plan assumes Python 3.11 where compatible; Colab was designated for training.
+Local CPU work covers classical CV, geometry, tests and evaluation. Backend-owned
+`backend/requirements.txt` was not changed by the ML role. Later scikit-image
+installation is recorded below, not retroactively applied to this baseline.
 
-### A limitation that changes what we can claim
+## History
 
-**Crack-Seg contains almost no negatives.** Across all 4,029 images there is
-**1** empty label file (0.025%); the test split has **zero**. So a distress
-model evaluated only on Crack-Seg cannot have its false-alarm behaviour
-measured at all - which is precisely the failure mode final plan 13.3 calls out
-(*"a detector tested only on damage images cannot establish false-alarm
-behaviour"*). Recorded rather than worked around.
+Dates are chronological; same-day entries follow the original recorded milestone
+sequence, not independently established timestamps.
 
-**This directly motivates a download:** the CRKWH100 **crack ground truth**
-link (task tracker A1.12, a separate OneDrive URL in the DeepCrack README that
-has never been fetched). CRKWH100 images without crack GT are the natural
-negative source, because CRKWH100 is one camera and one surface family, so a
-negatives set there is far more comparable than borrowed images. See the
-dataset download list sent to the user.
+### 2026-10-15 — Changelog and synthetic measurement core established
 
-### Recursion note
+The log was created after actual environment checks; it established no dataset or
+model-quality claim. The user chose measurement core plus tests as the first slice,
+and CRKWH100 as the first scale-documented candidate, with ISTD-PDS7/GAPs fallbacks.
 
-This same harness is what E8 will be scored with once training runs, so the
-MetricBeforeModel ordering is preserved: the measurement and the scorer exist
-first, and a model is judged against them rather than scored by whatever metric
-it happens to print.
+Implemented `backend/geometry/{scale,plane}.py` and
+`backend/aggregate/{segmentation,features,measurement}.py`: explicit `PlanarScale`
+lineage; valid-pixel area × sx × sy / 1e6; crop/resize handling; area uncertainty;
+plane homography `H = K[r1 r2 t]`; local mm/px from Jacobian singular values;
+watershed instances, density, coverage, medial-axis gaps and versioned JSON.
 
-**Not done / still open:** E4/E5/E8 training; CRKWH100 crack GT (A1.12); the
-chip-scale data question (A1.6/A1.9); J7/J8.
-### 2026-10-16 - E6 / D9 implemented: tiled segmentation with instance merging
-Type: feature + tests
+A background-flood defect first caused four test failures: a radius-12 disk had
+293 px² instead of 441 (34% shortfall), diameter 19.31 rather than 24 px. In a
+25×25 window labels were `{-1: 56, 1: 276, 2: 293}`; background marker 1 stole
+92 particle pixels. Negated-distance watershed without a background marker fixed
+the cause; clipping foreground alone could not recover mislabeled pixels.
 
-New ``backend/aggregate/tiling.py``. ``segment_tiled`` / ``measure_tiled`` /
-``tile_windows``. Closes task-tracker **E6** (native-resolution tiles, instance
-IDs merged at tile boundaries) and **D9** (merge and count each particle once).
-``measure_surface`` gained an optional ``labels`` parameter so a stitched label
-map is measured directly instead of being re-segmented.
+Evidence after repair:
 
-### Three defects found and fixed, not hidden
+- `python -m pytest tests/ml -q`: **92 passed in 3.36s**; full rerun also 92 passed.
+- `python -m compileall -q backend/geometry backend/aggregate`: passed; package
+  imports exposed 13 geometry and 15 aggregate public names.
+- Deleted temporary accuracy script: four radius-12 disks each measured 441 px²
+  (+0.0%); equivalent diameter 23.70 versus 24.0 px (−1.25%). Two bars separated
+  by 11 facing-pixel centres gave median gap 11.0 px / 5.5 mm, 190 sites,
+  IQR 0.0 mm.
+- Tests distinguish unscaled `None` from measured `0.0`; `require_scaled()`
+  raises `UnscaledError`. Downsampling by two doubles mm/px and preserves area.
+  A 1.5 m down-looking camera at f=1000 px gives 1.5 mm/px at the principal point.
+- One isolated particle produces no gap sites; sub-`min_gap_px` gaps are omitted.
+  Distress does not remove itself from the denominator. ROI selection uses
+  centroids; records, including unscaled ones, serialize to JSON.
 
-1. **Naive tail-shift tile layout double-counted.** Advancing by stride and then
-   shifting the final tile back to the edge produced two nearly coincident tiles
-   whenever the edge shift landed close to a stride multiple. Their interior ROIs
-   then overlapped almost completely, so an instance centroid could fall inside
-   two of them. Replaced with evenly spaced origins from 0 to
-   ``length - tile_px``. Directly exposed by a new test that asserts consecutive
-   interior-ROI gaps are equal.
-2. **The merge had no sanity guard.** A tile that returned one oversized
-   fragment (measured: 15,313 px) silently absorbed every legitimate instance it
-   happened to graze, fusing several chips into one. Now a fragment pair merges
-   only when the shared pixels cover at least ``MERGE_MIN_OVERLAP_FRACTION``
-   (0.5) of the *smaller* fragment.
-3. **Stitched map was discarded.** ``measure_tiled`` originally re-segmented the
-   whole frame, which both wasted work and re-split merged boundary instances.
-   Fixed to pass the stitched labels through.
+Limitations: synthetic arithmetic/plumbing only, not pavement accuracy. Gaps need
+opposing boundaries from different instances, so merged-instance internal gaps are
+missed; pixel-centre separation includes boundary pixels. Watershed ridge pixels
+remain unassigned. Learned models, quality gate, reference and scoring were absent.
 
-### A hypothesis that was wrong
+The six fixture/test modules were then consolidated into
+`tests/ml/test_measurement_core.py`, retaining `tests/ml/conftest.py` for imports.
+`set -o pipefail; python -m pytest tests -q`: **92 passed**, exit 0. Explicit pytest
+status replaced earlier piped-output status ambiguity; no tests were dropped.
 
-I initially diagnosed the tiling failure as the scale-dependent
-``flatten_sigma`` (``0.125 x shorter_side``) and pinned tiles to the whole-image
-sigma. The pin took effect (64.0 vs 16.0) but changed nothing. The real cause:
-a tile containing **no** disk has no signal, so Otsu splits pure noise and
-invents foreground - 13.6% foreground on a background-only crop versus 0.5% on
-the whole image, which is just the disks. The whole frame is immune because
-Otsu always finds the disks. The pin is kept because it is still correct, but it
-is not the fix.
+### 2026-10-15 — Crack-Seg audited and conditionally admitted
 
-### The actual requirement, measured
+Origin: [Ultralytics release](https://github.com/ultralytics/assets/releases/download/v0.0.0/crack-seg.zip).
+HTTP 200; archive **96,089,865 bytes (91.64 MiB)**; SHA-256
+`814b566d61e890024d15f22a3e6b14e252f781ab83f60a8d59e6684817efecdc`.
+Raw data: `data/external/crack-seg/` (gitignored, uncommitted). Committed record:
+`data_manifests/crack_seg_ultralytics_2025-08-21.json`.
 
-The existing ``WatershedConfig.min_instance_area_px`` is the right knob, but its
-default is ``0``. Sweeping it on a synthetic surface (Gaussian background plus
-441 px disks, disks centred exactly on tile boundaries):
+Added `eval/dataset_audit.py`. Run:
+`python -m eval.dataset_audit --path data/external/crack-seg --name "crack-seg" --out reports/ml/crack_seg_audit.json`
+returned exit 0.
 
-| ``min_instance_area_px`` | 128/32 | 128/64 | 160/48 | 192/48 | 256/64 |
-|---|---|---|---|---|---|
-| 0 (default) | 2073 | 2859 | 2612 | 2282 | 1049 |
+| Audit evidence | Result |
+|---|---|
+| Images / decode failures | 4,029 / 0; all 416×416 RGB |
+| Train / val / test | 3,717 / 200 / 112 |
+| Labels / pairing problems | 4,029 / 0; one empty label retained as possible negative |
+| Geometry | 5,290 polygons, 667,295 points, mean 126.1 points; class `0: crack`; no out-of-range coordinates |
+| Sampled width (400 images) | Median 8.94 px; p10 4.62, p90 16.69; real-width outlines, not centrelines |
+| Parent prefixes | 1,549; none span splits |
+| Exact duplicates | One pair, both in test: only 111 unique test images |
+| Cross-split dHash candidates | 18 at distance ≤6; all rejected by pixel correlation, zero confirmed |
+
+Decision: `ADMIT_CONDITIONAL`, the **single** crack-mask backup allowed by plan
+§4.3: internal non-metric, non-Indian method development only. No chip/gap or
+known-good-reference use. Uniform resized exports have unknown ancestry/scale;
+metric outputs must be null. Public Domain documentation conflicts with an
+AGPL-3.0 YAML header; upstream attribution/licences are untraceable.
+
+The user explicitly approved `data/` storage (`keep data/`) and **internal use
+only, no redistribution**, not citation as an admitted public source. This scoped
+ancestry risk rather than removing it. The manifest recorded the decisions and
+still parsed as JSON. `ML_ROLE.md` had zero literal `data/` occurrences, so storage
+permission was not assumed. Audit helpers were then exercised on real data but
+not yet unit-tested (closed on 2026-10-16).
+
+### 2026-10-15 — Tracker and DeepCrack download selection
+
+`TASKS.md` was derived from `ML_ROLE.md` and `final_plan.md`, grouping obligations
+A–J with source citations and evidence-backed statuses. Content review, not an
+execution result; a tracker is not proof and can go stale.
+
+A user screenshot confirmed the shared OneDrive parent contained exactly
+`CrackLS315`, `CRKWH100`, `Stone331`, `Stone331_mask`; no separate CRKWH100 GT
+folder or CrackTree260. Folder sizes were unknown until download. Selection:
+CRKWH100 for the pilot; CrackLS315 optional for visibility only (laser imagery
+cannot anchor appearance reference); exclude cut-stone Stone331 and redundant
+CrackTree260 because Crack-Seg already occupies the backup slot.
+
+### 2026-10-15 — CRKWH100 audit and first real-image pilot failed to transfer
+
+`CRKWH100.zip`: **26,533,247 bytes (25.30 MiB)**; SHA-256
+`e6da26f7546897662573ffe9d9a7c11a867b68b5f9e389afe06faae7a042889b`.
+Stored at `data/external/deepcrack/CRKWH100/images/`, gitignored. Audit exit 0:
+100 RGB images, all 512×512, zero decode failures/exact duplicates, no split
+folders (`unknown: 100`), no GT shipped (100 missing labels, zero orphan labels).
+`reports/ml/crkhw100_audit.json` and a 20-tile native-resolution 256 px centre-crop
+contact sheet were generated. Initial sheet: 1280×1024, approximately 2.5 MB.
+
+Pilot on 12 real images using the **unverified publisher claim** of 1 mm/px:
+
+| Polarity | Instances/image | Then-reported equivalent diameter | Coverage |
+|---|---:|---:|---:|
+| Brighter | 2,150 | 3.91 mm | 0.149 |
+| Darker | 3,742 | 5.53 mm | 0.540 |
+
+These historical mm outputs are **not publishable measurements**. Crop versus
+resize of the delivered 512×512 files was unknown; `scale_source` remained
+unverified. Counts showed pathological oversegmentation, not real chip counts.
+The first polarity probe accidentally passed `None` config, producing identical
+rows; it was discarded and rerun with the polarity actually applied.
+
+Bottom/top 8-row adjacency correlation: median +0.020 versus random +0.006,
+zero pairs above 0.8; recorded conclusion was independent rather than contiguous
+frames. Gray mean averaged 91.4 (53.7–162.6), gray std 16.6; Laplacian variance
+min/median/max 51/435/2,721. No human chips/gaps go/no-go existed.
+
+### 2026-10-15 — Unverified physical scale removed from review artifact
+
+The contact sheet incorrectly drew `10px = 10mm`. `eval/dataset_audit.py` changed
+to a pixel-only `10 px` bar, caption “scale UNVERIFIED: 1 mm/px is the publisher
+claim only”, `claimed_mm_per_px`, and `scale_verified: false`.
+Both `--skip-audit` and combined audit/sheet paths passed (CONTACT_EXIT=0,
+COMBINED_PATH_EXIT=0, REPORT_ASSERT_STATUS=0). PNG verification passed:
+1054×1280×3, body mean 96.4/std 31.9/range 0–255, zero blank tiles out of 20.
+No key could imply verified scale. Only 512×512 sources/256 px tiles were tested.
+
+### 2026-10-15 — Public licence investigation, then direct author permission
+
+Checked [qinnzou/DeepCrack](https://github.com/qinnzou/DeepCrack) and GitHub API:
+`license: null`, `mirror_url: null`; README copyright statement only “This
+dataset was collected for academic research.” Contact: Dr. Qin Zou,
+`qzou@whu.edu.cn`; repository then had 366 stars, 79 forks, last push 2023-10-29.
+A third-party CC BY 4.0 assertion could not establish rights. IEEE is the
+publication venue, not the data-rights grantor. Zou/TIP 2019 must not be confused
+with Liu/Neurocomputing 2019, also called DeepCrack.
+
+The former `NEEDED_FROM_USER.md` (current location: `TASKS.md`) was corrected:
+it had described the removed mm bar and overstated licensing as blocking a pilot
+already executed. Rights gated publishable claims, not internal development.
+The audit then lacked a rights field, so it was not yet an admission record.
+A malformed changelog heading/encoding write was repaired: 10 date entries,
+15 em-dashes, zero replacement characters/mojibake; unintended UTF-8 BOM removed.
+
+Subsequently, the user reported direct permission from originating author and
+supervisor Dr. Qin Zou. Licence decision **D8** closed; A1.7 closed. The audit's
+new rights block recorded:
+
+- `rights_status: granted_by_author`; solo academic, non-commercial project;
+  manual aggregate annotation and texture-measurement development/validation.
+- Attribution required, citation embedded; redistribution **not granted/unstated**.
+- `permission_artifact: AUTHOR_GRANT_PENDING_FILE`: written artifact still absent.
+
+This did not verify scale or replace two-human review. Two failed literal tracker
+edits were traced to U+2014 em-dash versus U+002D hyphen; dash-agnostic matching
+fixed them. Historical “D8” was overloaded between this licence decision and the
+separate distress-feature task; task context distinguishes them.
+
+### 2026-10-16 — User-action list and first aggregate evaluation harness
+
+The former `NEEDED_FROM_USER.md` (now `TASKS.md`) collected human review, scale,
+judge definitions, camera/dependency access, gated datasets and approval before
+Colab spending. It was a request list, not completion evidence.
+
+Added `eval/aggregate_eval.py` and `tests/ml/test_eval_metrics.py` for pixel
+precision/recall/F1/IoU/Dice, greedy instance IoU matching and count errors.
+`python -m pytest tests -q`: **113 passed**, exit 0. Twelve synthetic cases per
+scenario and 100 real images ran successfully; real determinism had zero mismatches.
+
+A test incorrectly expected a 50/50 split to miss at IoU 0.5 (equality qualifies);
+it was replaced by 60/144 overlap (0.417) plus an explicit threshold-boundary test.
+Missing median precision/recall aggregation was also repaired. Initial uniform /
+touching instance F1 **0.508 / 0.183** were later superseded by fixture repairs;
+those reports were removed to prevent reuse. Separated F1 **1.000** was unaffected.
+No real-image F1 existed without annotations.
+
+### 2026-10-16 — Baseline/fixture defects repaired; synthetic marker selection
+
+Changed `backend/aggregate/segmentation.py`, `eval/aggregate_eval.py` and review
+artifact helpers. `python -m pytest tests -q`: **136 passed**, exit 0 (23 added).
+Eight new fixture/min-area/hole-fill tests failed before implementation; one
+captured failure was an unexpected `min_instance_area_px` keyword. Patch-selection
+test and implementation were written together: no red state observed for that helper.
+
+Distinct defects and evidence:
+
+- **Unanswerable fixture:** identical-intensity touching chips hid true boundaries.
+  Seed 3: chip 46 had only 6 px area but distance-transform maximum 23.2 px;
+  26/53 chips had no marker. F1 0.148 measured fixture unfairness. `touching` now
+  has visible binder seams (contrast 135 gray levels); deliberately `merged`
+  truth is `ignore`, `instance_gt_resolvable: false`, instance scores null.
+- **Morphological close erased seams:** Otsu preserved all seam pixels, giving
+  61 components for 60 chips; 3×3 close flipped 903/1,380 seam pixels and reduced
+  components to 21. Same-case F1 was 0.228 with close versus 0.700 without.
+  Replaced with enclosed-hole filling, default max 16 px², constrained below the
+  declared minimum particle area.
+- **Greedy NMS over-seeded plateaus:** a uniform 20×120 bar became 26 fragments;
+  relative h-maxima produced one. Marker depth uses each component's peak.
+- **New implementation too slow:** per-component/per-hole loops timed out at
+  600 s. Vectorized `ndi.maximum`, `ndi.maximum_position`, `np.isin` reduced one
+  real 512×512 image to 0.14 s and a synthetic case to 0.12 s; reports completed.
+
+Marker sweep: training seeds 0–7, selection seeds 5000–5007, touching scenario.
+NMS held-out median F1 **0.628**, count error +16; h=0.5 **0.839**, error −2.5.
+h=0.9 reached 0.877 but was rejected as tending toward one particle per connected
+region. Rule: smallest depth within 0.05 of best; tested on fabricated rows.
+Reported cases used seeds 0–11, not the selection block.
+
+Final `agg-classical-v2`, 12 cases each:
+
+| Scenario | Instance F1 | Other evidence |
+|---|---:|---|
+| Separated | 1.000 | Pixel F1 1.000; count error 0; unchanged across h grid |
+| Touching | 0.877 | Pixel F1 0.955; precision 0.887, recall 0.842; relative count error 0.051 |
+| Merged | null | Unresolvable instances; pixel F1 0.991 |
+
+Real CRKWH100 diagnostics remained **descriptive, unscored**. Medians over 100:
+
+| Polarity | Minimum area px² | Instances | Median diameter px |
+|---|---:|---:|---:|
+| Brighter | 0 / 50 / 200 | 2,919.5 / 146.5 / 18 | 3.57 / 9.85 / 20.34 |
+| Darker | 0 / 50 / 200 | 1,300.5 / 162 / 46 | 3.74 / 11.35 / 25.82 |
+
+Synthetic reports carry `not_real_road_evidence: true`; circular-fixture h=0.5 is
+not pavement validation. Minimum instance area still defaulted to zero; a real
+limit needs verified scale and human labels. No CRKWH100 mm claim was enabled.
+
+Generated unaided 10-patch sheet and
+`annotation_guides/aggregate_patch_annotation_template.csv`: PNG 1306×512×3,
+mean 93.0/std 33.2/range 0–255, zero blank tiles, no resize/model overlay.
+Reports live under gitignored `reports/ml/` (`synthetic_f1_*`, `marker_sweep`,
+`crkhw100_real_eval`, review sheets/metadata).
+
+### 2026-10-16 — Dataset priorities corrected against plan authority
+
+Content review against final plan §4.2 corrected understated blockers in tracker,
+admission and the former user-action document (now `TASKS.md`):
+RDD2022 India is the **primary Indian distress** source; ISTD-PDS7 the **only
+public scaled aggregate candidate**; Indian seasonal imagery the **Indian
+robustness/challenge** source. They became user-blocked A1.8/A1.9/A1.11, priority
+1–2–3. Having Crack-Seg plus a small unverified-scale pilot did not replace them.
+No datasets were obtained by this documentation change.
+
+### 2026-10-16 — Provisional image-validity gate
+
+Added `backend/quality/validity.py`, `eval/quality_gate.py`, 18 tests. Before
+implementation the test import failed (exit 2); after it, full tests:
+**154 passed**, exit 0. Real command:
+`python -m eval.quality_gate --path data/external/deepcrack/CRKWH100/images --out reports/ml/crkhw100_quality_gate.json`.
+Exit 0: **100 limited**, reasons `scale_missing: 100`, `low_dynamic_range: 10`;
+**zero rejected**. `1000.png` Laplacian variance 2067.4 agreed with audit units.
+
+Tests exposed unsupported OpenCV float32→CV_64F Laplacian conversion; sharpness
+now uses 8-bit input. Four fixtures initially used 200 px images below a 256 px
+minimum, testing resolution rather than intended sharpness/contrast; corrected.
+
+`accepted`/`limited`/`rejected` and all simultaneous reasons are reported.
+Missing scale means limited, `is_metric_evidence=false`, not automatic rejection.
+`quality-v1` has `thresholds_calibrated=false` in policy and reports. Flat/glare/
+sub-resolution rejection was synthetic only; the 40-level contrast floor was
+provisional. No validated real rejection behaviour, rig envelope, Indian or live
+frame claim; C11 requires per-rig labelled calibration.
+
+### 2026-10-16 — Review-artifact metadata inconsistencies fixed
+
+Regenerating a previously unverified contact-sheet path exposed shape-order and
+return-key mismatches: contact metadata `[width,height]` contradicted decoded
+1054×1280×3, while patches used HWC; writers returned `out_path` versus `path`.
+Both now use `sheet_shape_hwc` and `out_path`. Two overlapping metadata files
+were replaced by combined `reports/ml/sheet_meta.json`.
+
+SHEET_VERIFY=0: contact 1054×1280×3, 20/20 nonblank; patches 1306×512×3, 10/10
+nonblank; metadata matched decoded shapes, old keys absent, unverified captions
+present, no mm-claim keys. Regenerated CSV was byte-identical. Full tests:
+**154 passed**, exit 0. No measurement changed; human review remained outstanding.
+
+### 2026-10-16 — Fixed-scale texture proxies (D7)
+
+Added `texture_statistics`, `TextureStatistics`, `TEX_METHOD_VERSION` in
+`backend/aggregate/features.py`: four-direction GLCM contrast/homogeneity/energy/
+correlation (unitless), mean squared Sobel magnitude divided by pixel area
+(1/mm²), and LBP uniform-pattern fraction (≤2 circular transitions, unitless).
+Offsets are requested in mm through `PlanarScale`, not arbitrary pixel distances.
+
+Twenty new tests; measurement module **122 passed**. Six equivalent-pixel-offset
+comparisons across physical scales matched; color/gray, determinism and invalid
+input checks passed. Corrections/limitations:
+
+- Checkerboard Sobel energy is exactly **0.0000**, not high: 3×3 Sobel has a
+  Nyquist null. `np.gradient` gave 255. Fine alternating texture can look smooth.
+- Initial LBP circular Hamming-distance average inverted “uniformity”; corrected
+  definition gives flat 1.0, checkerboard 0.0.
+- `sin(x/4)` has period 8π (~25.1 px), not 4. Exact 4 px square-wave fixture
+  gives quarter/half/three-quarter/full-period correlation 0/−1/0/+1.
+- Physical offsets quantize to pixels; a 1 mm request at 2 mm/px is dropped,
+  never invented by upsampling.
+
+Concurrent `test_auto_annotation.py` imported missing `PROVISIONAL_CONFIDENCE`;
+left other-role work untouched. At that point **171 passed excluding that file**,
+not a clean full-suite claim. J7/J8 were still open then.
+
+### 2026-10-16 — Native-resolution tiling and instance merging (E6/D9)
+
+Added `backend/aggregate/tiling.py` (`segment_tiled`, `measure_tiled`,
+`tile_windows`) and optional labels to `measure_surface`. Ten tiling tests.
+Three defects repaired: tail-shift origins produced overlapping interior ROIs
+(replaced by evenly spaced origins); a 15,313 px fragment absorbed legitimate
+chips (require shared pixels ≥0.5 of smaller fragment); measurement discarded
+stitched labels and re-segmented (now passes them through).
+
+Pinning flatten sigma from tile 16.0 to whole-image 64.0 did **not** fix the
+failure; retained for scale consistency, not credited as its cause. Actual issue:
+Otsu on background-only tiles invented 13.6% foreground versus 0.5% whole-frame
+foreground. Synthetic seven radius-12 disks (441 px each) centred on boundaries:
+
+| Minimum area px² | 128/32 | 128/64 | 160/48 | 192/48 | 256/64 (tile/overlap px) |
+|---|---:|---:|---:|---:|---:|
+| 0 | 2073 | 2859 | 2612 | 2282 | 1049 |
 | 20 | 104 | 126 | 122 | 97 | 50 |
 | 40 | 9 | 9 | 9 | 9 | 9 |
-| **60** | **7** | **7** | **7** | **7** | **7** |
+| 60 | 7 | 7 | 7 | 7 | 7 |
 | 100 | 7 | 7 | 7 | 7 | 7 |
 
-True count is 7. At 60 px and above every tile configuration is exact. **This is
-a cross-role dependency: the segmentation default must move off zero, and that is
-``segmentation.py``'s owner call, not mine.** Documented in the ``segment_tiled``
-docstring rather than silently overridden. Also note the whole image is robust at
-any setting, which is exactly why this was only visible once tiling existed.
-
-### Verification
-
-10 tests in ``tests/ml/test_tiling.py``. The count test uses disks centred
-*directly on tile boundaries*, the case that must not split. To prove the test
-has teeth, a deliberately broken no-merge variant was run: it reports 20
-instances for 7 real ones.
-
-Also verified: evenly spaced tile origins; interior ROIs never overlap; stitched
-tiled measurement matches whole-image measurement for instances, eligible area
-and density; unscaled/null handling; degenerate shapes.
-
-### Concurrency note
-
-``segmentation.py`` was modified by another role during this work
-(``agg-classical-v3``, adding h-maxima markers, hole filling,
-``min_instance_area_px``). ``dataclasses.replace`` is used when pinning the
-flatten sigma so those added fields cannot be silently reset. Cross-checked that
-the concurrent ``test_auto_annotation.py`` still fails only on its own
-``PROVISIONAL_CONFIDENCE`` import, unrelated to this change.
-
-**Not done / still open:** J7, J8; E4/E5/E8 remain blocked on reviewed training
-labels and the A2.2 human review.
-### 2026-10-16 - D7 implemented: fixed-scale texture proxies (GLCM, gradient energy, LBP)
-Type: feature + tests
-
-**D7 from the task tracker is now implemented and verified.** New
-``texture_statistics()`` in ``backend/aggregate/features.py``, exported from the
-package, plus ``TextureStatistics`` and ``TEX_METHOD_VERSION``.
-
-| Feature | Definition | Unit |
-|---|---|---|
-| GLCM contrast / homogeneity / energy / correlation | Co-occurrence at configurable physical mm offsets, averaged over 4 directions | unitless |
-| Gradient energy | mean squared Sobel magnitude, divided by the pixel area | 1/mm^2 |
-| LBP uniformity | fraction of pixels whose LBP code has at most 2 circular bit transitions | unitless |
-
-All offsets are requested in **millimetres** and converted through the
-``PlanarScale``, so the same physical request means the same thing at any
-calibrated scale.
-
-### Verified, not assumed
-
-20 new tests in ``tests/ml/test_measurement_core.py``; the file now runs
-**122 passed**. Assertions were derived from measured behaviour, not hoped-for
-numbers - three of my initial expectations were wrong and were corrected during
-the run:
-
-1. **Checkerboard gradient energy is exactly 0.0000.** I first asserted it
-   should be high. It is genuinely zero: a 3x3 Sobel is a *null operator* at the
-   checkerboard (Nyquist) frequency. Verified analytically - every kernel term
-   cancels. Cross-checked against ``np.gradient``, which correctly reports 255.
-   **This is a real limitation, now documented in the function docstring**, not
-   papered over: a surface whose aggregate/binder pattern alternates near one
-   pixel can read as "smooth" when it is in fact the most textured case.
-2. **First LBP definition was wrong.** The initial implementation computed the
-   mean circular Hamming distance of a code to its rotation, then named the
-   result ``uniformity``. On a flat image that returns 0, i.e. inverted. Rewritten
-   to the standard fraction of uniform patterns (at most 2 circular transitions),
-   which returns 1.0 for flat and 0.0 for a checkerboard.
-3. **Sinusoidal stripe fixture was unusable.** ``np.sin(x / 4.0)`` has period
-   ``8*pi`` (about 25.1 px), not 4 px, so "full period" reasoning was wrong and
-   the correlation decayed over 16 px. Replaced with an exact 4 px square wave,
-   after which the per-direction correlation matches the expected phase response
-   exactly: quarter period 0, half period -1, three quarters 0, full period +1.
-
-Also verified: identical **pixel** offsets reached through different mm requests
-at different scales give identical values (6 offsets tested); colour and grey
-paths agree; determinism; rejected non-finite and bad-shape inputs.
-
-### Two caveats recorded, not fixed
-
-- **Sobel blind spot at Nyquist**, as above.
-- **Physical offsets quantise to whole pixels.** A 1 mm request at 2 mm/px cannot
-  be represented and is dropped, so the effective offset set depends on the
-  declared scale. A coarse-scale image cannot report a fine-scale texture
-  measurement, and no attempt is made to upsample to pretend otherwise.
-
-### Concurrent-work interruption noted
-
-During verification a new ``tests/ml/test_auto_annotation.py`` appeared mid-run
-(02:13) referencing ``PROVISIONAL_CONFIDENCE``, which
-``backend/aggregate/auto_annotation.py`` does not yet define. That file is
-another role's in-flight work; it was **not** modified. Confirmed my
-``__init__.py`` rewrite is safe against it - the failing test imports the module
-directly rather than via the package. Full-suite runs therefore pass only when
-that file is excluded: **171 passed** excluding it, **122 passed** for the
-measurement core alone.
-
-**Not done / still open:** J7 (unit-test the ``eval/dataset_audit.py`` helpers)
-and J8 (skeletonize_2d vs scikit-image) remain open.
-
-### 2026-10-16 - Completion check found two small defects in the review-artifact writer; both fixed and re-verified
-Type: bugfix + run
-Status: verified
-Files:
-  - `eval/dataset_audit.py` (changed: `sheet_shape` -> explicit `sheet_shape_hwc` in (height, width, channels) order for both writers; `write_annotation_patches` now returns `out_path` like `write_contact_sheet`)
-  - `reports/ml/{crkhw100_contact_sheet.png,crkhw100_annotation_patches.png,sheet_meta.json}` (regenerated)
-  - `annotation_guides/aggregate_patch_annotation_template.csv` (regenerated, byte-identical)
-  - `reports/ml/{contact_sheet_meta.json,annotation_patches_meta.json}` (removed: superseded by the single combined `sheet_meta.json`, and they carried the old inconsistent keys)
-Command / evidence:
-  The trigger was a check I had not run this session: I edited
-  `eval/dataset_audit.py` to add the patch sheet *after* the last contact-sheet
-  verification, so the contact-sheet path was unverified. Regenerating it
-  through the edited code gave exit 0 and a real file - (1054, 1280, 3),
-  **20 of 20 tiles non-blank**, caption carrying "scale UNVERIFIED", no
-  `scale_mm_per_px` key - and in doing so exposed two inconsistencies:
-
-  1. **`sheet_shape` was reported in different orders by two writers in the same
-     file.** `write_contact_sheet` reported `[width, height]`; the patch writer I
-     had just added reported `[height, width, channels]`. Measured on the actual
-     file: decoded shape (1054, 1280, 3) against metadata `[1280, 1054]` - i.e.
-     the metadata contradicted the file. Two orders for one key is how a consumer
-     silently transposes an image. Both now report `sheet_shape_hwc` in
-     (height, width, channels) order.
-  2. **The two writers used different keys for the same thing**: `out_path` vs
-     `path`. A verification script written against one broke on the other. Both
-     now return `out_path`.
-
-  Re-verified after the fixes: `SHEET_VERIFY=0` - contact sheet (1054, 1280, 3)
-  with 20/20 tiles and 0 blank, metadata matching the file exactly; annotation
-  sheet (1306, 512, 3) with 10/10 tiles and 0 blank; `out_path` present and the
-  old `path` key absent in both; no mm-claim key in either; both captions carry
-  the unverified warning. `python -m pytest tests -q` -> **154 passed**, exit 0.
-  The CSV template was regenerated from the corrected metadata and is
-  **byte-identical** to the previous file, so the correction changed no annotation
-  instruction.
-What it does:
-  Removes two ways a review artifact could be misread by software downstream, and
-  replaces two overlapping metadata files with one combined record.
-Checks:
-  - Both PNGs decoded and measured rather than assumed present.
-  - Metadata shape asserted equal to the decoded file shape, in both sheets.
-  - The regenerated CSV was diffed against the previous version and is identical.
-Limitations:
-  - These are metadata-consistency fixes in a helper; they change no measurement.
-  - The contact sheet and patch sheet remain unopened by human reviewers, which is
-    the outstanding A2.2/A2.3 work.
-Decision needed from user:
-  None for this repair.
-
-### 2026-10-16 - C10: image-validity gate implemented and exercised on 100 real images
-Type: feature + run
-Status: verified
-Files:
-  - `backend/quality/validity.py` (added); `backend/quality/__init__.py` (changed)
-  - `eval/quality_gate.py` (added)
-  - `tests/ml/test_quality_validity.py` (added, 18 tests)
-  - `reports/ml/crkhw100_quality_gate.json` (generated, gitignored)
-Command / evidence:
-  Red first: `python -m pytest tests/ml/test_quality_validity.py` ->
-  `ImportError: cannot import name 'QUALITY_STATUSES' from 'backend.quality'`,
-  exit status 2, before any implementation existed.
-  After implementation: `set -o pipefail; python -m pytest tests -q` ->
-  **154 passed**, exit status 0.
-  Real run: `python -m eval.quality_gate --path
-  data/external/deepcrack/CRKWH100/images --out
-  reports/ml/crkhw100_quality_gate.json` -> GATE_EXIT=0, **100 images,
-  status {'limited': 100}, reasons {'scale_missing': 100, 'low_dynamic_range': 10}**.
-
-  Two defects found by the tests rather than by review:
-  1. `cv2.Laplacian(float32_source, cv2.CV_64F)` raises on this OpenCV build -
-     "Unsupported combination of source format (=5), and destination format (=6)".
-     Sharpness is now measured on an 8-bit source, which also keeps the definition
-     identical to the one behind the audit's real-image numbers.
-  2. **My own fixtures were wrong**: 200 px images against a 256 px source
-     minimum, so four tests were being rejected for *resolution* before ever
-     reaching the sharpness and contrast logic they were written to check. Caught
-     by the assertion failing, not by reading the code.
-  Sharpness definition cross-checked against real data: CRKWH100 `1000.png`
-  gives Laplacian variance **2067.4**, inside the audit's recorded range
-  (min 51 / median 435 / max 2721 over 100 images), so the units agree.
-What it does:
-  Implements the validity side of final plan section 7.2 and the
-  `accepted`/`limited`/`rejected` status plus reason codes of section 11.5, with
-  two honesty rules built in: a missing scale is `limited` (`scale_missing`) and
-  `is_metric_evidence=false`, never a rejection of a good image; and
-  `QualityPolicy.thresholds_calibrated` is `false` by default and travels into
-  every report, because section 7.2 requires per-rig calibration from labelled
-  accepted/rejected examples (C11) and explicitly warns that one universal
-  Laplacian threshold can mistake smooth good asphalt for blur.
-Checks:
-  - Every status and reason code asserted to come from the declared vocabulary.
-  - Multiple simultaneous reasons are all reported, not just the first.
-  - A flat image, a glare-clipped frame and a sub-resolution frame are rejected;
-    a low-contrast but sharp frame is only `limited`; a clean unscaled frame is
-    `limited` with `scale_missing` and not metric evidence.
-  - `thresholds_calibrated is False` asserted on both the policy and the report.
-  - Rejected and limited counts are reported beside the accepted count, as
-    section 13.3 requires for auditing the excluded set.
-Limitations:
-  - **The thresholds are not calibrated.** They are engineering defaults, and the
-    report says so on every run. Nothing here is a validated rejection policy.
-  - **0 images were rejected.** At these provisional thresholds the gate did not
-    bind on any real frame, so it has not yet been shown to reject anything real;
-    its value so far is the `limited`/`scale_missing` verdict, which is the honest
-    label for all 100 CRKWH100 frames while A1.6 is unresolved.
-  - The 10 `low_dynamic_range` frames are a real observation about that set (the
-    dark acquisitions) but the 40 grey-level floor is provisional.
-  - No Indian imagery, no live frames, and no camera rig - so this cannot yet
-    satisfy any part of the operating-envelope requirement by itself.
-Decision needed from user:
-  C11 (per-rig threshold calibration) needs camera access; A1.6 keeps every
-  CRKWH100 frame metric-unavailable.
-
-### 2026-10-16 - Planning documents corrected to match final_plan.md authority
-Type: documentation
-Status: verified
-Files:
-  - `docs/ml/TASKS.md` (changed: A1.8-A1.13 expanded with final_plan citations, blocking priority reordered)
-  - `docs/ml/NEEDED_FROM_USER.md` (changed: items 7-9 expanded, summary table corrected with new priorities)
-  - `docs/ml/DATA_ADMISSION.md` (changed: section 4 restructured with status key, critical gap analysis added)
-Command / evidence:
-  Cross-referenced against `docs/final_plan.md` §4.2 "Selected sources and their
-  exact roles". Verified every dataset's stated role matches the authority document.
-What it does:
-  Corrects a critical planning error: TASKS.md was derived from final_plan.md but
-  understated the priority of three core datasets. RDD2022 India (PRIMARY Indian
-  distress source), ISTD-PDS7 (ONLY public scaled aggregate candidate), and Indian
-  seasonal (Indian robustness set) were listed as open items without emphasizing
-  that they block entire claim categories. The corrected documents now:
-  - Mark A1.8, A1.9, A1.11 as `[!]` blocked-on-user with BLOCKING annotations
-  - Reorder the user-facing priority table (RDD2022/ISTD-PDS7/seasonal now 1-2-3)
-  - Add a critical gap analysis showing we have 2 sources but are missing 3 core ones
-  - Cite final_plan section numbers for every dataset role
-Checks:
-  - Every dataset in final_plan §4.2 table now appears in TASKS.md and DATA_ADMISSION.md
-  - Blocking annotations match the plan's language ("primary", "only", "first conditional")
-  - No dataset has been promoted above its stated role
-  - The user priority summary reflects actual project blockers, not alphabetical order
-Limitations:
-  - Documentation only; no datasets obtained
-  - The three core datasets remain unavailable
-  - Gate 0 still cannot close without at least one scaled aggregate source
-Decision needed from user:
-  Download/request the three core datasets (RDD2022 India, ISTD-PDS7, Indian seasonal)
-  as the highest priority, before A1.6 or A2.2/A2.3.
-
-### 2026-10-16 - A3.2: two real baseline defects fixed, the fixture made honest, marker depth chosen on held-out seeds
-Type: feature + run
-Status: verified
-Files:
-  - `backend/aggregate/segmentation.py` (changed: `MORPH_CLOSE` -> enclosed-hole filling; greedy-NMS markers -> relative h-maxima; new `min_instance_area_px`, `hole_fill_max_area_px`, `marker_method`, `marker_h_max_fraction`; `config_version` `agg-classical-v1` -> `agg-classical-v2`)
-  - `eval/aggregate_eval.py` (changed: fixture scenarios separated/touching/merged with an explicit seam, `ignore` rule for unresolvable instance truth, held-out `sweep_marker_params`, `real_image_diagnostics`)
-  - `eval/dataset_audit.py` (changed: `select_annotation_patches`, `write_annotation_patches`)
-  - `tests/ml/test_measurement_core.py`, `tests/ml/test_eval_metrics.py` (changed: 23 new tests)
-  - `annotation_guides/aggregate_patch_annotation_template.csv` (added)
-  - `reports/ml/{synthetic_f1_separated,synthetic_f1_touching,synthetic_f1_merged,marker_sweep,crkhw100_real_eval,sheet_meta}.json`, `reports/ml/crkhw100_annotation_patches.png` (generated, gitignored; the sheet metadata was later folded into the single combined `sheet_meta.json`)
-Command / evidence:
-  `set -o pipefail; python -m pytest tests -q` -> `136 passed`, exit status 0
-  (from 113 at the start of this entry).
-  Red-then-green was followed for the new behaviour: the 8 new tests for the
-  fixture scenarios, the minimum-area filter and the hole-fill limit were run
-  **before** the implementation and all 8 failed (exit status 1). The machine
-  output quoted one of them exactly -
-  `TypeError: WatershedConfig.__init__() got an unexpected keyword argument
-  'min_instance_area_px'` - and the fixture tests failed as a group on the new
-  keyword arguments as well. The fixture messages themselves were not captured in
-  the terminal tail, so they are described here rather than quoted.
-  `python -m eval.aggregate_eval --synthetic-cases 12 --seed 0 --scenario
-  {separated,touching,merged} --out reports/ml/synthetic_f1_*.json` -> exit 0.
-  `python -m eval.aggregate_eval --images data/external/deepcrack/CRKWH100/images
-  --out reports/ml/crkhw100_real_eval.json` -> exit 0.
-  `python -m eval.aggregate_eval --sweep-markers --out
-  reports/ml/marker_sweep.json` -> exit 0.
-  `python -m eval.dataset_audit ... --annotation-patches
-  reports/ml/crkhw100_annotation_patches.png` -> PATCH_EXIT=0; the PNG was opened
-  and measured, not merely confirmed to exist: 1306x512x3, mean 93.0, std 33.2,
-  range 0-255, **0 of 10 tiles blank**, `resized: false`, `model_overlay: false`.
-
-  **Defect A - the fixture asked an unanswerable question.** In the old touching
-  fixture, chips were placed in contact at *identical intensity*, so the
-  ground-truth boundary between them was invisible by construction. Measured on
-  seed 3: chip 46 had area 6 px yet a distance-transform maximum of **23.2 px**,
-  i.e. the value was describing the merged blob, not the chip. 26 of 53 chips had
-  no marker inside them. Instance F1 0.148 was therefore measuring the fixture's
-  unfairness, while final plan section 6.3 classifies an unresolvable boundary as
-  `ignore`. Fixed: the `touching` scenario now draws the binder joint along the
-  ground-truth boundary (measured contrast 135.0 grey levels), the `merged`
-  scenario deliberately does not, and `merged` now reports `instance_gt_resolvable:
-  false` with instance scores `null` instead of a misleading low number.
-
-  **Defect B - a real production defect: the morphological close destroyed the
-  visible boundary.** Measured: the Otsu foreground kept the joint dark at 100% of
-  seam pixels and produced **61 connected components for 60 chips**, but the 3x3
-  `MORPH_CLOSE` flipped **903 of 1,380 joint pixels back to foreground** and
-  collapsed those 61 components to **21**. Instance F1 on the same case was
-  **0.228 with the close, 0.700 without it**. Fixed by replacing the close with
-  `_fill_enclosed_holes` (bounded by `hole_fill_max_area_px=16`, validated to stay
-  strictly below `min_instance_area_px` so hole filling can never swallow the
-  smallest particle a config claims to resolve).
-
-  **Defect C - a real production defect: greedy NMS seeded markers along flat
-  plateaus.** Measured on a uniform 20x120 bright bar: `marker_method='nms'`
-  returned **26 fragments**, relative h-maxima return **1 region**, which is what a
-  region with no visible internal boundary is. Fixed with relative h-maxima
-  anchoring each marker to its own component peak, so the rule does not depend on
-  absolute blob size or brightness.
-
-  **Held-out selection of the marker depth** (`--sweep-markers`, train seeds 0-7,
-  held-out seeds 5000-5007, touching scenario, selection on the hold-out column):
-  nms baseline hold-out median instance F1 **0.628** (count error +16);
-  h=0.5 -> **0.839** (count error -2.5); h=0.9 -> 0.877 but **rejected**: at that
-  depth the marker stage degenerates towards one particle per connected region,
-  which under-splits any real merge whose joint is too faint to break the
-  foreground. The documented rule selects the smallest depth within 0.05 of the
-  best, and the rule is unit-tested on fabricated rows so it cannot silently become
-  an argmax.
-
-  **Performance defect found and fixed in my own new code.** The first h-maxima
-  implementation looped per connected component and per background hole; a full
-  report run **timed out at 600 s**. Vectorised with `ndi.maximum`,
-  `ndi.maximum_position` and `np.isin`: one real 512x512 image now segments in
-  **0.14 s**, one synthetic case in **0.12 s**, and the full report set completes
-  inside the timeout.
-
-  Final synthetic scores, `agg-classical-v2`, 12 cases each, same seeds:
-  `separated` instance F1 **1.000** (pixel F1 1.000, count error 0.000);
-  `touching` instance F1 **0.877** (pixel F1 0.955, precision 0.887, recall 0.842,
-  relative count error 0.051) against **0.148** before both fixes;
-  `merged` instance scores `null` (unresolvable truth), pixel F1 0.991.
-
-  Real CRKWH100 (100 images, no annotations): determinism holds; descriptive
-  instance-count ladder only, **no score implied** - all values are medians over
-  the 100 images, written exactly as measured (the .5 values are medians of an
-  even count). Polarity `brighter`: min-area 0 -> 2,919.5 instances at 3.57 px
-  median diameter, 50 px^2 -> 146.5 at 9.85 px, 200 px^2 -> 18 at 20.34 px.
-  Polarity `darker`: 0 -> 1,300.5 at 3.74 px, 50 px^2 -> 162 at 11.35 px,
-  200 px^2 -> 46 at 25.82 px.
-What it does:
-  Removes two defects that were making the classical baseline look far worse than
-  it is, and removes a defect that was making my own evaluation instrument look
-  like a model failure. It also makes the human-review step fillable: a numbered
-  10-patch unaided sheet and a CSV template, so two annotators can produce the
-  disagreement floor final plan section 5.1 step 4 asks for.
-Checks:
-  - Defects A, B and C were each **measured before** being fixed, and the measured
-    numbers are recorded here rather than only the improved result.
-  - Red-then-green observed for the new tests (8 failures before implementation).
-  - Held-out selection used a different seed block (5000-5007) from the reported
-    cases (0-11), so the reported number is not the number the parameter was
-    fitted on.
-  - The `separated` control did not degrade for any h (1.000 across the whole grid).
-  - `merged` now returns instance scores as `null`, asserted by a test.
-Limitations:
-  - **Still not real-road accuracy.** No annotations exist for CRKWH100, so no
-    real F1 can be computed. Every number above is against synthetic geometry
-    with exact labels, and `not_real_road_evidence: true` travels in every report.
-  - **A1.6 is unchanged**: crop-vs-resize of the 512x512 delivery is still
-    undetermined, so no mm value from this source may be published. The real-image
-    ladder is deliberately unit-free for that reason.
-  - The h-maxima depth was selected on the synthetic touching fixture, which has a
-    circular-particle geometry. It is a defensible default, not a validated value
-    for pavement imagery.
-  - `min_instance_area_px` defaults to 0 (keep everything). Choosing a real value
-    requires the declared minimum resolvable particle size, which needs verified
-    scale and human labels.
-  - TDD ordering deviation, recorded rather than hidden: for
-    `select_annotation_patches` the test and the implementation were written in the
-    same edit, so no red state was observed for that one function.
-Decision needed from user:
-  A1.6 (crop-vs-resize), the A2.2/A2.3 human review using the new patch sheet, and
-  D3 (judge definitions).
-
-### 2026-10-16 - F1/accuracy harness built; synthetic ground truth only; 113 tests
-Type: feature + run
-Status: verified
-Files:
-  - `eval/aggregate_eval.py` (added)
-  - `tests/ml/test_eval_metrics.py` (added)
-  - `reports/ml/synthetic_f1_{uniform,touching,separated}.json`, `reports/ml/crkhw100_real_eval.json` (generated, gitignored)
-Command / evidence:
-  `python -m pytest tests -q` -> `113 passed` (from 92), exit status 0.
-  `python -m eval.aggregate_eval --synthetic-cases 12 --seed 0 --scenario ...` and
-  `--images data/external/deepcrack/CRKWH100/images` -> all exit status 0.
-  Determinism on 100 real images: `deterministic: true`, 0 mismatched indices.
-What it does:
-  Adds the per-task evaluation harness ML_ROLE section 4 asks for: pixel
-  precision/recall/F1/IoU/Dice, greedy instance matching at an IoU threshold, and
-  signed/absolute/relative count error, plus a synthetic case generator whose
-  instance labels are **exact**, so "F1" is a measured number rather than a hope.
-Checks:
-  - Two defects in **my own** work were found and fixed rather than reported:
-    (1) a test asserted that an even 50/50 split of one particle scores zero true
-      positives - but each half then has IoU exactly 0.5, which the harness credits
-      at a 0.5 threshold. The test's geometry was changed to an unequal 60/144
-      split (IoU 0.417) and a second test now documents the boundary explicitly.
-    (2) The summary block omitted `median_pixel_precision` and
-      `median_pixel_recall`; they were computed per case and never aggregated. The
-      aggregation was added instead of working around it in the print script.
-Limitations:
-  - **Superseded by the entry above.** The `uniform`/`touching` numbers recorded
-    then (instance F1 0.508 / 0.183) came from the fixture defect described above
-    and were removed from disk, not left to be misread. `separated` (1.000) was
-    unaffected.
-  - No real-image F1 exists: no annotations exist for these images.
-Decision needed from user:
-  None for this entry.
-
-### 2026-10-16 - `NEEDED_FROM_USER.md` created: every blocker in one place
-Type: documentation
-Status: verified
-Files:
-  - `docs/ml/NEEDED_FROM_USER.md` (added)
-Command / evidence:
-  No command: content review against `docs/ML_ROLE.md` and `docs/final_plan.md`.
-What it does:
-  Collects, in one ordered file, only the items the ML role cannot do alone: the
-  A1.6 crop-vs-resize question, the two-human visibility review, the judge's
-  definitions, camera access, dependency approval, the two gated datasets and the
-  rule that Colab compute is requested before it is spent.
-Checks:
-  - Ordered by how much each item blocks, with the smallest-set-to-unblock table
-    at the end.
-  - Every item states why it blocks and exactly what is needed, not just a label.
-Limitations:
-  - A request list, not evidence. Nothing in it is done until it is answered.
-Decision needed from user:
-  All items in the file.
-
-### 2026-10-15 - D8 RESOLVED: CRKWH100 permission granted by the originating author
-Type: decision + documentation
-
-**D8 (DeepCrack / CRKWH100 licence) is closed.** Dr. Qin Zou, who produced
-CRKWH100, is the supervising professor on this solo project and has granted
-permission directly.
-
-This is the strongest provenance available and it supersedes the whole public
-information problem: GitHub's `license` field being `null`, the README's
-single-sentence "Copy Right", and the third-party **CC BY 4.0** mirror claim are
-all now moot, because permission from the owner overrides whatever a third party
-asserts. No IEEE involvement exists or is needed - IEEE is the journal DeepCrack
-was published in, not a party that grants data rights.
-
-### Recorded
-
-`reports/ml/crkhw100_audit.json` gains a `rights` block that did not exist
-before:
-
-| Field | Value |
-|---|---|
-| `rights_status` | `granted_by_author` |
-| `basis` | Direct permission from the originating author / supervisor |
-| `scope` | Solo academic project; manual aggregate annotation, texture-measurement development and validation; non-commercial |
-| `redistribution` | `not_granted_unstated` - do not redistribute the images |
-| `attribution_required` | true, with the citation string embedded |
-| `permission_artifact` | `AUTHOR_GRANT_PENDING_FILE` |
-
-That field is the one the previous entry flagged as missing. Without it the audit
-recorded scale status but could be misread as having cleared rights.
-
-### Documentation updated
-
-- `NEEDED_FROM_USER.md` section 2 rewritten as **RESOLVED**, with the
-  copy-pasteable permission email **removed** since it is no longer needed.
-- `TASKS.md`: **A1.7 closed**; the D8 row removed from "Blocked on the user right
-  now" and remaining rows renumbered 1-5.
-
-### Explicitly NOT resolved by this
-
-- **A1.6 remains open.** Permission settles *rights*, not *scale*. Crop-vs-resize
-  of the 512x512 delivery is still undetermined, so `scale_source` stays
-  `unverified`, `contact_sheet.scale_verified` stays `false`, and **no mm value
-  from CRKWH100 may be published yet**. Worth noting the author can now be asked
-  directly, which turns a research risk into a short question to a supervisor.
-- **A2.2/A2.3 two-human review still needs two people.** Unrelated to licensing.
-
-### Defect found and repaired while editing
-
-Two prior edits to `TASKS.md` failed silently against this file because it uses
-**em dash U+2014**, not hyphen U+002D. Both render as `-` in a terminal, so
-exact-string matching appeared correct in every manual check. Resolved by using a
-dash-agnostic character class. Recorded because the same trap will hit any future
-script that edits these docs by literal match.
-
-### ID collision noted, not fixed
-
-`TASKS.md` uses the identifier **D8 twice**: line ~111 for a feature task
-("Crack skeleton length and defect mask area") and previously for the licence
-decision. The licence meaning is now closed, so only one live meaning remains,
-but the collision should be renumbered at some point to avoid future ambiguity.
-
-**Not done / still open:** no written grant artifact filed yet
-(`AUTHOR_GRANT_PENDING_FILE`); A1.6 and A2.2/A2.3 unchanged.
-
-### 2026-10-15 - D8 licence facts verified against the authoritative source; two doc defects repaired
-Type: documentation + investigation
-
-**D8 (DeepCrack / CRKWH100 licence) - licence state now established from the
-authoritative source instead of inferred.**
-
-Checked 15 Oct 2026 against the origin:
-
-| Source | Finding |
-|---|---|
-| GitHub API `repos/qinnzou/DeepCrack`, field `license` | **null** - no LICENSE file exists |
-| GitHub API field `mirror_url` | **null** - GitHub records no official mirror |
-| README "Copy Right", complete text | one sentence: "This dataset was collected for academic research." |
-| README "Contact" | Dr. Qin Zou, `qzou@whu.edu.cn` |
-| repo stats | 366 stars, 79 forks, last push 2023-10-29 |
-
-The conflict with a third-party **CC BY 4.0** claim is real but unresolvable from
-public information: author silence is not a licence grant, and a third party's
-grant cannot substitute for one. Recorded as **unresolved**. Not papered over,
-not inferred, not upgraded.
-
-**Two defects found and fixed in `NEEDED_FROM_USER.md`.**
-
-1. **Stale self-contradicting instruction.** The sheet description still told
-   reviewers the contact sheet carries a "10 mm-equivalent scale bar". That bar
-   was removed in the prior turn (A1.6 repair) and replaced with a pixel-only
-   `10 px` bar plus an explicit
-   "scale UNVERIFIED: 1 mm/px is the publisher claim only" caption. The document
-   therefore described an artifact that no longer existed, and would have
-   misdirected the two human reviewers on the single question Gate 0 turns on.
-   Rewritten to state the bar is pixel-only and to judge visibility on what is
-   visible rather than on an assumed physical scale.
-2. **D8 over-claimed the block.** The section stated the licence question
-   "blocks the chip-visibility pilot". The pilot has already been executed on
-   these images. D8 gates **publishable claims**, not development. Retitled
-   "It is not blocking your work - only your claims", with the distinction made
-   explicit so the tracker does not stall work that is already done.
-
-**Also recorded:** `crkhw100_audit.json` carries scale status but **no rights
-field**, so the audit can be misread as having cleared rights. A `rights_status`
-field is now required before the audit may be cited as an admission record.
-Value deliberately unset pending the user's decision.
-
-**Action taken:** documentation only. No licence inferred, no rights assumed, no
-data redistributed, no claim upgraded. A copy-pasteable permission request to
-`qzou@whu.edu.cn` is now in `NEEDED_FROM_USER.md`, and the conservative interim
-reading (internal academic research; no redistribution; not citable as an
-admitted public benchmark) is stated so development continues without waiting
-for a reply.
-
-**Housekeeping defect found and repaired in this log itself.** An earlier attempt
-appended this entry as a top-level `## 11.` heading after section 5, which does
-not match this file's structure - entries belong under `## 3. Entries` as
-`### YYYY-MM-DD` items. The bad block was removed. The mis-decode repair that
-restored the file also stripped a UTF-8 BOM added by that same bad write.
-Verified after repair: 10 date entries, 15 real em-dashes, zero U+FFFD
-replacement characters, zero remaining mojibake sequences.
-
-**Not done / still open:** no email sent - the team sends it. `rights_status`
-unset. D8 remains unresolved until written terms are obtained or the dataset is
-dropped.
-
-
-### 2026-10-15 — Defect fixed: contact sheet asserted an unverified physical scale
-Type: feature + run
-Status: verified (defect found, cause fixed, re-verified)
-Files:
-  - `eval/dataset_audit.py` (changed: scale bar now pixel-only, `--caption` strip added, `scale_mm_per_px` renamed to `claimed_mm_per_px` with an explicit `scale_verified: false`)
-  - `reports/ml/crkhw100_contact_sheet.png` (regenerated)
-  - `reports/ml/crkhw100_audit.json` (regenerated)
-Command / evidence:
-  Before: the sheet drew a bar annotated `10px = 10mm`, given
-  `--scale-mm-per-px 1.0`, while task A1.6 records the CRKWH100 scale as
-  **UNVERIFIED** (512x512 delivery, crop-vs-resize undetermined). The artifact
-  handed to the two human reviewers therefore asserted a physical scale nobody
-  has verified.
-  After: bar annotated in pixels only (`10 px`), plus a caption strip reading
-  "... scale UNVERIFIED: 1 mm/px is the publisher claim only".
-  `--skip-audit` path -> CONTACT_EXIT=0. Combined audit+sheet path ->
-  COMBINED_PATH_EXIT=0, REPORT_ASSERT_STATUS=0.
-  PNG verified as a real artifact, not just a written file: decodes to
-  (1054, 1280, 3); body mean 96.4, std 31.9, range 0-255; **0 of 20 tiles blank**;
-  caption strip present. PNG_VERIFY_STATUS=0.
-What it does:
-  Removes a claim from a review artifact. The reviewers' judgement is the only
-  route to the Gate 0 chips/gaps decision, so the sheet must not pre-assert the
-  scale it is meant to help them assess.
-Checks:
-  - Both edited call sites exercised: `--skip-audit` and the combined path.
-  - The output PNG was opened and measured, not merely confirmed to exist.
-  - Metadata renamed so no key implies a verified scale; asserted absent.
-Limitations:
-  - The caption states the 1 mm/px figure as the publisher's claim; that claim is
-    still unverified and still gates every metric output from this source.
-  - Tile geometry is asserted at 256 px; only 512x512 sources have been tested.
-Decision needed from user:
-  None for this repair.
-
-### 2026-10-15 — CRKWH100 audited; 512x512 scale question opened; first real-data classical pilot
-Type: run + data-admission
-Status: verified (audit + pilot), blocked (scale + human review)
-Files:
-  - `reports/ml/crkhw100_audit.json` (generated, gitignored)
-  - `reports/ml/crkhw100_contact_sheet.png` (generated, gitignored; 2.5 MB, 1280x1024)
-  - `eval/dataset_audit.py` (changed: added `write_contact_sheet` and the `--contact-sheet` flags)
-  - `data/external/deepcrack/CRKWH100/images/` (added, gitignored, not committed)
-Command / evidence:
-  Archive: `CRKWH100.zip`, 26,533,247 bytes (25.30 MiB),
-  sha256 `e6da26f7546897662573ffe9d9a7c11a867b68b5f9e389afe06faae7a042889b`.
-  `python -m eval.dataset_audit --path data/external/deepcrack/CRKWH100 ...` ->
-  AUDIT_EXIT_STATUS=0. Measured: **100 images, 0 decode failures, all exactly
-  512x512**, 3-channel; no split folders (`unknown: 100`); **no GT masks shipped**
-  (100 images without label, 0 orphan labels); 0 exact duplicates.
-  Contact sheet: 20 native-resolution 256 px centre-crops, evenly sampled across
-  the set, 10 mm scale bar at the claimed 1 mm/px, tiles **never resized** ->
-  CONTACT=0.
-  Classical pilot on 12 real images at the claimed 1 mm/px:
-  polarity `brighter` -> **2,150 instances/image**, median equivalent diameter
-  3.91 mm, coverage 0.149; polarity `darker` -> **3,742 instances/image**,
-  5.53 mm, coverage 0.540.
-  Adjacency test (bottom 8 rows of image i vs top 8 rows of i+1): median
-  correlation **+0.020** vs random-pair control **+0.006**, 0 pairs above 0.8 ->
-  the 100 files are **independent frames, not contiguous crops**.
-  Pixel stats: gray mean avg 91.4 (min 53.7, max 162.6); gray std avg 16.6;
-  Laplacian variance min 51 / median 435 / max 2,721.
-What it does:
-  Audits the second admitted source and runs the first classical pilot on real
-  imagery, which is the Gate 0 step that could not be done on synthetic data.
-  Also adds contact-sheet generation to the audit tool, because final plan
-  section 5.1 requires one and it must be native resolution.
-Checks:
-  - Decode of all 100 images, not a sample.
-  - Both the audit and the contact sheet reported exit status 0 explicitly.
-  - The polarity probe was **re-run after a bug was found**: the first attempt
-    passed `None` for the config, so `polarity` was never applied and both rows
-    printed identical numbers. That result was discarded, not reported.
-  - Adjacency was tested against a random-pair control, so "no adjacency" is a
-    comparison, not an impression.
-Limitations:
-  - **The 1 mm/px claim is NOT verified.** Every file is exactly 512x512, which is
-    not obviously a raw line-array frame; crop (scale preserved) versus resize
-    (scale destroyed) is undetermined. `scale_source` for CRKWH100 stays
-    unverified and **no mm value from this source may be published**.
-  - **The classical baseline fails on real data**: ~2,150-3,742 instances per
-    512x512 image is pathological oversegmentation, and 3.91-5.53 mm is far too
-    small for road aggregate. The synthetic-tuned config does not transfer. No
-    result from this pilot is a chip measurement.
-  - **No chips/gaps go/no-go was produced.** It requires two humans at native
-    resolution, which an agent cannot perform.
-  - No GT masks in this zip; the separate CRKWH100 GT link was not downloaded.
-  - DeepCrack licence still unresolved, so nothing here can be cited as validated.
-Decision needed from user:
-  A1.6 crop-vs-resize, D8 licence, and the A2.2/A2.3 human visibility review.
-
-### 2026-10-15 — Task tracker created from ML_ROLE.md and final_plan.md
-Type: feature
-Status: verified
-Files:
-  - `docs/ml/TASKS.md` (added)
-Command / evidence:
-  No command: a document derived only from `docs/ML_ROLE.md` and
-  `docs/final_plan.md`. Verification was content review, not execution.
-What it does:
-  Lists every ML-role obligation grouped A-J with a citation to its source
-  section, marking achieved items struck through, plus partial, open and blocked
-  status. Closes with the six items currently blocked on the user.
-Checks:
-  - Every task cites a source section; nothing was invented beyond the two
-    authority documents and the user's working instructions.
-  - Achieved items map to real evidence: 92 passing tests, audit JSON, contact
-    sheet, manifests, admission document, changelog entries.
-  - Two writing defects were found and fixed during review: a stray `[ !]` status
-    marker and a leftover thinking fragment in A1.1.
-Limitations:
-  - It is a tracker, not proof. A struck-through item still rests on the evidence
-    recorded in the corresponding changelog entry.
-  - Statuses go stale; the file must be updated alongside the changelog.
-Decision needed from user:
-  None.
-
-### 2026-10-15 — DeepCrack folder contents confirmed; download list fixed
-Type: data-admission
-Status: verified (contents), blocked (download)
-Files:
-  - `docs/ml/DATA_ADMISSION.md` (changed: section 3 folder contents confirmed, section 6 item 1 replaced with an explicit download list)
-Command / evidence:
-  User-supplied screenshot of the OneDrive parent folder
-  (`1drv.ms/f/s!AittnGm6vRKLtylBkxVXw5arGn6R`) showing exactly four subfolders:
-  `CrackLS315`, `CRKWH100`, `Stone331`, `Stone331_mask`.
-What it does:
-  Resolves the open question of what that shared link contains, and confirms the
-  README reuses one link for three different datasets. Replaces the vague
-  "download CRKWH100" instruction with a take / optional / do-not-take list,
-  each justified by a final-plan section.
-Checks:
-  - Screenshot contradicts the README's per-dataset link hints, which is exactly
-    why the folder had to be inspected rather than assumed.
-  - No separate `CRKWH100 GT` folder is present, so the README's separate GT link
-    may still be required; that is stated as an open branch, not a guess.
-  - `CrackTree260` is absent from this folder, consistent with it having its own
-    link.
-Limitations:
-  - Folder *sizes* are still unknown; OneDrive reports them only when the
-    download starts. No size will be quoted as fact.
-  - Nothing has been downloaded, so the DeepCrack licence question (D8) is still
-    open and still blocks the chip-visibility pilot.
-Decision needed from user:
-  Download `CRKWH100` to `data/external/deepcrack/CRKWH100/` and report the size;
-  decide D8 (DeepCrack licence).
-
-### 2026-10-15 — Two user decisions recorded: dataset storage location and Crack-Seg licence
-Type: data-admission
-Status: verified
-Files:
-  - `data_manifests/crack_seg_ultralytics_2025-08-21.json` (changed: `licence.user_decision`, new `storage` block)
-  - `docs/ml/DATA_ADMISSION.md` (changed: section 2.5 item 2 mark resolved, section 2.6 storage note, section 6 item 4 closed)
-  - `docs/ml/changelog.md` (changed)
-Command / evidence:
-  No command: these are user decisions obtained through a direct prompt. Recorded
-  verbatim as: storage = `keep data/` (approved), licence = `internal use only,
-  no redistribution`.
-What it does:
-  Closes the two open questions raised by the Crack-Seg admission, so the manifest
-  records an approved state instead of leaving a decision implicit in prose.
-Checks:
-  - `data_manifests/crack_seg_ultralytics_2025-08-21.json` still parses as JSON.
-  - `docs/ML_ROLE.md` was verified to name no `data/` directory (0 occurrences of
-    the literal `data/`), confirming the storage location genuinely needed approval.
-Limitations:
-  - The Crack-Seg ancestry itself is still untraceable; the decision scopes the
-    risk, it does not remove it.
-  - Neither decision resolves the DeepCrack CRKWH100 licence question, which is
-    still open and blocks the chip-visibility pilot.
-Decision needed from user:
-  None for this entry.
-
-### 2026-10-15 — Crack-Seg downloaded, audited, admitted conditionally
-Type: run + data-admission
-Status: verified
-Files:
-  - `eval/dataset_audit.py` (added)
-  - `eval/__init__.py` (added)
-  - `data_manifests/crack_seg_ultralytics_2025-08-21.json` (added)
-  - `docs/ml/DATA_ADMISSION.md` (added)
-  - `data/external/crack-seg/**` (added, **gitignored**, not committed)
-Command / evidence:
-  `curl -L --fail -o data/external/crack-seg.zip <release url>` -> HTTP 200,
-  96,089,865 bytes (91.64 MiB, matching the documented ~91.6 MB),
-  sha256 `814b566d61e890024d15f22a3e6b14e252f781ab83f60a8d59e6684817efecdc`.
-  `python -m eval.dataset_audit --path data/external/crack-seg --name "crack-seg"
-  --out reports/ml/crack_seg_audit.json` -> AUDIT_EXIT_STATUS=0.
-  Measured: 4,029 images, **0 decode failures**, all exactly 416x416, 3-channel;
-  splits train 3,717 / val 200 / test 112; 4,029 label files, **0 pairing
-  problems**, 1 empty label file, 5,290 polygons, 667,295 points (mean 126.1);
-  0 out-of-range coordinates; class `0: crack` only.
-  Label geometry: median stroke width **8.94 px** (p10 4.62, p90 16.69) over 400
-  sampled images -> `real_width_outline`, not a centerline.
-  Leakage: 1,549 parent prefixes, **0 spanning multiple splits**; 1 exact
-  duplicate pair (**both inside test**); 18 dHash cross-split candidates ->
-  **0 confirmed, 18 rejected** by pixel correlation.
-What it does:
-  Obtains real data and runs the section 6.1 admission audit: inventory, decode
-  of every image, label integrity, image-label pairing, label-geometry class,
-  parent-lineage grouping and duplicate ancestry with a confirmation stage.
-  Decision recorded: **ADMIT_CONDITIONAL** as the single allowed crack-mask
-  backup, non-metric, non-Indian, no redistribution.
-Checks:
-  - Decode of all 4,029 images, not a sample.
-  - Every audit number came from the tool run above, at exit status 0.
-  - The 18 near-duplicate candidates were **not** reported as leakage; they were
-    rejected by a stronger test, and both stages are recorded.
-  - No candidate was silently promoted above its final-plan section 4.3 role.
-Limitations:
-  - **No chips or gaps were assessed.** Crack-Seg is crack imagery; it cannot
-    answer the chip-count/gap question at all.
-  - `scale_source = unscaled`. Uniform 416x416 means a pre-export resize of
-    unknown factor, so no GSD exists and all metric output must be null.
-  - Upstream ancestry is untraceable from the artifact, and the licence is
-    contradictory (docs say Public Domain, the shipped YAML header says AGPL-3.0).
-  - The audit tool's own helpers are not unit-tested; they were exercised on a
-    real 4,029-image archive at exit 0.
-Decision needed from user:
-  Licence question in `docs/ml/DATA_ADMISSION.md` section 6 item 4.
-
-### 2026-10-15 — Measurement-core tests consolidated from 6 files to 2
-Type: feature + run
-Status: verified
-Files:
-  - `tests/ml/test_measurement_core.py` (added)
-  - `tests/ml/helpers.py`, `tests/ml/test_geometry_scale.py`,
-    `tests/ml/test_geometry_plane.py`, `tests/ml/test_aggregate_segmentation.py`,
-    `tests/ml/test_aggregate_features.py`, `tests/ml/test_measure_surface.py`
-    (removed)
-Command / evidence:
-  `set -o pipefail; python -m pytest tests -q` -> `92 passed`, exit status 0
-  (printed explicitly, because the earlier runs were piped through `tail` and
-  would otherwise have reported `tail`'s status, not pytest's).
-What it does:
-  Folds all 92 measurement-core tests and their synthetic fixtures into a single
-  module with one shared import header and one shared set of constants.
-Checks:
-  - Test count is unchanged at 92, so no test was dropped in the merge.
-  - `tests` is run as a whole, not just `tests/ml`, so the import shim is proven
-    not to disturb other test directories.
-Limitations:
-  - `tests/ml/conftest.py` is deliberately kept: without it `import backend`
-    only resolves when `python -m pytest` runs from the repo root. It is import
-    infrastructure, not a leftover.
-Decision needed from user:
-  None.
-
-### 2026-10-15 — Measurement core implemented and verified on synthetic ground truth
-Type: feature + run
-Status: verified
-Files:
-  - `backend/geometry/__init__.py` (changed)
-  - `backend/geometry/scale.py` (added)
-  - `backend/geometry/plane.py` (added)
-  - `backend/aggregate/__init__.py` (changed)
-  - `backend/aggregate/segmentation.py` (added)
-  - `backend/aggregate/features.py` (added)
-  - `backend/aggregate/measurement.py` (added)
-  - `tests/ml/conftest.py` (added)
-  - `tests/ml/helpers.py` (added)
-  - `tests/ml/test_geometry_scale.py` (added)
-  - `tests/ml/test_geometry_plane.py` (added)
-  - `tests/ml/test_aggregate_segmentation.py` (added)
-  - `tests/ml/test_aggregate_features.py` (added)
-  - `tests/ml/test_measure_surface.py` (added)
-Command / evidence:
-  `python -m pytest tests/ml -q` -> `92 passed in 3.36s` (exit 0).
-  `python -m compileall -q backend/geometry backend/aggregate` -> COMPILE OK.
-  `python -c "import backend.geometry, backend.aggregate"` -> clean import, 13 and 15 public names.
-  Measured accuracy on synthetic ground truth (temporary script, since deleted):
-  4 disks of radius 12 px -> area 441 px vs 441 px truth (+0.0%), equivalent diameter
-  23.70 px vs 24.0 px (-1.25%); two bars with an 11 px facing-pixel separation ->
-  gap median 11.0 px / 5.5 mm, n = 190 qualifying sites, IQR 0.0 mm.
-What it does:
-  Implements the physical measurement core: `PlanarScale` with explicit
-  `scale_source` lineage, the plan's `valid_pixels x sx x sy / 1e6` area formula,
-  resize lineage (crop preserves scale, resize changes it), area-uncertainty
-  propagation, plane homography `H = K[r1 r2 t]`, local mm/px from the Jacobian
-  singular values, polygon area, a marker-watershed aggregate baseline with
-  instance properties, count density, union coverage, medial-axis gap statistics,
-  and `measure_surface` producing a versioned JSON record.
-Checks:
-  - Unscaled imagery returns `None` for every metric value while pixel counts and
-    scale-free ratios survive; a measured zero returns `0.0`. Asserted directly.
-  - `require_scaled()` raises `UnscaledError` where metric geometry is mandatory.
-  - Downsampling by 2 doubles mm/px and preserves physical area (400 px at 1 mm/px
-    == 100 px at 2 mm/px).
-  - Down-looking camera at 1.5 m with f = 1000 px gives exactly 1.5 mm/px at the
-    principal point; plane origin maps to the principal point.
-  - An isolated single particle yields **zero** qualifying gap sites, so an open
-    background region cannot be reported as a chip gap.
-  - A gap below the declared `min_gap_px` is not reported at all.
-  - Distress area is recorded separately and does not remove itself from
-    measurement (denominator safeguard).
-  - ROI margin excludes an instance whose centroid is outside the interior ROI.
-  - Every record is JSON-serializable, including the all-null unscaled case.
-Limitations:
-  - This validates arithmetic, units, null-versus-zero behaviour and plumbing
-    **only**. It establishes nothing about real pavement imagery.
-  - The gap method is an approximation: it requires the opposing boundary to
-    belong to a different instance, so a genuine narrow gap inside one merged
-    instance is missed rather than guessed. The plan expects human endpoint
-    labels to validate this later.
-  - Gap width is a pixel-centre separation between facing boundary pixels and
-    therefore includes those two pixels; the lower reporting limit is declared
-    separately as `min_gap_px`.
-  - The learned challenger, quality gate, reference and scoring do not exist yet.
-Decision needed from user:
-  None for this slice. Next slice needs the DeepCrack CRKWH100 sample download
-  (already chosen as the data source) and a decision on whether to start the
-  annotation guide/pilot or the `docs/ml/` contract proposal first.
-
-### 2026-10-15 — Segmentation defect found and corrected (background-flood bias)
-Type: run
-Status: verified (defect found, cause fixed, re-verified)
-Files:
-  - `backend/aggregate/segmentation.py` (changed)
-Command / evidence:
-  Before the fix, `pytest tests/ml` reported 4 failures. A temporary diagnostic
-  script showed the watershed output for a 12 px-radius synthetic disk as
-  `{-1: 56, 1: 276, 2: 293}` inside a 25x25 window: the **background marker (1)
-  claimed 92 pixels inside the particle**, and the particle basin kept only
-  293 px^2 instead of 441 px^2 (a 34% area shortfall, diameter 19.31 px vs 24).
-  After switching the watershed surface from the image gradient to the negated
-  distance transform and removing the background marker, the same disk measured
-  441 px^2 (+0.0%) and `tests/ml` reported `92 passed`.
-What it does:
-  Root cause: on a flat particle interior the flood from a background marker
-  crosses the rim and steals interior area; clipping to the foreground cannot
-  repair it because the pixels already carry the background label. Also, splitting
-  on the image gradient puts the cut at the object rim rather than at the neck
-  between touching particles.
-Checks:
-  - Re-ran the full suite after the change: `92 passed`.
-  - Recorded the defect, the measured evidence and the corrected measurement in
-    this entry rather than only keeping the passing result.
-Limitations:
-  - Ridge pixels between two touching basins stay background, so a small amount
-    of aggregate area between touching chips is unassigned by construction.
-  - Only synthetic disks and bars were tested; no real chip image was involved.
-Decision needed from user:
-  None.
-
-### 2026-10-15 — ML changelog established; environment baseline recorded
-Type: feature
-Status: verified
-Files:
-  - `docs/ml/changelog.md` (added)
-Command / evidence:
-  `python --version`, `import numpy/cv2/scipy/sklearn/torch`, `python -m pytest --version`
-  — all returned the versions in §2; `scikit-image` and `segmentation-models-pytorch`
-  raised `ModuleNotFoundError`.
-What it does:
-  Creates the ML-role change log required by this role's working agreement, with fixed
-  status vocabulary, a mandatory evidence field and a baseline environment table so
-  later "verified" claims can be checked against the interpreter that produced them.
-Checks:
-  - Every §2 row was produced by an actual command in this session, not recalled.
-  - No fabricated metrics, scores, thresholds or dataset sizes appear in this file.
-Limitations:
-  - Establishes nothing about data availability, model quality or physical measurement.
-  - PyTorch is CPU-only locally; Colab remains the training environment.
-Decision needed from user:
-  Which first ML feature slice to implement (see §4).
-
----
-
-## 4. Open decisions and blockers
-
-| # | Decision / blocker | Why it matters | Who resolves | State |
-|---|---|---|---|---|
-| D1 | Which ML slice to implement first | Answered: measurement core + tests (implemented and verified, see §3) | user | **resolved 2026-10-15** |
-| D2 | Which scale-documented source to pursue first | Answered: DeepCrack CRKWH100 (`.gitignore`d download, 100 images, stated 1 mm/pixel). ISTD-PDS7 request and GAPs form remain fallbacks | user + dataset owner | **resolved 2026-10-15** |
-| D3 | Exact judge definitions of "chip boundary width" and "roughness" | Feature definitions in final plan §7.3 are provisional until confirmed | judge/team liaison | **open** |
-| D4 | Whether ML-side dependencies (`scikit-image`, `segmentation-models-pytorch`) should be added, and by which environment file | Needed for the learned aggregate challenger; file ownership sits with backend | user → backend owner | **open** |
-| D5 | Which slice comes next | Partly answered: real data first. Crack-Seg admitted conditionally; CRKWH100 pending manual download | user | **partly resolved 2026-10-15** |
-| D6 | `scikit-image` is absent, so `skeletonize_2d` is implemented locally in `backend/aggregate/features.py`. Confirm the local implementation is acceptable rather than adding the dependency | Avoids a dependency change, but adds ~50 lines of algorithm code the ML role now owns | user | **open** |
-| D7 | Crack-Seg upstream ancestry and data licence are untraceable and contradictory (docs say Public Domain, shipped YAML header says AGPL-3.0) | Governs whether Crack-Seg may be used at all beyond internal method development, and whether it can ever be redistributed or cited | user + Ultralytics contact | **resolved 2026-10-15**: internal use only, no redistribution, not citable as an admitted public source. Ancestry risk scoped, not removed |
-| D8 | DeepCrack CRKWH100 licence: repo says only "collected for academic research", a mirror claims CC BY 4.0 | Blocks the chip-visibility pilot, which is the only path to a chips/gaps go/no-go | user | **open** |
-| D9 | Dataset storage location `data/` is not named in `docs/ML_ROLE.md` (0 literal occurrences), so it was outside the explicit writable list | Raw datasets must live outside Git (final plan section 16) and `.gitignore` already ignores `data/`, but the ML role needed approval to use it | user | **resolved 2026-10-15**: `data/` approved for raw dataset storage |
-| D10 | Should a repo-level note (owned by backend) document that `data/` holds gitignored raw datasets | Helps the next person find the data without reading the ML changelog; `.gitignore` and root docs are not ML-owned | backend owner | **open** |
-
----
-
-## 5. Pointers
-
-- Gate 0 outputs (when produced): `docs/ml/DATA_ADMISSION.md`, `data_manifests/`,
-  `reports/ml/`.
-- Feature/unit/null-behaviour specification: to be written under `docs/ml/`.
-  The implemented definitions currently live in `backend/aggregate/features.py`
-  and `backend/geometry/scale.py`; a written specification under `docs/ml/` is
-  still outstanding.
-- Contract change requests to the backend owner: to be written under `docs/ml/`.
-
-### Audit tooling
-
-| Tool | Purpose | Run |
-|---|---|---|
-| `eval/dataset_audit.py` | Reusable dataset admission audit: inventory, decode of every image, label integrity, pairing, label-geometry class, parent lineage, duplicate ancestry with confirmation stage | `python -m eval.dataset_audit --path <dir> --name "<id>" --out <json>` |
-
-Generated audit reports land in `reports/ml/` and are gitignored; the committed
-record is the manifest in `data_manifests/` plus `docs/ml/DATA_ADMISSION.md`.
-
-### Version identifiers in use
-
-| Identifier | Value | Where |
-|---|---|---|
-| Measurement record | `measure-v1` | `MeasurementConfig.config_version` |
-| Classical aggregate segmentation | `agg-classical-v2` | `WatershedConfig.config_version` (`v1` is reproducible via `marker_method='nms'`; `v2` also changed the clean-up step, so it is not bit-comparable to `v1`) |
-| Gap method | `gap-medial-v1` | `features.GAP_METHOD_VERSION` |
-| Quality validity policy | `quality-v1` | `QualityPolicy.policy_version` (`thresholds_calibrated=False` until C11) |
-
-Changing any of these changes measured output and therefore requires a new
-reference/score validation (final plan section 9.2).
-
-### Known implementation debt
-
-| Item | Why it matters |
-|---|---|
-| No written feature/unit specification under `docs/ml/` yet; definitions live in code | The plan asks for a versioned feature spec so backend and frontend cannot blur units |
-| `configs/features/` is still empty; `MeasurementConfig`/`WatershedConfig` are code-only dataclasses | The plan wants measurement mappings in `configs/features/`; a machine-readable config is deferred until something outside Python needs it |
-| ~~`backend/quality/` has no validity/reason-code implementation~~ | **Resolved 2026-10-16** (`backend/quality/validity.py` + `eval/quality_gate.py`, 18 tests). `measure_surface` still records limitations as strings rather than embedding the verdict; wiring the gate into the measurement record is the remaining step |
-| Gap method unvalidated against human endpoints | The plan requires endpoint/mask agreement checks in the Gate 0 pilot |
-| Gate 0 incomplete | No chips/gaps go/no-go exists yet; it needs human inspection of scale-documented imagery that has not been obtained |
-| No distress engine, and Crack-Seg is only a conditional mask backup | The learned crack model, its Indian fine-tuning and its evaluation are all outstanding |
-| `eval/dataset_audit.py` helpers have no unit tests | Exercised on a real 4,029-image archive, but not regression-protected |
+Default zero therefore remained a documented cross-owner dependency, not silently
+overridden. Deliberately disabling merge counted 20 instead of 7, showing the
+test detects splitting. Tests also checked nonoverlapping interiors, equal origin
+gaps, whole/tiled area/density agreement, null scale and degenerate shapes.
+Concurrent segmentation work reported `agg-classical-v3`; `dataclasses.replace`
+preserved newly added fields. Auto-annotation import failure remained unrelated.
+E4/E5/E8 still needed reviewed labels; no real chip accuracy followed from tiling.
+
+### 2026-10-16 — Distress measurements and evaluation (feature D8/I16)
+
+Added `backend/distress/features.py`, `eval/distress_eval.py`, 20 feature tests:
+`crack_skeleton_length_m`, `defect_extent_fraction`, `distress_metrics` and YOLO
+polygon rasterizers. Skeleton length sums forward-neighbor step distances once:
+20 diagonal steps equal `20*sqrt(2)/1000` m at 1 mm/px; naive pixel count is
+70.7% of true length (~29% short). Evaluation CLI accepts labels and optional GT;
+GT-vs-GT pixel IoU/precision/recall/Dice and instance IoU were **1.0**.
+
+Crack-Seg test split, 112 images (not 112 unique), all distressed: extent
+mean/median/p90/max **1.98% / 1.64% / 3.88% / 5.82%**; mean mask pixels **3,428**,
+mean skeleton pixels **453**. Pixel-only output records unknown GSD in
+`scale_note`. This was label measurement, not learned-model performance.
+
+Only one empty label in all 4,029 images (**0.025%**), none in test: false-alarm
+behaviour was unmeasurable. The then-proposed CRKWH100 GT download was expected
+to help identify negatives; that expectation was disproved by the later audit.
+Harness-before-training ordering retained; E4/E5/E8 had not run.
+
+### 2026-10-16 — Acquisition plan and author-unreachable constraint
+
+The former `DATASET_PLAN.md` (now `DATA_ADMISSION.md`) mapped named sources,
+roles, acquisition paths and consumers in four tiers. User reported Dr. Zou
+unreachable. Author verification of crop versus resize/native originals was
+therefore recorded as unavailable; CRKWH100 scale stayed unverified, **no mm
+publication**. This did not revoke the earlier reported permission grant.
+
+The former `CHIP_VISIBILITY_EVIDENCE.md` (now `DATA_ADMISSION.md`) recorded chips
+not resolvable in delivered files. The chip branch consequently depended on
+request-gated **ISTD-PDS7 (0.91 mm/px)** or **GAPs (1.2 mm/px)**, with self-capture
+also a later option. No supported calibrated Indian-road chip claim existed.
+The plan's proposed negative-source benefit of CRKWH100 GT was historical, not
+an observed result; all-positive GT was established in the next milestone.
+
+Acquisition links recorded from the DeepCrack README:
+
+- [Images/shared parent](https://1drv.ms/f/s!AittnGm6vRKLtylBkxVXw5arGn6R)
+- [CRKWH100 GT](https://1drv.ms/u/s!AittnGm6vRKLglyfiCw_C6BDeFsP)
+- [Baidu mirror](https://pan.baidu.com/s/1PWiBzoJlc8qC8ffZu2Vb8w), password `zfoo`
+
+No download occurred during that documentation milestone. Earlier instructions
+used an `/f/` GT link; the `/u/` link above was the later verbatim README record.
+
+### 2026-10-16 — Raster GT admitted for cross-source test; E8 package prepared
+
+Obtained 100 CRKWH100 BMP masks, 512×512, binary 0/255, paired pixel-exactly 1:1;
+manifest `data/manifests/crkhw100_test.json`. Every image had crack GT: **zero
+negatives**, disproving the acquisition plan's expectation. False alarms remained
+unmeasurable with data in hand.
+
+A BMP-to-YOLO-polygon conversion was rejected: **225,881** polygon pixels versus
+**93,711** true crack pixels (**2.41×**), mean IoU **0.34**, 95/100 images lost
+their crack entirely. External contours/fill of thin branched networks destroyed
+raster information. Converter deleted; test GT and evaluation remain raster-space.
+`eval/distress_eval.py --manifest` self-check returned pixel IoU/precision/recall/
+Dice **1.0**, with `false_alarm_measurable: false` carried into reports.
+
+Prepared, **not trained**:
+
+- `training/train_distress_yoloseg.py`: YOLO polygon baseline, Crack-Seg train+val
+  **3,917 images**; val folded into fitting because evaluation is cross-source
+  CRKWH100, not the small in-distribution split. Test never used for fitting.
+- `training/evaluate_crosssource.py`: raster scoring on the CRKWH100 manifest.
+- `training/COLAB_E8.md`: setup, two-epoch smoke test, full run/evaluation/export,
+  metric interpretation and caveats. User runs Colab; no model results claimed.
+
+A U-Net/ResNet18 challenger per plan §8.1 should be retained only if it beats the
+baseline on unseen parents. Cross-source labels permit a genuine different-source
+test, not an Indian performance or negative-set claim.
+
+J8 closed: scikit-image **0.26.0** became available;
+`test_skeletonize_matches_scikit_image_exactly` passed exact comparison. Decision:
+keep local `skeletonize_2d` in production, scikit-image as test oracle only.
+
+### 2026-10-16 — Audit-helper tests closed J7; transient suite failure investigated
+
+`tests/ml/test_dataset_audit.py`: **26 tests** covering polygon parsing, valid
+empty negatives, unparsable/too-few-point counters, fat-rectangle versus collapsed
+centreline width, degenerate skips, deterministic dHash and geometry classification.
+Full ML suite: **298 passed on three consecutive runs**.
+
+One earlier run failed
+`test_particle_sizes_select_roi_centroids_but_keep_full_instance_area`. It passed
+alone and in three unchanged reruns. The original investigation attributed the
+transient failure to concurrent writing/collection of a half-written test module;
+no code was changed to suppress it. These are historical observations, not a fresh
+validation of the current tree. No model had trained; negatives and chip data
+remained unavailable.
+
+### 2026-10-16 — ML documentation consolidated from seven files to three
+
+Documentation-only consolidation: retain `TASKS.md` for status, user actions and
+implementation review; `DATA_ADMISSION.md` for acquisition/admission and visibility;
+and this standalone history. The four superseded document names are mapped in
+Current navigation. This entry records the seven-to-three organization, not a
+claim that this changelog-only edit deleted those files or completed their moves.
+
+The changelog was read in full in chunks, then condensed to remove repeated entry
+templates, long boilerplate and stale duplicated context. Numerical evidence,
+failed runs, permissions/provenance, limitations and superseding decisions remain
+historical. No training/evaluation rerun or new scientific result accompanies this
+edit; only `docs/ml/changelog.md` was written.
+
+## Historical decision and implementation register
+
+For current status use the two navigation documents; this register preserves
+otherwise easy-to-lose decisions and outstanding items at the recorded milestones.
+
+- D1: measurement core first; D2: CRKWH100 first with ISTD-PDS7/GAPs fallbacks;
+  D5: real data next, partly resolved 2026-10-15.
+- D3: judge definitions of “chip boundary width” and “roughness” needed confirmation;
+  final-plan §7.3 definitions were provisional.
+- D4: learned-challenger dependencies/environment file needed backend-owner review.
+  D6 local skeletonization concern was subsequently resolved by J8's exact oracle
+  comparison, not by adding a production dependency.
+- D7: Crack-Seg internal-only permission scopes, but does not cure, ancestry risk.
+  Licence D8: author permission reported; written artifact remained pending.
+  Feature D8 is a separate identifier. D9: `data/` storage explicitly approved.
+  D10: backend-owned repository note about gitignored raw storage remained open.
+- Feature/unit specification under `docs/ml/`, shared-contract proposals and
+  machine-readable `configs/features/` were still outstanding in the original
+  register; Python dataclasses/code carried definitions meanwhile.
+- Quality implementation debt was partly closed by `validity.py`; embedding its
+  verdict in `measure_surface` remained separate. Threshold calibration, human
+  gap endpoints, supported size limits and formal Gate 0 review were not established.
+- Crack-Seg's admission never admitted a chip source. Later CRKWH100 GT admission
+  was for crack cross-source evaluation, not scale/aggregate admission. No distress
+  training, Indian fine-tuning, score/reference validation or wet-surface validation
+  result is claimed by this history.
+
+### Reproducibility pointers
+
+Audit CLI: `python -m eval.dataset_audit --path <dir> --name <id> --out <json>`.
+Generated reports/review images under `reports/ml/` are gitignored; provenance
+records include `data_manifests/`, the later `data/manifests/crkhw100_test.json`
+and `DATA_ADMISSION.md`. The two manifest paths reflect historical artifacts,
+not an asserted migration between them.
+
+Recorded version identifiers: `measure-v1`, `gap-medial-v1`, `quality-v1`
+(uncalibrated). Aggregate history moved from `agg-classical-v1` to `v2`, with
+concurrent work later reporting `v3`. NMS marker mode reproduces the v1 marker
+choice only: v2 cleanup changed too, so it is not bit-comparable to v1. Any change
+in measured-output definitions requires renewed reference/score validation
+(final plan §9.2), not silent reuse of old evidence.

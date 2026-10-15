@@ -16,7 +16,7 @@ Where ground truth comes from matters more than the score. This module can only
 score against **real annotations**, or against **synthetic geometry with exact
 labels**. Synthetic numbers validate the pipeline's arithmetic and the harness
 itself; they are **not** evidence about road imagery. Real-road F1 requires the
-human review in `docs/ml/NEEDED_FROM_USER.md` item 3 and is recorded as blocked
+human review in `docs/ml/TASKS.md` (User actions and blockers, item 3) and is recorded as blocked
 until then.
 """
 
@@ -31,6 +31,7 @@ from typing import Sequence
 import cv2
 import numpy as np
 import scipy.ndimage as ndi
+from scipy.optimize import linear_sum_assignment
 
 from backend.aggregate import WatershedConfig, renumber_labels, segment_aggregate
 
@@ -131,9 +132,9 @@ def _pairwise_intersections(pred_labels: np.ndarray, gt_labels: np.ndarray) -> n
 def match_instances(
     pred_labels: np.ndarray, gt_labels: np.ndarray, iou_threshold: float = 0.5
 ) -> dict:
-    """Greedy instance matching at an IoU threshold.
+    """Maximum-cardinality instance matching at an IoU threshold.
 
-    Predictions are matched to ground-truth particles in descending IoU order, so
+    Total IoU breaks ties between equally large valid matchings, so
     a merged prediction cannot claim two particles. Unmatched ground truth is a
     miss (recall); unmatched prediction is a false alarm (precision). Merges and
     splits therefore show up as paired FP+FN rather than hiding inside a good
@@ -141,6 +142,18 @@ def match_instances(
     """
     if not 0.0 <= float(iou_threshold) <= 1.0:
         raise ValueError("iou_threshold must be in [0, 1]")
+    pred_labels = np.asarray(pred_labels)
+    gt_labels = np.asarray(gt_labels)
+    if pred_labels.shape != gt_labels.shape:
+        raise ValueError("prediction and ground truth shapes must match")
+    for labels in (pred_labels, gt_labels):
+        if labels.ndim != 2 or not np.issubdtype(labels.dtype, np.integer) or np.any(labels < 0):
+            raise ValueError("labels must be 2D non-negative integer arrays")
+    pred_ids = np.unique(pred_labels[pred_labels > 0])
+    gt_ids = np.unique(gt_labels[gt_labels > 0])
+    # Compact arbitrary identifiers before allocating overlap tables.
+    pred_labels = np.where(pred_labels > 0, np.searchsorted(pred_ids, pred_labels) + 1, 0)
+    gt_labels = np.where(gt_labels > 0, np.searchsorted(gt_ids, gt_labels) + 1, 0)
     table = _pairwise_intersections(pred_labels, gt_labels)
     n_pred_pairs, n_gt_pairs = table.shape[0] - 1, table.shape[1] - 1
     if n_pred_pairs == 0 or n_gt_pairs == 0:
@@ -166,22 +179,19 @@ def match_instances(
     with np.errstate(divide="ignore", invalid="ignore"):
         iou = np.where(union > 0, intersections / np.maximum(union, 1), 0.0)
 
-    flat_order = np.argsort(-iou, axis=None)
-    used_pred: set[int] = set()
-    used_gt: set[int] = set()
+    valid = (iou > 0.0) & (iou >= float(iou_threshold))
+    # One additional valid match outweighs every possible IoU tie-break gain.
+    bonus = min(n_pred_pairs, n_gt_pairs) + 1
+    reward = np.where(valid, bonus + iou, 0.0)
+    rows, columns = linear_sum_assignment(-reward)
     matches: list[dict] = []
-    for flat in flat_order:
-        p_index, g_index = divmod(int(flat), n_gt_pairs)
-        if iou[p_index, g_index] < float(iou_threshold):
-            break
-        if p_index in used_pred or g_index in used_gt:
+    for p_index, g_index in zip(rows, columns):
+        if not valid[p_index, g_index]:
             continue
-        used_pred.add(p_index)
-        used_gt.add(g_index)
         matches.append(
             {
-                "pred": p_index + 1,
-                "gt": g_index + 1,
+                "pred": int(pred_ids[p_index]),
+                "gt": int(gt_ids[g_index]),
                 "iou": float(iou[p_index, g_index]),
             }
         )
@@ -232,7 +242,21 @@ def evaluate(
     ignore_mask: np.ndarray | None = None,
     iou_threshold: float = 0.5,
 ) -> dict:
-    """Full evaluation: pixel scores, instance scores and count error."""
+    """Full evaluation, excluding ignored pixels from every metric family.
+
+    Partially ignored instances retain their identity and visible support;
+    instances with no remaining support do not enter the count denominator.
+    """
+    pred_labels = np.asarray(pred_labels)
+    gt_labels = np.asarray(gt_labels)
+    if pred_labels.shape != gt_labels.shape:
+        raise ValueError("prediction and ground truth shapes must match")
+    if ignore_mask is not None:
+        ignore = np.asarray(ignore_mask, dtype=bool)
+        if ignore.shape != gt_labels.shape:
+            raise ValueError("ignore shape does not match labels")
+        pred_labels = np.where(ignore, 0, pred_labels)
+        gt_labels = np.where(ignore, 0, gt_labels)
     return {
         "pixel": semantic_scores(pred_labels > 0, gt_labels > 0, ignore_mask),
         "instance": match_instances(pred_labels, gt_labels, iou_threshold),

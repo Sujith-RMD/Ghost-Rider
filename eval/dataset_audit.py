@@ -80,18 +80,18 @@ def _find_label(image: Path) -> Path | None:
         if parts[index].lower() == "images":
             parts[index] = "labels"
             candidate = Path(*parts).with_suffix(".txt")
-            if candidate.exists():
+            if candidate.is_file():
                 return candidate
             break
     sibling = image.with_suffix(".txt")
-    return sibling if sibling.exists() else None
+    return sibling if sibling.is_file() else None
 
 
 def parse_yolo_segment_label(path: Path) -> dict:
     """Parse a YOLO instance-segmentation label file.
 
-    Returns counts plus validation problems. Empty files are recorded as
-    ``empty_lines``, i.e. possible valid negatives, not as errors.
+    Returns counts plus validation problems. Empty files have no polygons or validation problems: they are possible
+    valid negatives, not errors.
     """
     polygons = 0
     points_total = 0
@@ -110,6 +110,12 @@ def parse_yolo_segment_label(path: Path) -> dict:
         try:
             values = [float(token) for token in tokens]
         except ValueError:
+            unparsable_lines += 1
+            continue
+        if not all(np.isfinite(value) for value in values):
+            unparsable_lines += 1
+            continue
+        if values[0] < 0 or not values[0].is_integer():
             unparsable_lines += 1
             continue
         class_id = int(values[0])
@@ -228,7 +234,10 @@ def find_near_duplicate_pairs(
     for start in range(0, count, chunk):
         stop = min(start + chunk, count)
         xor = hashes[start:stop, None] ^ hashes[None, :]
-        distances = np.bitwise_count(xor)
+        # NumPy 1.x is supported by the project and has no bitwise_count.
+        distances = np.unpackbits(
+            xor.view(np.uint8).reshape(stop - start, count, 8), axis=2
+        ).sum(axis=2)
         for local_row in range(stop - start):
             row = start + local_row
             columns = np.nonzero(distances[local_row] <= max_distance)[0]
@@ -271,7 +280,8 @@ def audit(root: Path, name: str, roi_dir: str | None = None, max_hamming: int = 
     parents_by_split: dict[str, set[str]] = defaultdict(set)
     paths: list[str] = []
 
-    labelled_dirs = {p.parent for p in root.rglob("labels") if p.is_dir()}
+    matched_labels: set[Path] = set()
+    decoded_indices: list[int] = []
 
     for index, image_path in enumerate(images):
         split = _split_of(image_path, root)
@@ -291,22 +301,24 @@ def audit(root: Path, name: str, roi_dir: str | None = None, max_hamming: int = 
         image = cv2.imread(str(image_path), cv2.IMREAD_UNCHANGED)
         if image is None:
             decode_failures.append(paths[-1])
-            hashes.append(0)
-            continue
-        if image.ndim == 2:
-            channels[1] += 1
         else:
-            channels[image.shape[2]] += 1
-        resolutions[f"{image.shape[1]}x{image.shape[0]}"] += 1
-        gray = image if image.ndim == 2 else cv2.cvtColor(image[:, :, :3], cv2.COLOR_BGR2GRAY)
-        hashes.append(int(dhash(gray)))
+            decoded_indices.append(index)
+            if image.ndim == 2:
+                channels[1] += 1
+            else:
+                channels[image.shape[2]] += 1
+            resolutions[f"{image.shape[1]}x{image.shape[0]}"] += 1
+            gray = image if image.ndim == 2 else cv2.cvtColor(image[:, :, :3], cv2.COLOR_BGR2GRAY)
+            hashes.append(int(dhash(gray)))
 
         label_path = _find_label(image_path)
         if label_path is None:
             label_missing.append(paths[-1])
             continue
+        matched_labels.add(label_path)
         parsed = parse_yolo_segment_label(label_path)
-        if parsed["polygons"] == 0 and parsed["unparsable_lines"] == 0:
+        if (parsed["polygons"] == 0 and parsed["unparsable_lines"] == 0
+                and parsed["too_few_points"] == 0):
             empty_labels += 1
         total_polygons += parsed["polygons"]
         total_points += parsed["points_total"]
@@ -317,23 +329,17 @@ def audit(root: Path, name: str, roi_dir: str | None = None, max_hamming: int = 
         label_problems["out_of_range_polygons"] += parsed["out_of_range_polygons"]
 
         # Stroke width is estimated on a bounded sample to keep the audit fast.
-        if parsed["coordinates"] and widths_sampled < 400:
+        if image is not None and parsed["coordinates"] and widths_sampled < 400:
             widths_sampled += 1
             stroke_widths.extend(
                 polygon_stroke_width_px(parsed["coordinates"], image.shape[1], image.shape[0])
             )
 
-    for label_path in root.rglob("labels/**/*.txt"):
-        if label_path.parent in labelled_dirs:
-            parts = list(label_path.parts)
-            for i in range(len(parts) - 1, -1, -1):
-                if parts[i].lower() == "labels":
-                    parts[i] = "images"
-                    break
-            if not Path(*parts).with_suffix(".jpg").exists() and not any(
-                Path(*parts).with_suffix(suffix).exists() for suffix in IMAGE_SUFFIXES
-            ):
-                orphan_labels.append(str(label_path.relative_to(root)))
+    for label_path in sorted(root.rglob("*.txt")):
+        if (label_path.is_file()
+                and "labels" in [part.lower() for part in label_path.relative_to(root).parts[:-1]]
+                and label_path not in matched_labels):
+            orphan_labels.append(str(label_path.relative_to(root)))
 
     duplicated_parents = {}
     all_parents = set().union(*parents_by_split.values()) if parents_by_split else set()
@@ -343,7 +349,11 @@ def audit(root: Path, name: str, roi_dir: str | None = None, max_hamming: int = 
             duplicated_parents[parent] = owning
 
     hash_array = np.asarray(hashes, dtype=np.uint64)
-    near_pairs = find_near_duplicate_pairs(hash_array, splits, max_hamming)
+    valid_pairs = find_near_duplicate_pairs(
+        hash_array, [splits[i] for i in decoded_indices], max_hamming
+    )
+    near_pairs = [(decoded_indices[a], decoded_indices[b], distance)
+                  for a, b, distance in valid_pairs]
     confirmed = confirm_pairs(root, paths, near_pairs)
     verdict_counts = Counter(entry["verdict"] for entry in confirmed)
     exact_pairs: list[tuple[str, str]] = []
@@ -495,8 +505,10 @@ def write_annotation_patches(
         path = images[patch["image_index"]]
         image = cv2.imread(str(path), cv2.IMREAD_COLOR)
         if image is None:
-            continue
+            raise SystemExit(f"could not read {path}")
         top, left, side = patch["top"], patch["left"], patch["crop_px"]
+        if top + side > image.shape[0] or left + side > image.shape[1]:
+            raise ValueError(f"selected patch exceeds image bounds: {path}")
         tile = image[top : top + side, left : left + side].copy()
         cv2.putText(
             tile, f"{patch['patch_id']}  {path.name[:16]}", (6, 18),
@@ -507,7 +519,7 @@ def write_annotation_patches(
             cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 255), 1, cv2.LINE_AA,
         )
         tiles.append(tile)
-        resolved.append({**patch, "source_image": path.name})
+        resolved.append({**patch, "source_image": str(path.relative_to(root))})
 
     if not tiles:
         raise SystemExit("no tiles could be built")
@@ -533,7 +545,8 @@ def write_annotation_patches(
         sheet[:26] = strip
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    cv2.imwrite(str(out_path), sheet)
+    if not cv2.imwrite(str(out_path), sheet):
+        raise SystemExit(f"failed to write annotation patches to {out_path}")
     return {
         # ``out_path`` matches write_contact_sheet: the same file previously used
         # two different keys for the same thing, which broke a caller that assumed
@@ -568,6 +581,8 @@ def write_contact_sheet(
     Images are sampled evenly across the sorted file list rather than taken from
     the front, so the sheet is not biased to one end of the set.
     """
+    if int(columns) < 1 or int(tile_px) < 1:
+        raise ValueError("columns and tile_px must be >= 1")
     images = _iter_images(root)
     if not images:
         raise SystemExit(f"no images found under {root}")
@@ -575,6 +590,7 @@ def write_contact_sheet(
     indices = np.unique(np.linspace(0, len(images) - 1, count).astype(int))
 
     tiles: list[np.ndarray] = []
+    sampled_files: list[str] = []
     for index in indices:
         path = images[int(index)]
         image = cv2.imread(str(path), cv2.IMREAD_COLOR)
@@ -608,7 +624,10 @@ def write_contact_sheet(
                     cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 255, 255), 1, cv2.LINE_AA,
                 )
         tiles.append(tile)
+        sampled_files.append(str(path.relative_to(root)))
 
+    if not tiles:
+        raise SystemExit("no tiles could be built")
     rows: list[np.ndarray] = []
     for start in range(0, len(tiles), int(columns)):
         row_tiles = tiles[start : start + int(columns)]
@@ -643,7 +662,7 @@ def write_contact_sheet(
         "scale_note": "The bar is drawn in pixels only; mm_per_px is the publisher's claim and is NOT verified for these files.",
         "caption": caption,
         "tiles_are_native_crops_not_resized": True,
-        "sampled_files": [str(images[int(i)].relative_to(root)) for i in indices],
+        "sampled_files": sampled_files,
     }
 
 

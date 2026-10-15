@@ -34,19 +34,26 @@
 | Bedrock Converse smoke test | High | ✅ Verified live in `ap-southeast-2` (`apac.amazon.nova-micro-v1:0`) |
 | Google Maps data contract render | Medium | Frontend |
 | Real ML artifact wired into worker | High | 🔄 Aggregate + quality **wired live** (`backend/analysis.py`); distress path wired (crack-mask metrics + canonical features); runtime distress **detection** and scoring modules still empty (ML AI) |
+<<<<<<< Updated upstream
 | S3 lifecycle policy (raw-frame expiry) | Low | ✅ **Live** — rule `ghost-rider-expire-raw-uploads` applied (expire `uploads/` after 7 d + abort incomplete multiparts); IAM permission granted by the account owner |
+=======
+| S3 lifecycle policy (raw-frame expiry) | Low | `s3:PutLifecycleConfiguration` denied by IAM policy — admin-applied, optional |
+>>>>>>> Stashed changes
 | Canonical record persistence | Medium | ✅ **Done** — `canonical_json` column + additive migration; `GET /v1/samples/{id}` returns the §11.5 record (real sha256, geometry, feature list; absent when nothing was measured) |
 | Live camera transport test | High | Camera-access track (hardware) |
 
 ## Version History
 
 ### v1.3.0 (2026-10-16)
+<<<<<<< Updated upstream
 - **Merged with the frontend team's integration** (`14f196f`, `9ec7999`): S3
   uploads are fetched via presigned download into a private temp dir during
   analysis, and jobs complete as **`partial`** (not `succeeded`) whenever no
   SQI score exists yet — truthful while the scoring module is undelivered;
   canonical provenance (sha256) is captured before the temp dir is removed and
   `original_uri` is the S3 object key.
+=======
+>>>>>>> Stashed changes
 - **Tiled measurement**: `measure_frame` now uses the ML team's
   `measure_tiled` (native-resolution tiles, boundary-safe instance merge) —
   verified: 120 instances on a 1024×768 synthetic frame counted exactly once;

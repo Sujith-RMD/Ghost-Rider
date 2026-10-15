@@ -110,11 +110,20 @@ def evaluate(
         images_dir = labels_dir
 
     files = _label_files(labels_dir)
-    if not files:
+    if not files and gt_dir is None:
         raise ValueError(f"no .txt label files found in {labels_dir}")
 
+    if gt_dir is not None and not Path(gt_dir).is_dir():
+        raise NotADirectoryError(gt_dir)
     gt_files = _label_files(Path(gt_dir)) if gt_dir is not None else []
+    if gt_dir is not None and not gt_files:
+        raise ValueError(f"no .txt ground-truth files found in {gt_dir}")
     gt_map = {p.name: p for p in gt_files}
+    prediction_names = {p.name for p in files}
+    unpredicted = sorted(set(gt_map) - prediction_names)
+    # YOLO commonly omits label files for images with no detections. Include
+    # these as empty predictions rather than dropping all missed positives.
+    files = sorted(set(files) | {labels_dir / name for name in unpredicted})
 
     extents: list[float] = []
     mask_pixels: list[int] = []
@@ -128,7 +137,7 @@ def evaluate(
 
     for path in files:
         shape = _image_shape(images_dir, path)
-        masks = rasterize_label_file(shape, path, class_filter={0})
+        masks = rasterize_label_file(shape, path, class_filter={0}) if path.exists() else {}
         prediction = masks.get(0, np.zeros(shape, dtype=bool))
         record: DistressMetrics = distress_metrics(prediction, UNSCALED)
         if record.extent_fraction is not None:
@@ -166,14 +175,12 @@ def evaluate(
             # Both empty: nothing to find, nothing falsely found.
             dices.append(1.0)
 
-        if prediction.any() and gt.any():
+        if gt.any():
             instance_ious.append(
                 _best_overlap_iou(_instances(prediction), _instances(gt))
             )
 
-    for name in gt_map:
-        if name not in {p.name for p in files}:
-            unlabelled.append(name)
+    unlabelled.extend(unpredicted)
 
     ext = np.asarray(extents) if extents else None
     return DistressReport(
@@ -215,16 +222,147 @@ def _best_overlap_iou(pred: list[np.ndarray], gt: list[np.ndarray]) -> float:
     return _safe_mean(scores) or 0.0
 
 
+def evaluate_manifest(
+    manifest_path: str | Path,
+    predictions: dict[str, np.ndarray],
+) -> dict:
+    """Score a directory of predicted raster masks against a raster GT manifest.
+
+    ``predictions`` maps ``sample_id`` to a boolean mask. Works in raster space
+    so a thin crack is never re-encoded as a polygon (which measurably
+    over-fills by 2.41x). Returns pixel metrics plus per-sample areas, because
+    defect extent is what the quality index eventually consumes.
+
+    ``manifest_path`` is written by ``training.prepare_crkhw100_test.py``.
+    """
+    data = json.loads(Path(manifest_path).read_text(encoding="utf-8"))
+    return score_raster_manifest(data, predictions, manifest_name=str(manifest_path))
+
+
+def score_raster_manifest(data: dict, predictions: dict[str, np.ndarray],
+                          manifest_name: str | None = None) -> dict:
+    """Score complete raster predictions; missing inference is not background."""
+    samples = data.get("samples", [])
+    ids = [s["sample_id"] for s in samples]
+    if len(ids) != len(set(ids)):
+        raise ValueError("duplicate sample_id in manifest")
+    missing_ids = sorted(set(ids) - predictions.keys())
+    if missing_ids:
+        raise ValueError(f"missing predictions: {missing_ids}")
+    scale_note = data.get("negative_note", "")
+
+    pixel_ious: list[float] = []
+    precisions: list[float] = []
+    recalls: list[float] = []
+    dices: list[float] = []
+    extents_gt: list[float] = []
+    extents_pred: list[float] = []
+    missing: list[str] = []
+    rows: list[dict] = []
+    n_negatives = 0
+
+    for sample in samples:
+        sample_id = sample["sample_id"]
+        gt = _read_raster_mask(sample["gt_mask"])
+        pred = np.asarray(predictions[sample_id])
+        if pred.dtype != np.bool_:
+            raise ValueError(f"prediction {sample_id} must be a boolean mask")
+        if pred.shape != gt.shape:
+            raise ValueError(
+                f"prediction {sample_id} shape {pred.shape} != GT shape {gt.shape}"
+            )
+
+        inter = int(np.count_nonzero(pred & gt))
+        union = int(np.count_nonzero(pred | gt))
+        pixel_ious.append(inter / union if union else 1.0)
+        pred_px = int(np.count_nonzero(pred))
+        gt_px = int(np.count_nonzero(gt))
+        precisions.append(inter / pred_px if pred_px else 1.0)
+        recalls.append(inter / gt_px if gt_px else 1.0)
+        dices.append(
+            2.0 * inter / (pred_px + gt_px) if (pred_px + gt_px) else 1.0
+        )
+        extents_gt.append(gt_px / gt.size)
+        extents_pred.append(pred_px / pred.size)
+        n_negatives += int(gt_px == 0)
+        rows.append({
+            "sample_id": sample_id, "gt_pixels": gt_px, "pred_pixels": pred_px,
+            "gt_fraction": gt_px / gt.size, "pred_fraction": pred_px / pred.size,
+            "pixel_iou": pixel_ious[-1], "precision": precisions[-1],
+            "recall": recalls[-1], "dice": dices[-1],
+        })
+
+    return {
+        "manifest": manifest_name,
+        "role": data.get("role"),
+        "n_scored": len(pixel_ious),
+        "n_missing_predictions": len(missing),
+        "missing": missing,
+        "pixel_iou_mean": _safe_mean(pixel_ious),
+        "pixel_precision_mean": _safe_mean(precisions),
+        "pixel_recall_mean": _safe_mean(recalls),
+        "dice_mean": _safe_mean(dices),
+        "dice_p10": float(np.percentile(dices, 10)) if dices else None,
+        "dice_p90": float(np.percentile(dices, 90)) if dices else None,
+        "samples": rows,
+        "extent_gt_mean": _safe_mean(extents_gt),
+        "extent_pred_mean": _safe_mean(extents_pred),
+        "extent_ratio_pred_over_gt": (
+            _safe_mean(extents_pred) / _safe_mean(extents_gt)
+            if extents_gt and _safe_mean(extents_gt)
+            else None
+        ),
+        "scale_note": data.get("scale_note"),
+        "negative_caveat": scale_note,
+        "false_alarm_measurable": n_negatives > 0,
+        "n_negatives_scored": n_negatives,
+        "metric_convention": "Per-image macro means; empty precision/recall denominator scores 1; both-empty IoU/Dice score 1",
+        "caveat": scale_note,
+    }
+
+
+def _read_raster_mask(path: str | Path) -> np.ndarray:
+    mask = cv2.imread(str(path), cv2.IMREAD_UNCHANGED)
+    if mask is None:
+        raise ValueError(f"could not decode mask {path}")
+    if mask.ndim == 3:
+        mask = mask[..., 0]
+    return mask > 127
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--labels", required=True, help="directory of predicted .txt labels")
+    parser.add_argument("--labels", default=None, help="directory of predicted .txt labels")
     parser.add_argument("--images", default=None, help="directory of paired images")
     parser.add_argument("--gt", default=None, help="directory of ground-truth .txt labels")
+    parser.add_argument(
+        "--manifest",
+        default=None,
+        help="raster GT manifest from training.prepare_crkhw100_test.py",
+    )
+    parser.add_argument(
+        "--pred-masks",
+        default=None,
+        help="directory of predicted raster masks, named <sample_id>.<ext>",
+    )
     parser.add_argument("--out", default=None, help="write the JSON report here")
     args = parser.parse_args(argv)
 
-    report = evaluate(args.labels, args.images, args.gt)
-    payload = report.describe()
+    if not args.labels and not args.manifest:
+        parser.error("give either --labels (YOLO format) or --manifest (raster GT)")
+
+    if args.manifest:
+        if not args.pred_masks:
+            parser.error("--manifest requires --pred-masks")
+        pred_dir = Path(args.pred_masks)
+        predictions = {}
+        for path in sorted(pred_dir.iterdir()):
+            if path.suffix.lower() in {".png", ".jpg", ".jpeg", ".bmp", ".tif"}:
+                predictions[path.stem] = _read_raster_mask(path)
+        payload = evaluate_manifest(args.manifest, predictions)
+    else:
+        payload = evaluate(args.labels, args.images, args.gt).describe()
+
     text = json.dumps(payload, indent=2)
     print(text)
     if args.out:

@@ -41,7 +41,7 @@ __all__ = [
     "distress_metrics",
 ]
 
-DISTRESS_METHOD_VERSION = "distress-v1"
+DISTRESS_METHOD_VERSION = "distress-v2"
 
 # Forward neighbourhood only, so every adjacency is visited exactly once.
 _STEP_OFFSETS = (
@@ -185,7 +185,10 @@ def crack_skeleton_length_m(
     if skeleton_pixels == 0:
         return (None if not scale.is_scaled else 0.0), 0
 
-    length_px = 0.0
+    if not scale.is_scaled:
+        return None, skeleton_pixels
+
+    length_mm = 0.0
     height, width = skeleton.shape
     ys, xs = np.nonzero(skeleton)
     skeleton_set = skeleton  # boolean lookup is the cheapest membership test
@@ -194,11 +197,12 @@ def crack_skeleton_length_m(
             ny, nx = y + dy, x + dx
             if 0 <= ny < height and 0 <= nx < width:
                 if skeleton_set[ny, nx]:
-                    length_px += weight
+                    length_mm += math.hypot(
+                        dx * float(scale.sx_mm_per_px),
+                        dy * float(scale.sy_mm_per_px),
+                    )
 
-    if not scale.is_scaled or scale.equivalent_mm_per_px is None:
-        return None, skeleton_pixels
-    length_m = length_px * float(scale.equivalent_mm_per_px) / 1000.0
+    length_m = length_mm / 1000.0
     return float(length_m), skeleton_pixels
 
 

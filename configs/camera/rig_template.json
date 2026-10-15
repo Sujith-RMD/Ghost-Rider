@@ -1,0 +1,32 @@
+{
+  "_comment": "Camera rig profile template + quality-gate defaults. Owned by ML role. No camera rig exists yet (task C8 is blocked on hardware), so this is a TEMPLATE: the quality thresholds below mirror backend/quality/validity.py (QualityPolicy) exactly and carry thresholds_calibrated=false. Final plan section 7.2 forbids presenting one universal blur cutoff as calibrated; per-rig calibration from accepted/rejected examples is task C11 and cannot happen until a camera exists. Fill the rig_* fields from real hardware, then re-derive and re-validate.",
+  "profile_id": "unset-rig",
+  "rig": {
+    "device_id": null,
+    "resolution_width": null,
+    "resolution_height": null,
+    "mounting": null,
+    "_mounting_note": "Mounting height, pitch and standoff above the road plane. Required before a road-plane fit and live calibration (task C8).",
+    "intrinsics": null,
+    "distortion": null,
+    "calibrated_at": null
+  },
+  "quality_policy": {
+    "policy_version": "quality-v2",
+    "thresholds_calibrated": false,
+    "min_source_px": 256,
+    "min_laplacian_variance": 10.0,
+    "min_dynamic_range": 40,
+    "clip_fraction_reject": 0.1,
+    "supported_channels": [1, 3, 4],
+    "_note": "The provisional sharpness floor (10.0) is deliberately LOW because the only real measurement available - the CRKWH100 audit (Laplacian variance 51 min / 435 median / 2721 max) - shows a high default would reject real pavement before per-rig calibration exists. Do not raise it without labelled accepted/rejected examples."
+  },
+  "scale": {
+    "scale_source": "unscaled",
+    "_note": "scale_source vocabulary: source_calibrated | rig_calibrated | reference_measured | unscaled. A rig becomes rig_calibrated only after intrinsics + a road-plane fit are validated on held-out distances (task C8)."
+  },
+  "grade": {
+    "_note": "Inclination is a separate formal requirement (backend/geometry/grade.py). It is NOT part of surface scoring. Phone pitch and Google elevation are refused as grade truth (task G4). See configs/scoring/ for the surface score; grade stays independent.",
+    "grade_source": "unknown"
+  }
+}

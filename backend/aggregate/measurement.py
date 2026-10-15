@@ -199,6 +199,8 @@ def measure_surface(
         else np.zeros(gray_shape, dtype=bool)
     )
 
+    ignore = ignore & valid
+    distress = distress & valid
     eligible = valid & ~ignore & ~distress
     limitations: list[str] = []
 
@@ -289,7 +291,9 @@ def measure_surface(
             None if mm_per_px is None else min_diameter_px * float(mm_per_px)
         ),
         min_measurable_gap_mm=(
-            None if mm_per_px is None else float(config.min_gap_px) * float(mm_per_px)
+            None if mm_per_px is None else float(config.min_gap_px) * max(
+                            float(scale.sx_mm_per_px), float(scale.sy_mm_per_px)
+                        )
         ),
         limitations=limitations,
     )

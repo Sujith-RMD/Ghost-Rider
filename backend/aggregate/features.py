@@ -437,6 +437,17 @@ def particle_size_stats(
         raise ValueError("min_diameter_px must be >= 0")
 
     area_per_instance = _instance_area_px(labels)
+    if eligible_mask is not None:
+        eligible = np.asarray(eligible_mask, dtype=bool)
+        if eligible.shape != labels.shape:
+            raise ValueError("eligible_mask shape does not match labels")
+        selected = {}
+        for label, area in area_per_instance.items():
+            cy, cx = ndi.center_of_mass(labels == label)
+            y, x = int(round(cy)), int(round(cx))
+            if eligible[y, x]:
+                selected[label] = area
+        area_per_instance = selected
     areas_px = [float(area) for area in area_per_instance.values() if area > 0]
     diameters_px = [sqrt(4.0 * area / pi) for area in areas_px]
     keep = [d >= float(min_diameter_px) for d in diameters_px]
@@ -618,6 +629,7 @@ def gap_endpoints(
         "endpoint_a_xy": (int(site["near_x"][index]), int(site["near_y"][index])),
         "endpoint_b_xy": (int(site["opposite_x"][index]), int(site["opposite_y"][index])),
         "width_px": float(widths[index]),
+        "site_xy": (int(site["site_x"][index]), int(site["site_y"][index])),
         "site_count": int(widths.size),
         "min_gap_px": float(min_gap_px),
         "method": "medial_axis_opposing_distinct_instances",
@@ -706,7 +718,15 @@ def gap_statistics(
         widths_mm = None
         limitation = "unscaled imagery: gap reported in pixels only, no metric width"
     else:
-        widths_mm = widths_px * float(mm_per_px)
+        # Transform each measured leg, not an equal-area surrogate length.
+        sx, sy = float(scale.sx_mm_per_px), float(scale.sy_mm_per_px)
+        widths_mm = np.hypot(
+            (site["near_x"] - site["site_x"]) * sx,
+            (site["near_y"] - site["site_y"]) * sy,
+        ) + np.hypot(
+            (site["opposite_x"] - site["site_x"]) * sx,
+            (site["opposite_y"] - site["site_y"]) * sy,
+        )
 
     return GapStatistics(
         median_mm=None if widths_mm is None else float(np.median(widths_mm)),

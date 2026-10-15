@@ -28,7 +28,7 @@ from backend.quality import QualityPolicy, classify_quality
 
 __all__ = ["run_gate"]
 
-IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff"}
+IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff", ".webp"}
 
 
 def run_gate(
@@ -43,9 +43,13 @@ def run_gate(
     verified ground sampling distance, so a default of ``True`` would silently
     promote unscaled imagery to metric evidence.
     """
+    if max_listed < 0:
+        raise ValueError("max_listed must be >= 0")
+    root = Path(root)
     policy = policy or QualityPolicy()
     paths = sorted(
-        path for path in Path(root).rglob("*") if path.suffix.lower() in IMAGE_SUFFIXES
+        path for path in root.rglob("*")
+        if path.is_file() and path.suffix.lower() in IMAGE_SUFFIXES
     )
     if not paths:
         raise SystemExit(f"no images found under {root}")
@@ -54,14 +58,14 @@ def run_gate(
     reason_counts: Counter[str] = Counter()
     rows = []
     for path in paths:
-        image = cv2.imread(str(path), cv2.IMREAD_COLOR)
+        image = cv2.imread(str(path), cv2.IMREAD_UNCHANGED)
         report = classify_quality(image, policy=policy, has_scale=has_scale)
         status_counts[report.status] += 1
         for code in report.reason_codes:
             reason_counts[code] += 1
         rows.append(
             {
-                "file": path.name,
+                "file": str(path.relative_to(root)),
                 "status": report.status,
                 "reason_codes": list(report.reason_codes),
                 "laplacian_variance": report.metrics.get("laplacian_variance"),
@@ -76,8 +80,11 @@ def run_gate(
         "thresholds_calibrated": policy.thresholds_calibrated,
         "has_scale": bool(has_scale),
         "note": (
-            "provisional policy - thresholds are engineering defaults, not a "
-            "validated per-rig rejection policy (final plan section 7.2); "
+            ("calibrated policy; " if policy.thresholds_calibrated else
+             "provisional policy - thresholds are engineering defaults, not a ")
+            + ("" if policy.thresholds_calibrated else
+               "validated per-rig rejection policy (final plan section 7.2); ")
+            +
             "accepted and rejected counts are reported together on purpose"
         ),
         "images": len(paths),

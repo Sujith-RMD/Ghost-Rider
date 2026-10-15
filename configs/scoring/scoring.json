@@ -1,0 +1,37 @@
+{
+  "_comment": "Surface-condition scoring policy skeleton. Owned by ML role. The scoring engine (backend/scoring/) is NOT yet implemented and no known-good reference has been fitted, so every threshold and weight here is deliberately null. Final plan section 9.2 and tasks F6-F8 forbid copying the 70/40 bands or inventing weights: Good/Bad thresholds must be derived from grouped development tradeoffs once human-rated examples exist. This file is the contract shape, not a set of numbers.",
+  "policy_version": "score-provisional-v0",
+  "implemented": false,
+  "calibrated": false,
+  "_status": "Not calibrated. No human-rated condition labels exist yet (task F6), so no probability calibration is supported. Until it is, any output must be labelled a provisional reference-deviation index, NOT a validated SQI (task F7, final plan section 9.2 item 5).",
+  "components": {
+    "texture_deviation_T": {
+      "source": "known-good reference deviation (backend/reference/)",
+      "weight": null,
+      "_note": "Robust normalized-deviation or shrinkage Mahalanobis against a reviewed good-surface reference (tasks F1-F2). Reference not yet fitted."
+    },
+    "distress_burden_D": {
+      "source": "backend/distress/ measured extent and skeleton length",
+      "weight": null,
+      "_note": "Observed defect fraction/length and distribution. Definitions must be stable before fitting (final plan section 9.2)."
+    },
+    "distribution_term": {
+      "source": "at most ONE distribution term (e.g. gap median/tail)",
+      "weight": null,
+      "_note": "Final plan section 9.2 caps this at one distribution term to avoid a descriptor soup."
+    }
+  },
+  "sqi": {
+    "formula": "SQI = 100 * (1 - P_bad)",
+    "enabled": false,
+    "_note": "SQI may only be emitted if probability calibration is supported (task F7). Otherwise emit a provisional reference-deviation index with a review label."
+  },
+  "thresholds": {
+    "good_bad": null,
+    "_note": "Derived from development tradeoffs only (task F8). Never copied from a 70/40 band."
+  },
+  "null_policy": {
+    "missing_mandatory_evidence": "score=null",
+    "_note": "Missing mandatory evidence yields score=null unless a separately evaluated partial-input rule exists (task F9). null is never replaced by a number."
+  }
+}
