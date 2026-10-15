@@ -6,9 +6,11 @@ The worker turns received frames into stored assessment samples. It:
   :mod:`backend.ingestion.queue`, so live/replay frames are *dropped* under
   backpressure instead of stalling the API, and a stale result can never appear
   current;
-* invokes the ML-owned analysis callable (:func:`run_inference`). Until the ML
-  AI delivers a packaged artifact, this is a typed stub that returns *unknown*
-  measurements - it never fabricates physical units, counts or scores;
+* invokes the real ML analysis pipeline (quality gate → scale → aggregate
+  measurement) through :mod:`backend.analysis`, which translates the ML-owned
+  modules into the API contract. Frames are measured **unscaled** (no
+  calibration store exists yet), so physical units stay ``null`` rather than
+  being fabricated; counts and ratios are real;
 * persists results idempotently on ``(session_id, frame_index, model_version)``
   so a retry or a duplicate submission can never double-count a frame;
 * updates the session processed counter and last-processed timestamp.
@@ -38,7 +40,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
-from . import database, s3_service
+from . import analysis, database, s3_service
 from .ingestion.adapter import generate_idempotency_key
 from .ingestion.queue import QueueItem, get_ingestion_queue
 from .queues import ensure_v1_tables
@@ -51,9 +53,13 @@ logger = logging.getLogger("ghost_rider.worker")
 
 # Version tags recorded with every stored result. These change together with the
 # ML artifact; the idempotency key pins the result to ``MODEL_VERSION``.
-MODEL_VERSION = os.getenv("GHOST_RIDER_MODEL_VERSION", "stub-0.0.0")
-FEATURE_VERSION = os.getenv("GHOST_RIDER_FEATURE_VERSION", "stub")
-SCORING_VERSION = os.getenv("GHOST_RIDER_SCORING_VERSION", "stub")
+# ``measure-v1`` / ``quality-v1`` are the ML modules' own config versions
+# (``MeasurementConfig.config_version`` / ``QualityPolicy.policy_version``);
+# results stored by the earlier ``stub-*`` tags are intentionally not
+# recomputed — version-pinned idempotency keeps old rows auditable.
+MODEL_VERSION = os.getenv("GHOST_RIDER_MODEL_VERSION", "measure-v1")
+FEATURE_VERSION = os.getenv("GHOST_RIDER_FEATURE_VERSION", "quality-v1")
+SCORING_VERSION = os.getenv("GHOST_RIDER_SCORING_VERSION", "not-implemented")
 
 # A durable upload job may be attempted this many times before it is failed with
 # an explicit reason code. A processing job whose lease has expired (worker crash)
@@ -73,17 +79,31 @@ def _iso_now() -> str:
 # Analysis adapter (ML-owned interface; stubbed for early integration)
 # --------------------------------------------------------------------------- #
 
+def _measure_frame_from_path(image_path: Optional[str],
+                             metadata: Optional[FrameMetadata]) -> Optional[Dict[str, Any]]:
+    """Decode and analyse the image at ``image_path``.
+
+    Returns the :func:`backend.analysis.measure_frame` outcome, or ``None``
+    when there is no readable image (the caller then stores an honest
+    all-unknown result).
+    """
+    if not image_path:
+        return None
+    image = analysis.decode_image(image_path)
+    if image is None:
+        logger.debug("No decodable image at %s; recording unknown measurements.", image_path)
+        return None
+    return analysis.measure_frame(image, metadata)
+
+
 def run_inference(frame: QueueItem) -> Optional[SegmentResult]:
-    """Invoke the road-assessment analysis for one frame.
+    """Invoke the road-assessment analysis for one live/replay frame.
 
-    This is the single integration point between the backend and the ML AI. The
-    real implementation will call the packaged ``quality -> geometry ->
-    aggregate/distress -> reference -> score`` pipeline and return a populated
-    :class:`SegmentResult`.
-
-    The current stub returns a *typed* result whose physical measurements are all
-    ``None`` (unknown). It deliberately does not invent counts, areas, scales or
-    scores, so the API contract can be exercised end-to-end without fake data.
+    This is the single integration point between the backend and the ML AI's
+    modules: the image is decoded and run through the real quality gate and
+    aggregate measurement pipeline (:mod:`backend.analysis`). Physical
+    measurements stay ``None`` while the frame is uncalibrated; counts, ratios
+    and quality verdicts are real.
     """
     metadata: Optional[FrameMetadata] = None
     if frame.metadata_json:
@@ -92,31 +112,21 @@ def run_inference(frame: QueueItem) -> Optional[SegmentResult]:
         except Exception as exc:  # pragma: no cover - malformed telemetry is non-fatal
             logger.debug("Ignoring malformed telemetry for %s:%d (%s)", frame.session_id, frame.frame_index, exc)
 
+    image_path = frame.image_path or None
     image_url = s3_service.to_local_url(frame.image_path) if frame.image_path else None
+    measured = _measure_frame_from_path(image_path, metadata)
 
-    return SegmentResult(
+    return analysis.build_segment_result(
         segment_id=frame.frame_index,
         route_id=frame.session_id,
-        sample_id=None,
-        image_path=frame.image_path,
+        metadata=metadata,
+        image_path=image_path,
         image_url=image_url,
         raw_url=image_url,
-        mask_url=None,
-        captured_at=metadata.captured_at if metadata else None,
-        gps=metadata.gps if metadata else None,
-        grade=metadata.grade if metadata else None,
-        geometry_valid=False,
-        observed_area=None,
-        quality=None,
-        metrics=None,
-        evidence=None,
-        score=None,
-        reference=None,
         model_version=MODEL_VERSION,
         feature_version=FEATURE_VERSION,
         scoring_version=SCORING_VERSION,
-        created_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        error=None,
+        measured=measured,
     )
 
 
@@ -345,9 +355,10 @@ def run_upload_inference(job: Dict[str, Any]) -> Optional[SegmentResult]:
     """Analyse one finalized upload.
 
     This is the ML integration seam for the upload path (mirrors
-    :func:`run_inference` for live frames). The stub returns a typed result whose
-    physical measurements are all unknown and never fabricated; provenance (the
-    resolved media path/URL and capture time) is real.
+    :func:`run_inference` for live frames): the resolved local object is run
+    through the real quality gate and aggregate measurement pipeline.
+    Provenance (the resolved media path/URL and capture time) is real; physical
+    units stay ``None`` while the frame is uncalibrated.
     """
     metadata: Optional[FrameMetadata] = None
     if job.get("metadata_json"):
@@ -381,29 +392,19 @@ def run_upload_inference(job: Dict[str, Any]) -> Optional[SegmentResult]:
         except Exception as exc:
             logger.debug("Could not inspect object for job %s: %s", job.get("job_id"), exc)
 
-    return SegmentResult(
+    measured = _measure_frame_from_path(image_path, metadata)
+
+    return analysis.build_segment_result(
         segment_id=1,
         route_id=job.get("job_id"),
-        sample_id=None,
+        metadata=metadata,
         image_path=image_path,
         image_url=image_url,
         raw_url=raw_url,
-        mask_url=None,
-        captured_at=metadata.captured_at if metadata else None,
-        gps=metadata.gps if metadata else None,
-        grade=metadata.grade if metadata else None,
-        geometry_valid=False,
-        observed_area=None,
-        quality=None,
-        metrics=None,
-        evidence=None,
-        score=None,
-        reference=None,
         model_version=MODEL_VERSION,
         feature_version=FEATURE_VERSION,
         scoring_version=SCORING_VERSION,
-        created_at=_iso_now(),
-        error=None,
+        measured=measured,
     )
 
 

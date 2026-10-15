@@ -14,7 +14,7 @@
 | v1 uploads (+ bounded local PUT) | `backend/api/v1.py` | 1.1.0 | Implemented + tested |
 | v1 jobs (durable lifecycle + events) | `backend/api/v1.py`, `backend/worker.py` | 1.1.0 | Implemented + tested |
 | v1 samples | `backend/api/v1.py` | 1.1.0 | Implemented + tested |
-| Worker (live frames + durable jobs) | `backend/worker.py` | 1.1.0 | Implemented (typed stub analysis) |
+| Worker (live frames + durable jobs) | `backend/worker.py` | 1.2.0 | Implemented — **real** quality→measure pipeline via `backend/analysis.py`; scoring pending |
 | Health Endpoint | `backend/app/health.py`, `/v1/health` | 1.1.0 | Implemented |
 
 ### 🔄 In Progress
@@ -24,6 +24,7 @@
 | v1 sessions/frames (live) | `backend/api/v1.py` | Endpoints implemented; real camera transport pending hardware |
 | v1 segments (50 m bins) | `backend/api/v1.py`, `backend/routes/` | Binning + coverage-truth implemented; real GPS data pending |
 | Bedrock reports | `backend/reports/` | Live Bedrock **verified** (`apac.amazon.nova-micro-v1:0`) |
+| Distress / scoring / reference | `backend/distress/`, `scoring/`, `reference/` | Empty ML packages — `score`/`reference`/`evidence` stay **null** (not fabricated) |
 
 ### 📋 Planned / pending external
 
@@ -32,10 +33,33 @@
 | S3 private upload smoke test | High | ✅ **PASS** — bucket created in `ap-southeast-2` (SCP is region-scoped); full round-trip verified (`docs/backend/AWS_SMOKE_TEST.md` Run 2) |
 | Bedrock Converse smoke test | High | ✅ Verified live in `ap-southeast-2` (`apac.amazon.nova-micro-v1:0`) |
 | Google Maps data contract render | Medium | Frontend |
-| Real ML artifact wired into worker | High | ML AI delivers packaged interface |
+| Real ML artifact wired into worker | High | 🔄 Aggregate + quality **wired live** (`backend/analysis.py`); distress/scoring/reference modules still empty (ML AI) |
 | S3 lifecycle policy (raw-frame expiry) | Low | `s3:PutLifecycleConfiguration` denied by IAM policy — admin-applied, optional |
+| Live camera transport test | High | Camera-access track (hardware) |
+| Canonical record persistence | Medium | Schema migration + sample-id pre-allocation needed |
 
 ## Version History
+
+### v1.2.0 (2026-10-16)
+- **Real ML pipeline wired into the worker** (replaces the typed stub):
+  `backend/analysis.py` decodes (Windows-path safe) → quality gate
+  (`backend.quality`) → unscaled `PlanarScale` → aggregate measurement
+  (`backend.aggregate.measure_surface`) → contract translation. Counts/ratios
+  are real; every mm/m²/count-per-m² value stays `null` without calibration.
+  Verified against the ML team's synthetic generator: chip count 60/60 on all
+  seeds; `MODEL_VERSION=measure-v1`, `FEATURE_VERSION=quality-v1`
+  (version-pinned idempotency keeps old stub rows intact).
+- **CPU latency measured** (512×512): median 1.8 s/frame, ≈0.6 fps single-core
+  — recorded in `docs/backend/AWS_RUNBOOK.md` §5 (GPU decision deferred to ML
+  owner per final plan).
+- **Failure/recovery tests**: crashed-worker lease reclaim, active-lease
+  protection, attempt-limit failure with reason code, analysis-stack crash →
+  job fails with no fabricated sample, S3 degradation to local URLs.
+- **AWS runbook published**: `docs/backend/AWS_RUNBOOK.md` (deploy, ops,
+  failure playbook, cost controls, honest known gaps).
+- `scipy>=1.10.0` added to `pyproject.toml` / `backend/requirements.txt`
+  (imported by the ML modules; was undeclared).
+- 60/60 backend tests pass.
 
 ### v1.1.2 (2026-10-16)
 - **Region: `ap-southeast-2` throughout** — the org SCP `p-fakk0ucg` is
