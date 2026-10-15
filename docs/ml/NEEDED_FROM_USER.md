@@ -249,7 +249,31 @@ becomes **the entire chip task**.
 
 ---
 
-## 9. `D4`/`H6` — Config files and a contract, when you are ready
+## 9. Indian Seasonal Paved/Unpaved Dataset — **INDIAN ROBUSTNESS/CHALLENGE SET (CRITICAL)**
+
+**Priority:** HIGH — required for wet/unsupported-surface validation
+
+**Why it matters:** The final_plan §4.2 designates this as the **Indian robustness/challenge set**, specifically for testing wet appearance and unsupported surfaces. This addresses conditions that foreign datasets cannot represent.
+
+**What it is:**
+- 4,242 Nashik/Mumbai original images plus rotated versions and video
+- Captures seasonal variations, wet surfaces, unpaved roads
+- Must group rotations, resized copies and video siblings (not independent samples)
+- No assumed metric scale, chip labels, GPS track, or certified condition score
+- Paper: https://pmc.ncbi.nlm.nih.gov/articles/PMC8933537/
+- Dataset: https://data.mendeley.com/datasets/tj2m7zz4rg/2
+
+**What I need:**
+1. Download from the Mendeley link above
+2. Place at `data/external/indian_seasonal/`
+3. Keep the original folder structure
+4. Report the actual size
+
+**After download:** We'll group rotated/augmented versions and video frames to avoid treating them as independent roads.
+
+---
+
+## 10. `D4`/`H6` — Config files and a contract, when you are ready
 
 Not blocking today, listed so it is not a surprise later:
 
@@ -261,7 +285,7 @@ Not blocking today, listed so it is not a surprise later:
 
 ---
 
-## 10. Colab — I will ask before you spend compute
+## 11. Colab — I will ask before you spend compute
 
 Not needed yet. The learned challenger (`E4`) is gated behind Gate 0, because
 training on unverified-scale, un-annotated data would produce numbers that mean
@@ -272,12 +296,17 @@ size and the GPU class before you start anything.**
 
 ## Summary — smallest set to unblock the most
 
-| Priority | Item | Effort for you |
-|---|---|---|
-| 1 | `A1.6` crop-vs-resize | one email, or tell me how the zip was made |
-| 2 | `A2.2`/`A2.3` open `reports/ml/crkhw100_annotation_patches.png` with a second person and fill `annotation_guides/aggregate_patch_annotation_template.csv` | ~1 hour, two people |
-| 3 | `D8` DeepCrack licence | one decision |
-| 4 | `D3` judge definitions | one conversation |
-| 5 | RDD2022 India + ISTD-PDS7 access | browser + one email |
-| 6 | `C8` camera access | a conversation with the lab |
-| 7 | `D4` dependencies | one approval |
+**NEW PRIORITY ORDER (corrected to match final_plan.md):**
+
+| Priority | Item | Effort for you | Blocks |
+|---|---|---|---|
+| 1 | **RDD2022 India subset** (item 7) | Browser download | Every Indian distress claim |
+| 2 | **ISTD-PDS7 access** (item 8) | One email to authors | Scaled aggregate work (if A1.6 fails) |
+| 3 | **Indian seasonal dataset** (item 9) | Browser download | Wet/unsupported-surface validation |
+| 4 | `A1.6` crop-vs-resize | One email to Dr. Zou | All CRKWH100 metric output |
+| 5 | `A2.2`/`A2.3` two-human review | ~1 hour, two people | Gate 0 verdict |
+| 6 | `D3` judge definitions | One conversation | Feature specification finalization |
+| 7 | `C8` camera access | Lab conversation | Live validation |
+| 8 | `D4` dependencies | One approval | Learned model training |
+
+**Critical realization:** Items 1-3 are **core datasets** the plan requires but we don't have yet. These should have been priority 1 from the start.
