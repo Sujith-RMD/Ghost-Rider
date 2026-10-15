@@ -1,0 +1,1 @@
+function t(e){return!e||!Number.isFinite(Date.parse(e))?"Not supplied":new Intl.DateTimeFormat("en-IN",{dateStyle:"medium",timeStyle:"medium",timeZone:"Asia/Kolkata"}).format(new Date(e))+" IST"}export{t as f};

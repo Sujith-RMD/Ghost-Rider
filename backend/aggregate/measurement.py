@@ -149,6 +149,7 @@ def measure_surface(
     config: MeasurementConfig | None = None,
     ignore_mask: np.ndarray | None = None,
     distress_mask: np.ndarray | None = None,
+    labels: np.ndarray | None = None,
 ) -> SurfaceMeasurements:
     """Measure aggregate features for one image.
 
@@ -167,6 +168,12 @@ def measure_surface(
     distress_mask:
         Cracks/potholes/patches. Excluded from the *texture* denominator but
         still reported separately as its own area.
+    labels:
+        Optional precomputed instance label map from
+        :func:`backend.aggregate.tiling.segment_tiled`. When supplied,
+        segmentation is *not* re-run, so a particle that was merged across a
+        tile boundary stays merged. ``image`` is then only used for its shape,
+        and may be any array of that shape.
     """
     config = config or MeasurementConfig()
     if not isinstance(scale, PlanarScale):
@@ -209,7 +216,16 @@ def measure_surface(
         else:
             limitations.append("no_texture_eligible_area")
 
-    labels = segment_aggregate(image, config.watershed)
+    if labels is None:
+        labels = segment_aggregate(image, config.watershed)
+    else:
+        labels = np.asarray(labels)
+        if labels.ndim != 2:
+            raise ValueError(f"labels must be 2D, got shape {labels.shape}")
+        if labels.shape != gray_shape:
+            raise ValueError(
+                f"labels shape {labels.shape} does not match image shape {gray_shape}"
+            )
     total_instances = int(np.count_nonzero(np.unique(labels) > 0))
     size_stats = particle_size_stats(
         labels, scale, eligible_mask=roi, min_diameter_px=config.min_diameter_px

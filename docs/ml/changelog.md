@@ -87,6 +87,269 @@ Notes:
 ---
 
 ## 3. Entries
+### 2026-10-16 - Dataset acquisition plan written; Zou-unreachable recorded
+Type: documentation + decision
+
+New ``docs/ml/DATASET_PLAN.md``: every dataset the plan names, with its exact
+role, its download or request path, and a coverage matrix mapping each source to
+the branch it serves. Organised into four tiers so nothing is downloaded without
+a named consumer.
+
+### Constraint change: Dr. Zou is unreachable
+
+The licence question (D8) was previously resolved on the basis that Zou is the
+supervising professor. With contact now impossible:
+
+- ``A1.6`` (crop vs resize of the 512x512 delivery) can **never** be confirmed
+  from the author. CRKWH100 scale stays ``unverified`` and **no mm value may be
+  published from it.**
+- Native line-array originals cannot be requested.
+- ``CHIP_VISIBILITY_EVIDENCE.md`` already establishes chips are not resolvable in
+  the delivered files, so with the originals unavailable the chip requirement now
+  rests entirely on **ISTD-PDS7** (0.91 mm/px, documented) or **GAPs**
+  (1.2 mm/px). Both are request-gated, so the request latency is now the
+  schedule driver for the chip branch.
+
+Recorded rather than worked around: the plan is honest that a claim of
+calibrated chip measurement on Indian roads currently has **no** source it can
+stand on, and names the two requests that would fix it.
+
+### The finding that drove the priority order
+
+Crack-Seg carries **1 negative in 4,029 images** (0.025%), and the test split
+carries **zero**. So a distress model trained and evaluated on it cannot have
+its false-alarm behaviour measured, which final plan 13.3 explicitly requires.
+That makes the **CRKWH100 crack GT** link - a separate OneDrive URL in the
+DeepCrack README, never fetched - the highest-value single download available,
+because CRKWH100 images without crack GT are clean negatives from one camera and
+one surface family. It is Tier 1 item 1 for that reason.
+
+### Links
+
+Recorded verbatim from the DeepCrack README fetched earlier this session, not
+reconstructed from memory:
+
+- CRKWH100 images: ``https://1drv.ms/f/s!AittnGm6vRKLtylBkxVXw5arGn6R``
+- CRKWH100 GT: ``https://1drv.ms/u/s!AittnGm6vRKLglyfiCw_C6BDeFsP``
+- Baidu mirror (pass ``zfoo``): ``https://pan.baidu.com/s/1PWiBzoJlc8qC8ffZu2Vb8w``
+
+**Not done / still open:** no dataset downloaded this turn - the user fetches
+them. E4/E5/E8 training; the chip-scale request; J7/J8.
+### 2026-10-16 - D8 + I16 implemented: distress measurements and eval harness
+Type: feature + tests + evaluation
+
+New ``backend/distress/features.py`` closes **D8**; new ``eval/distress_eval.py``
+closes the distress half of **I16**. The interim priority was distress because it
+is the only branch with real labelled data in hand: Crack-Seg ships 4,029 images
+and 5,290 polygons, with ``label_geometry_class: real_width_outline``.
+
+### D8
+
+``crack_skeleton_length_m``, ``defect_extent_fraction``, ``distress_metrics``,
+plus ``rasterize_polygon`` / ``rasterize_label_file`` for YOLO segmentation
+label files. 20 tests in ``tests/ml/test_distress_features.py``.
+
+Skeleton length sums **step distances**, not skeleton pixels. A 1-px diagonal
+line of ``n`` steps spans ``n * sqrt(2)`` px, so pixel counting reports 70.7% of
+the true length - a 29% under-report on every diagonal crack. Each adjacency is
+visited exactly once by inspecting only the forward neighbourhood (right, down,
+and the two forward diagonals). Verified against analytic ground truth:
+20 diagonal steps -> ``20 * sqrt(2) / 1000`` m, and the naive count is asserted
+to be meaningfully smaller.
+
+### I16 - distress evaluation on real data
+
+``python -m eval.distress_eval --labels <dir> [--gt <dir>]``. Scores any
+directory of YOLO segmentation polygons. GT-vs-GT self-check returns **1.0** on
+pixel IoU, precision, recall, Dice and instance IoU, which is the sanity floor.
+
+Real Crack-Seg **test** split (112 images, all with distress):
+
+| Metric | Value |
+|---|---|
+| extent mean | 1.98% of pixels |
+| extent median | 1.64% |
+| extent p90 | 3.88% |
+| extent max | 5.82% |
+| mask pixels mean | 3,428 |
+| skeleton pixels mean | 453 |
+
+Reported in pixels only, with the reason recorded in ``scale_note``: Crack-Seg
+is a uniform 416x416 with unknown resize history, so no native GSD survives and
+no metric length or area is claimed (final plan 6.1 item 7).
+
+### A limitation that changes what we can claim
+
+**Crack-Seg contains almost no negatives.** Across all 4,029 images there is
+**1** empty label file (0.025%); the test split has **zero**. So a distress
+model evaluated only on Crack-Seg cannot have its false-alarm behaviour
+measured at all - which is precisely the failure mode final plan 13.3 calls out
+(*"a detector tested only on damage images cannot establish false-alarm
+behaviour"*). Recorded rather than worked around.
+
+**This directly motivates a download:** the CRKWH100 **crack ground truth**
+link (task tracker A1.12, a separate OneDrive URL in the DeepCrack README that
+has never been fetched). CRKWH100 images without crack GT are the natural
+negative source, because CRKWH100 is one camera and one surface family, so a
+negatives set there is far more comparable than borrowed images. See the
+dataset download list sent to the user.
+
+### Recursion note
+
+This same harness is what E8 will be scored with once training runs, so the
+MetricBeforeModel ordering is preserved: the measurement and the scorer exist
+first, and a model is judged against them rather than scored by whatever metric
+it happens to print.
+
+**Not done / still open:** E4/E5/E8 training; CRKWH100 crack GT (A1.12); the
+chip-scale data question (A1.6/A1.9); J7/J8.
+### 2026-10-16 - E6 / D9 implemented: tiled segmentation with instance merging
+Type: feature + tests
+
+New ``backend/aggregate/tiling.py``. ``segment_tiled`` / ``measure_tiled`` /
+``tile_windows``. Closes task-tracker **E6** (native-resolution tiles, instance
+IDs merged at tile boundaries) and **D9** (merge and count each particle once).
+``measure_surface`` gained an optional ``labels`` parameter so a stitched label
+map is measured directly instead of being re-segmented.
+
+### Three defects found and fixed, not hidden
+
+1. **Naive tail-shift tile layout double-counted.** Advancing by stride and then
+   shifting the final tile back to the edge produced two nearly coincident tiles
+   whenever the edge shift landed close to a stride multiple. Their interior ROIs
+   then overlapped almost completely, so an instance centroid could fall inside
+   two of them. Replaced with evenly spaced origins from 0 to
+   ``length - tile_px``. Directly exposed by a new test that asserts consecutive
+   interior-ROI gaps are equal.
+2. **The merge had no sanity guard.** A tile that returned one oversized
+   fragment (measured: 15,313 px) silently absorbed every legitimate instance it
+   happened to graze, fusing several chips into one. Now a fragment pair merges
+   only when the shared pixels cover at least ``MERGE_MIN_OVERLAP_FRACTION``
+   (0.5) of the *smaller* fragment.
+3. **Stitched map was discarded.** ``measure_tiled`` originally re-segmented the
+   whole frame, which both wasted work and re-split merged boundary instances.
+   Fixed to pass the stitched labels through.
+
+### A hypothesis that was wrong
+
+I initially diagnosed the tiling failure as the scale-dependent
+``flatten_sigma`` (``0.125 x shorter_side``) and pinned tiles to the whole-image
+sigma. The pin took effect (64.0 vs 16.0) but changed nothing. The real cause:
+a tile containing **no** disk has no signal, so Otsu splits pure noise and
+invents foreground - 13.6% foreground on a background-only crop versus 0.5% on
+the whole image, which is just the disks. The whole frame is immune because
+Otsu always finds the disks. The pin is kept because it is still correct, but it
+is not the fix.
+
+### The actual requirement, measured
+
+The existing ``WatershedConfig.min_instance_area_px`` is the right knob, but its
+default is ``0``. Sweeping it on a synthetic surface (Gaussian background plus
+441 px disks, disks centred exactly on tile boundaries):
+
+| ``min_instance_area_px`` | 128/32 | 128/64 | 160/48 | 192/48 | 256/64 |
+|---|---|---|---|---|---|
+| 0 (default) | 2073 | 2859 | 2612 | 2282 | 1049 |
+| 20 | 104 | 126 | 122 | 97 | 50 |
+| 40 | 9 | 9 | 9 | 9 | 9 |
+| **60** | **7** | **7** | **7** | **7** | **7** |
+| 100 | 7 | 7 | 7 | 7 | 7 |
+
+True count is 7. At 60 px and above every tile configuration is exact. **This is
+a cross-role dependency: the segmentation default must move off zero, and that is
+``segmentation.py``'s owner call, not mine.** Documented in the ``segment_tiled``
+docstring rather than silently overridden. Also note the whole image is robust at
+any setting, which is exactly why this was only visible once tiling existed.
+
+### Verification
+
+10 tests in ``tests/ml/test_tiling.py``. The count test uses disks centred
+*directly on tile boundaries*, the case that must not split. To prove the test
+has teeth, a deliberately broken no-merge variant was run: it reports 20
+instances for 7 real ones.
+
+Also verified: evenly spaced tile origins; interior ROIs never overlap; stitched
+tiled measurement matches whole-image measurement for instances, eligible area
+and density; unscaled/null handling; degenerate shapes.
+
+### Concurrency note
+
+``segmentation.py`` was modified by another role during this work
+(``agg-classical-v3``, adding h-maxima markers, hole filling,
+``min_instance_area_px``). ``dataclasses.replace`` is used when pinning the
+flatten sigma so those added fields cannot be silently reset. Cross-checked that
+the concurrent ``test_auto_annotation.py`` still fails only on its own
+``PROVISIONAL_CONFIDENCE`` import, unrelated to this change.
+
+**Not done / still open:** J7, J8; E4/E5/E8 remain blocked on reviewed training
+labels and the A2.2 human review.
+### 2026-10-16 - D7 implemented: fixed-scale texture proxies (GLCM, gradient energy, LBP)
+Type: feature + tests
+
+**D7 from the task tracker is now implemented and verified.** New
+``texture_statistics()`` in ``backend/aggregate/features.py``, exported from the
+package, plus ``TextureStatistics`` and ``TEX_METHOD_VERSION``.
+
+| Feature | Definition | Unit |
+|---|---|---|
+| GLCM contrast / homogeneity / energy / correlation | Co-occurrence at configurable physical mm offsets, averaged over 4 directions | unitless |
+| Gradient energy | mean squared Sobel magnitude, divided by the pixel area | 1/mm^2 |
+| LBP uniformity | fraction of pixels whose LBP code has at most 2 circular bit transitions | unitless |
+
+All offsets are requested in **millimetres** and converted through the
+``PlanarScale``, so the same physical request means the same thing at any
+calibrated scale.
+
+### Verified, not assumed
+
+20 new tests in ``tests/ml/test_measurement_core.py``; the file now runs
+**122 passed**. Assertions were derived from measured behaviour, not hoped-for
+numbers - three of my initial expectations were wrong and were corrected during
+the run:
+
+1. **Checkerboard gradient energy is exactly 0.0000.** I first asserted it
+   should be high. It is genuinely zero: a 3x3 Sobel is a *null operator* at the
+   checkerboard (Nyquist) frequency. Verified analytically - every kernel term
+   cancels. Cross-checked against ``np.gradient``, which correctly reports 255.
+   **This is a real limitation, now documented in the function docstring**, not
+   papered over: a surface whose aggregate/binder pattern alternates near one
+   pixel can read as "smooth" when it is in fact the most textured case.
+2. **First LBP definition was wrong.** The initial implementation computed the
+   mean circular Hamming distance of a code to its rotation, then named the
+   result ``uniformity``. On a flat image that returns 0, i.e. inverted. Rewritten
+   to the standard fraction of uniform patterns (at most 2 circular transitions),
+   which returns 1.0 for flat and 0.0 for a checkerboard.
+3. **Sinusoidal stripe fixture was unusable.** ``np.sin(x / 4.0)`` has period
+   ``8*pi`` (about 25.1 px), not 4 px, so "full period" reasoning was wrong and
+   the correlation decayed over 16 px. Replaced with an exact 4 px square wave,
+   after which the per-direction correlation matches the expected phase response
+   exactly: quarter period 0, half period -1, three quarters 0, full period +1.
+
+Also verified: identical **pixel** offsets reached through different mm requests
+at different scales give identical values (6 offsets tested); colour and grey
+paths agree; determinism; rejected non-finite and bad-shape inputs.
+
+### Two caveats recorded, not fixed
+
+- **Sobel blind spot at Nyquist**, as above.
+- **Physical offsets quantise to whole pixels.** A 1 mm request at 2 mm/px cannot
+  be represented and is dropped, so the effective offset set depends on the
+  declared scale. A coarse-scale image cannot report a fine-scale texture
+  measurement, and no attempt is made to upsample to pretend otherwise.
+
+### Concurrent-work interruption noted
+
+During verification a new ``tests/ml/test_auto_annotation.py`` appeared mid-run
+(02:13) referencing ``PROVISIONAL_CONFIDENCE``, which
+``backend/aggregate/auto_annotation.py`` does not yet define. That file is
+another role's in-flight work; it was **not** modified. Confirmed my
+``__init__.py`` rewrite is safe against it - the failing test imports the module
+directly rather than via the package. Full-suite runs therefore pass only when
+that file is excluded: **171 passed** excluding it, **122 passed** for the
+measurement core alone.
+
+**Not done / still open:** J7 (unit-test the ``eval/dataset_audit.py`` helpers)
+and J8 (skeletonize_2d vs scikit-image) remain open.
 
 ### 2026-10-16 - Completion check found two small defects in the review-artifact writer; both fixed and re-verified
 Type: bugfix + run

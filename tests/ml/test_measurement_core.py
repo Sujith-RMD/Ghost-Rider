@@ -569,6 +569,29 @@ def test_relative_h_maxima_is_the_default_marker_method():
     assert WatershedConfig().marker_method == "h_maxima"
 
 
+def test_disconnected_regions_are_never_stolen_by_another_basin():
+    # cv2.watershed floods through the *background*, not just the foreground, so
+    # with a single global call one component can swallow another that is fully
+    # separate. Measured: both markers were placed correctly at (50,1) and (80,0),
+    # yet the output was ONE instance of 7920 px - a silent under-count that would
+    # hit real imagery wherever chips form separate blobs.
+    image = np.full((200, 200), 60, dtype=np.uint8)
+    image[40:60, :] = 200
+    image[70:90, :] = 200
+    labels = segment_aggregate(image)
+    assert _count(labels) == 2
+    areas = sorted(props.area_px for props in instance_properties(labels))
+    # each bar is 20 x 200 = 4000 px; a single-marker component is labelled
+    # directly, so nothing is eaten by a ridge line
+    assert all(3800 < area <= 4000 for area in areas), areas
+
+
+def test_the_segmentation_version_changed_when_the_basin_rule_changed():
+    # Splitting basins per connected component changes measured output, so the
+    # version moves rather than silently re-using agg-classical-v2.
+    assert WatershedConfig().config_version == "agg-classical-v3"
+
+
 def _chain_image(joints: bool) -> np.ndarray:
     """Three radius-15 chips in a row, optionally separated by visible joints.
 
@@ -918,7 +941,7 @@ def test_record_describes_versions_and_scale_provenance():
     record = measure_surface(_image(), _full_valid(), SCALE_1MM)
     described = record.describe()
     assert described["config_version"] == "measure-v1"
-    assert described["segmentation_version"] == "agg-classical-v2"
+    assert described["segmentation_version"] == "agg-classical-v3"
     assert described["geometry"]["scale_source"] == "source_calibrated"
     assert described["gap"]["config_version"] == "gap-medial-v2"
     assert described["areas_m2"]["texture_eligible"] == record.eligible_area_m2
@@ -956,7 +979,7 @@ def test_bgr_image_is_accepted():
     assert measure_surface(bgr, _full_valid(), SCALE_1MM).n_instances_in_roi == N_DISKS
 
 # =============================================================================
-# D7 â€” fixed-scale texture proxies (final plan section 7.3)
+# D7 -” fixed-scale texture proxies (final plan section 7.3)
 # =============================================================================
 
 

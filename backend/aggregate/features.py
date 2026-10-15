@@ -66,6 +66,7 @@ __all__ = [
     "GapStatistics",
     "TextureStatistics",
     "skeletonize_2d",
+    "gap_endpoints",
     "count_density_per_m2",
     "aggregate_coverage",
     "particle_size_stats",
@@ -487,6 +488,142 @@ def _instance_area_px(labels: np.ndarray) -> dict[int, int]:
     return {int(v): int(counts[int(v)]) for v in positives if int(v) < len(counts)}
 
 
+def _qualifying_gap_sites(
+    labels: np.ndarray,
+    eligible_mask: np.ndarray | None = None,
+    ignore_mask: np.ndarray | None = None,
+    min_gap_px: float = 3.0,
+) -> dict:
+    """Medial-axis sites whose facing boundaries belong to two distinct instances.
+
+    Returns the qualifying sites plus the endpoints that produced each width, so
+    a caller can report *where* a gap was measured instead of only how wide it was.
+    This is the single implementation of the documented method: both
+    :func:`gap_statistics` and the provisional annotator use it.
+    """
+    labels = np.asarray(labels)
+    shape = labels.shape
+    aggregate = labels > 0
+    empty_i = np.zeros(0, dtype=np.int64)
+    empty_f = np.zeros(0, dtype=np.float64)
+
+    def _none(limitation: str) -> dict:
+        return {
+            "sites": np.zeros(shape, dtype=bool),
+            "site_y": empty_i,
+            "site_x": empty_i,
+            "near_y": empty_i,
+            "near_x": empty_i,
+            "opposite_y": empty_i,
+            "opposite_x": empty_i,
+            "widths_px": empty_f,
+            "limitation": limitation,
+        }
+
+    if not aggregate.any():
+        return _none("no_aggregate_instances_detected")
+
+    gap_region = ~aggregate
+    if eligible_mask is not None:
+        eligible = np.asarray(eligible_mask).astype(bool)
+        if eligible.shape != shape:
+            raise ValueError(
+                f"eligible_mask shape {eligible.shape} does not match labels {shape}"
+            )
+        gap_region &= eligible
+    if ignore_mask is not None:
+        ignore = np.asarray(ignore_mask).astype(bool)
+        if ignore.shape != shape:
+            raise ValueError(f"ignore_mask shape {ignore.shape} does not match labels {shape}")
+        gap_region &= ~ignore
+    if not gap_region.any():
+        return _none("eligible gap region is empty")
+
+    # Distance to the nearest aggregate pixel, plus that pixel's coordinates.
+    distance, indices = ndi.distance_transform_edt(~aggregate, return_indices=True)
+    nearest_y, nearest_x = indices[0], indices[1]
+
+    skeleton = skeletonize_2d(gap_region)
+    sites = skeleton & gap_region & (distance > 0.0)
+    if not sites.any():
+        return _none("no medial-axis sites found in the eligible gap region")
+
+    site_y, site_x = np.nonzero(sites)
+    site_distance = distance[site_y, site_x]
+    near_y = nearest_y[site_y, site_x]
+    near_x = nearest_x[site_y, site_x]
+
+    # Opposite boundary: reflect the site across its own nearest aggregate pixel
+    # (p - d * u == 2p - nearest) and re-query the nearest aggregate pixel there.
+    height, width = shape
+    reflected_y = np.clip(2 * site_y - near_y, 0, height - 1)
+    reflected_x = np.clip(2 * site_x - near_x, 0, width - 1)
+    opposite_y = nearest_y[reflected_y, reflected_x]
+    opposite_x = nearest_x[reflected_y, reflected_x]
+
+    near_label = labels[near_y, near_x]
+    opposite_label = labels[opposite_y, opposite_x]
+    opposite_distance = np.hypot(
+        opposite_y.astype(np.float64) - site_y,
+        opposite_x.astype(np.float64) - site_x,
+    )
+    qualifies = (
+        (near_label > 0)
+        & (opposite_label > 0)
+        & (near_label != opposite_label)
+        & (opposite_distance > 0.0)
+    )
+    widths = (site_distance + opposite_distance)[qualifies]
+    keep = widths >= float(min_gap_px)
+    if not keep.any():
+        return _none(
+            "no site had opposing boundaries belonging to two distinct instances "
+            "above the minimum reportable gap"
+        )
+    return {
+        "sites": sites,
+        "site_y": site_y[qualifies][keep],
+        "site_x": site_x[qualifies][keep],
+        "near_y": near_y[qualifies][keep],
+        "near_x": near_x[qualifies][keep],
+        "opposite_y": opposite_y[qualifies][keep],
+        "opposite_x": opposite_x[qualifies][keep],
+        "widths_px": widths[keep],
+        "limitation": None,
+    }
+
+
+def gap_endpoints(
+    labels: np.ndarray,
+    eligible_mask: np.ndarray | None = None,
+    ignore_mask: np.ndarray | None = None,
+    min_gap_px: float = 3.0,
+) -> dict | None:
+    """The clearest gap site: endpoints landing on two distinct instances.
+
+    Used where a *location* is needed, not just a distribution. The site chosen is
+    the qualifying one whose width is closest to the median, so the reported
+    example is representative rather than the widest or narrowest gap found.
+    Returns ``None`` when nothing qualifies - an honest "no resolvable gap here",
+    never a zero.
+    """
+    site = _qualifying_gap_sites(
+        labels, eligible_mask=eligible_mask, ignore_mask=ignore_mask, min_gap_px=min_gap_px
+    )
+    if site["limitation"] is not None or site["widths_px"].size == 0:
+        return None
+    widths = site["widths_px"]
+    index = int(np.argmin(np.abs(widths - float(np.median(widths)))))
+    return {
+        "endpoint_a_xy": (int(site["near_x"][index]), int(site["near_y"][index])),
+        "endpoint_b_xy": (int(site["opposite_x"][index]), int(site["opposite_y"][index])),
+        "width_px": float(widths[index]),
+        "site_count": int(widths.size),
+        "min_gap_px": float(min_gap_px),
+        "method": "medial_axis_opposing_distinct_instances",
+    }
+
+
 def gap_statistics(
     labels: np.ndarray,
     scale: PlanarScale,
@@ -538,67 +675,15 @@ def gap_statistics(
             )
         gap_region &= ~ignore
 
-    limitation: str | None = None
-    if not gap_region.any():
-        return GapStatistics(
-            median_mm=None,
-            iqr_mm=None,
-            p90_mm=None,
-            median_px=None,
-            sample_count=0,
-            min_gap_px=float(min_gap_px),
-            method="medial_axis_opposing_distinct_instances",
-            config_version=config_version,
-            limitation="eligible gap region is empty",
-        )
 
-    # Distance to the nearest aggregate pixel, plus that pixel's coordinates.
-    distance, indices = ndi.distance_transform_edt(~aggregate, return_indices=True)
-    nearest_y, nearest_x = indices[0], indices[1]
-
-    skeleton = skeletonize_2d(gap_region)
-    sites = skeleton & gap_region & (distance > 0.0)
-    if not sites.any():
-        return GapStatistics(
-            median_mm=None,
-            iqr_mm=None,
-            p90_mm=None,
-            median_px=None,
-            sample_count=0,
-            min_gap_px=float(min_gap_px),
-            method="medial_axis_opposing_distinct_instances",
-            config_version=config_version,
-            limitation="no medial-axis sites found in the eligible gap region",
-        )
-
-    site_y, site_x = np.nonzero(sites)
-    site_distance = distance[site_y, site_x]
-    near_y = nearest_y[site_y, site_x]
-    near_x = nearest_x[site_y, site_x]
-
-    # Opposite boundary: reflect the site across its own nearest aggregate pixel
-    # (p - d * u == 2p - nearest) and re-query the nearest aggregate pixel there.
-    height, width = shape
-    reflected_y = np.clip(2 * site_y - near_y, 0, height - 1)
-    reflected_x = np.clip(2 * site_x - near_x, 0, width - 1)
-    opposite_y = nearest_y[reflected_y, reflected_x]
-    opposite_x = nearest_x[reflected_y, reflected_x]
-
-    near_label = labels[near_y, near_x]
-    opposite_label = labels[opposite_y, opposite_x]
-    opposite_distance = np.hypot(
-        opposite_y.astype(np.float64) - site_y,
-        opposite_x.astype(np.float64) - site_x,
+    site = _qualifying_gap_sites(
+        labels,
+        eligible_mask=eligible_mask,
+        ignore_mask=ignore_mask,
+        min_gap_px=min_gap_px,
     )
-
-    qualifies = (
-        (near_label > 0)
-        & (opposite_label > 0)
-        & (near_label != opposite_label)
-        & (opposite_distance > 0.0)
-    )
-    widths_px = (site_distance + opposite_distance)[qualifies]
-    widths_px = widths_px[widths_px >= float(min_gap_px)]
+    limitation = site["limitation"]
+    widths_px = site["widths_px"]
     if widths_px.size == 0:
         limitation = (
             "no site had opposing boundaries belonging to two distinct instances "

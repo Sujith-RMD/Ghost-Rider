@@ -47,7 +47,7 @@ class WatershedConfig:
     change in segmentation behaviour is traceable (final plan section 9.2).
     """
 
-    config_version: str = "agg-classical-v2"
+    config_version: str = "agg-classical-v3"
     polarity: str = "brighter"
     """``brighter``: exposed aggregate is lighter than binder. ``darker``: the
     opposite. Must match the dataset/surface appearance, not per-image guessing."""
@@ -422,12 +422,78 @@ def segment_aggregate(image: np.ndarray, config: WatershedConfig | None = None) 
     peak_distance = float(distance.max())
     normalised = distance / peak_distance if peak_distance > 0.0 else distance
     surface = np.clip(255.0 - normalised * 255.0, 0.0, 255.0).astype(np.uint8)
-    markers = peaks.astype(np.int32)
-    cv2.watershed(cv2.cvtColor(surface, cv2.COLOR_GRAY2BGR), markers)
-
-    # Watershed labels ridge lines between basins as -1; those become background.
-    labels = np.where(fg_bool & (markers > 0), markers, 0)
+    surface_bgr = cv2.cvtColor(surface, cv2.COLOR_GRAY2BGR)
+    labels = _basin_labels(fg_bool, peaks.astype(np.int32), surface_bgr)
     return _drop_small_instances(renumber_labels(labels), config.min_instance_area_px)
+
+
+def _basin_labels(
+    foreground: np.ndarray, markers: np.ndarray, surface_bgr: np.ndarray
+) -> np.ndarray:
+    """Assign foreground pixels to markers **without** crossing components.
+
+    ``cv2.watershed`` floods the whole image from every marker at once, so the
+    background acts as a bridge: a disconnected foreground component that holds
+    its own correct marker can still end up labelled with a basin seeded somewhere
+    else. Measured before this existed: two full-width bars with markers placed
+    correctly at (50,1) and (80,0) came back as **one** 7920 px instance - a
+    silent under-count that would hit real imagery wherever chips form separate
+    blobs.
+
+    Three cases, and only the second needs the flood:
+
+    * one component, one marker -> the whole component is that instance;
+    * one component, several markers -> a genuine cluster, so flood inside that
+      component only (the common case stays cheap: on a 512x512 frame with
+      thousands of specks almost every component has exactly one marker);
+    * a component with no marker -> report it as one merged region rather than
+      silently dropping real foreground.
+    """
+    components, n_components = ndi.label(foreground)
+    if n_components == 0:
+        return np.zeros(foreground.shape, dtype=np.int32)
+
+    mk_y, mk_x = np.nonzero(markers > 0)
+    if mk_y.size == 0:
+        return components.astype(np.int32)
+
+    comp_ids = components[mk_y, mk_x]
+    lab_ids = markers[mk_y, mk_x]
+    order = np.argsort(comp_ids, kind="stable")
+    comp_sorted = comp_ids[order]
+    lab_sorted = lab_ids[order]
+    starts = np.flatnonzero(np.r_[True, comp_sorted[1:] != comp_sorted[:-1]])
+    group_comp = comp_sorted[starts]
+    group_lab = lab_sorted[starts]
+    counts = np.diff(np.r_[starts, comp_sorted.size])
+
+    result = np.zeros(foreground.shape, dtype=np.int32)
+
+    # Case 1: exactly one marker -> the whole component is that instance.
+    single = counts == 1
+    if single.any():
+        lut = np.zeros(n_components + 1, dtype=np.int32)
+        lut[group_comp[single]] = group_lab[single]
+        take = np.isin(components, group_comp[single])
+        result[take] = lut[components[take]]
+
+    # Case 2: several markers -> a real cluster; flood inside this component only.
+    for comp in group_comp[counts > 1].tolist():
+        region = components == comp
+        sub_markers = np.where(region, markers, 0).astype(np.int32)
+        if sub_markers.max() == 0:
+            continue
+        cv2.watershed(surface_bgr, sub_markers)
+        take = region & (sub_markers > 0)
+        result[take] = sub_markers[take]
+
+    # Case 3: a component with no marker keeps its pixels, as one merged region.
+    covered = np.zeros(n_components + 1, dtype=bool)
+    covered[group_comp] = True
+    for comp in (np.flatnonzero(~covered[1:]) + 1).tolist():
+        result[components == comp] = comp
+
+    return result
 
 
 def instance_properties(labels: np.ndarray) -> list[InstanceProps]:
