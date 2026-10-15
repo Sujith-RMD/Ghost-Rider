@@ -87,6 +87,73 @@ Notes:
 ---
 
 ## 3. Entries
+### 2026-10-16 - D7 implemented: fixed-scale texture proxies (GLCM, gradient energy, LBP)
+Type: feature + tests
+
+**D7 from the task tracker is now implemented and verified.** New
+``texture_statistics()`` in ``backend/aggregate/features.py``, exported from the
+package, plus ``TextureStatistics`` and ``TEX_METHOD_VERSION``.
+
+| Feature | Definition | Unit |
+|---|---|---|
+| GLCM contrast / homogeneity / energy / correlation | Co-occurrence at configurable physical mm offsets, averaged over 4 directions | unitless |
+| Gradient energy | mean squared Sobel magnitude, divided by the pixel area | 1/mm^2 |
+| LBP uniformity | fraction of pixels whose LBP code has at most 2 circular bit transitions | unitless |
+
+All offsets are requested in **millimetres** and converted through the
+``PlanarScale``, so the same physical request means the same thing at any
+calibrated scale.
+
+### Verified, not assumed
+
+20 new tests in ``tests/ml/test_measurement_core.py``; the file now runs
+**122 passed**. Assertions were derived from measured behaviour, not hoped-for
+numbers - three of my initial expectations were wrong and were corrected during
+the run:
+
+1. **Checkerboard gradient energy is exactly 0.0000.** I first asserted it
+   should be high. It is genuinely zero: a 3x3 Sobel is a *null operator* at the
+   checkerboard (Nyquist) frequency. Verified analytically - every kernel term
+   cancels. Cross-checked against ``np.gradient``, which correctly reports 255.
+   **This is a real limitation, now documented in the function docstring**, not
+   papered over: a surface whose aggregate/binder pattern alternates near one
+   pixel can read as "smooth" when it is in fact the most textured case.
+2. **First LBP definition was wrong.** The initial implementation computed the
+   mean circular Hamming distance of a code to its rotation, then named the
+   result ``uniformity``. On a flat image that returns 0, i.e. inverted. Rewritten
+   to the standard fraction of uniform patterns (at most 2 circular transitions),
+   which returns 1.0 for flat and 0.0 for a checkerboard.
+3. **Sinusoidal stripe fixture was unusable.** ``np.sin(x / 4.0)`` has period
+   ``8*pi`` (about 25.1 px), not 4 px, so "full period" reasoning was wrong and
+   the correlation decayed over 16 px. Replaced with an exact 4 px square wave,
+   after which the per-direction correlation matches the expected phase response
+   exactly: quarter period 0, half period -1, three quarters 0, full period +1.
+
+Also verified: identical **pixel** offsets reached through different mm requests
+at different scales give identical values (6 offsets tested); colour and grey
+paths agree; determinism; rejected non-finite and bad-shape inputs.
+
+### Two caveats recorded, not fixed
+
+- **Sobel blind spot at Nyquist**, as above.
+- **Physical offsets quantise to whole pixels.** A 1 mm request at 2 mm/px cannot
+  be represented and is dropped, so the effective offset set depends on the
+  declared scale. A coarse-scale image cannot report a fine-scale texture
+  measurement, and no attempt is made to upsample to pretend otherwise.
+
+### Concurrent-work interruption noted
+
+During verification a new ``tests/ml/test_auto_annotation.py`` appeared mid-run
+(02:13) referencing ``PROVISIONAL_CONFIDENCE``, which
+``backend/aggregate/auto_annotation.py`` does not yet define. That file is
+another role's in-flight work; it was **not** modified. Confirmed my
+``__init__.py`` rewrite is safe against it - the failing test imports the module
+directly rather than via the package. Full-suite runs therefore pass only when
+that file is excluded: **171 passed** excluding it, **122 passed** for the
+measurement core alone.
+
+**Not done / still open:** J7 (unit-test the ``eval/dataset_audit.py`` helpers)
+and J8 (skeletonize_2d vs scikit-image) remain open.
 
 ### 2026-10-16 - Completion check found two small defects in the review-artifact writer; both fixed and re-verified
 Type: bugfix + run

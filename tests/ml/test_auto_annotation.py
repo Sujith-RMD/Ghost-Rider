@@ -78,12 +78,13 @@ def test_auto_annotate_measures_the_gap_it_reports():
 
 
 def test_gap_endpoints_land_on_two_different_instances():
+    # Endpoints are (x, y) and must be actual pixels of two *different* instances.
     labels = _two_bar_labels()
-    a_y, a_x = result_a = auto_annotate_patch(_two_bars_image()).gap_endpoint_a_xy
-    b_y, b_x = auto_annotate_patch(_two_bars_image()).gap_endpoint_b_xy
-    # endpoints are (x, y)
-    label_a = int(labels[result_a[1], result_a[0]])
-    label_b = int(labels[b_y, b_x])
+    result = auto_annotate_patch(_two_bars_image(), patch_id="BARS")
+    ax, ay = result.gap_endpoint_a_xy
+    bx, by = result.gap_endpoint_b_xy
+    label_a = int(labels[ay, ax])
+    label_b = int(labels[by, bx])
     assert label_a > 0 and label_b > 0
     assert label_a != label_b
 
