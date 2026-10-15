@@ -34,7 +34,7 @@
 | Bedrock Converse smoke test | High | ✅ Verified live in `ap-southeast-2` (`apac.amazon.nova-micro-v1:0`) |
 | Google Maps data contract render | Medium | Frontend |
 | Real ML artifact wired into worker | High | 🔄 Aggregate + quality **wired live** (`backend/analysis.py`); distress path wired (crack-mask metrics + canonical features); runtime distress **detection** and scoring modules still empty (ML AI) |
-| S3 lifecycle policy (raw-frame expiry) | Low | `s3:PutLifecycleConfiguration` denied by IAM policy — admin-applied, optional |
+| S3 lifecycle policy (raw-frame expiry) | Low | ✅ **Live** — rule `ghost-rider-expire-raw-uploads` applied (expire `uploads/` after 7 d + abort incomplete multiparts); IAM permission granted by the account owner |
 | Canonical record persistence | Medium | ✅ **Done** — `canonical_json` column + additive migration; `GET /v1/samples/{id}` returns the §11.5 record (real sha256, geometry, feature list; absent when nothing was measured) |
 | Live camera transport test | High | Camera-access track (hardware) |
 

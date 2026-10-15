@@ -103,7 +103,7 @@ must be re-measured on the deployed instance type before any spend.
 
 | Resource | Control | Status |
 |---|---|---|
-| S3 raw frames | Lifecycle rule `ghost-rider-expire-raw-uploads` (expire `uploads/` after `S3_LIFECYCLE_EXPIRE_DAYS=7`, abort incomplete multiparts) | **Blocked**: `s3:PutLifecycleConfiguration` denied by IAM policy; must be applied by an admin. The rule is ready at `infra/s3-lifecycle.json`: `aws s3api put-bucket-lifecycle-configuration --bucket ghost-rider-road-storage --lifecycle-configuration file://infra/s3-lifecycle.json`. Until then raw frames accumulate — budget ~$0.023/GB-month |
+| S3 raw frames | Lifecycle rule `ghost-rider-expire-raw-uploads` (expire `uploads/` after `S3_LIFECYCLE_EXPIRE_DAYS=7`, abort incomplete multiparts) | ✅ **Live** (applied 16 Oct 2026 via `infra/s3-lifecycle.json`; verified through `s3_service.get_bucket_lifecycle_policy`) |
 | S3 storage class | Standard only; images are small (JPEG) | OK |
 | Presigned URLs | TTL bounded (`PRESIGNED_URL_TTL`, cap 5 min for upload slots) | OK |
 | Bedrock | Narrative cached by assessment/version hash; max 16–220 output tokens; fallback template on failure | OK |
@@ -115,15 +115,18 @@ threshold) when the deployed instance type is chosen.
 
 ## 7. Known gaps (honest status)
 
-- S3 lifecycle rule: IAM-denied, admin action required (see §6).
-- Scoring (`backend/scoring/`), distress (`backend/distress/`) and reference
-  (`backend/reference/`) packages are empty: `SegmentResult.score/reference/evidence`
-  stay `null` — no SQI yet, and none is fabricated.
+- S3 bucket management is fully closed: lifecycle rule live; IAM grants
+  `s3:PutLifecycleConfiguration` / `s3:GetLifecycleConfiguration`
+  (`s3:ListAllMyBuckets` remains denied — bucket listing is not needed).
+- Scoring (`backend/scoring/`) and reference (`backend/reference/`) packages are
+  still empty: `SegmentResult.score/reference` stay `null` — no SQI yet, and
+  none is fabricated. Jobs therefore complete as `partial`, not `succeeded`.
+- Distress: the measurement path is wired (crack-mask metrics + canonical
+  features), but runtime crack **detection** awaits the ML model artifact.
 - Live-camera transport: endpoints exist; a real hardware test has not been run
   (camera-access track).
-- `CanonicalSampleRecord` is defined in the contract but not yet persisted to the
-  `samples` table (requires a sample-id pre-allocation + column migration).
 - Real GPS-driven 50 m segmentation: binning implemented; needs real route data.
+- Deployment rehearsal: this runbook has not been executed on a live EC2 host.
 
 Run history and AWS integration details: `AWS_SMOKE_TEST.md`. Contract status:
 `CONTRACT_STATUS.md`.
