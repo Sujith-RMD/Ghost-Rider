@@ -41,6 +41,12 @@
 ## Version History
 
 ### v1.3.0 (2026-10-16)
+- **Merged with the frontend team's integration** (`14f196f`, `9ec7999`): S3
+  uploads are fetched via presigned download into a private temp dir during
+  analysis, and jobs complete as **`partial`** (not `succeeded`) whenever no
+  SQI score exists yet — truthful while the scoring module is undelivered;
+  canonical provenance (sha256) is captured before the temp dir is removed and
+  `original_uri` is the S3 object key.
 - **Tiled measurement**: `measure_frame` now uses the ML team's
   `measure_tiled` (native-resolution tiles, boundary-safe instance merge) —
   verified: 120 instances on a 1024×768 synthetic frame counted exactly once;
