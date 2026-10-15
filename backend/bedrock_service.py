@@ -24,7 +24,7 @@ Counters live in :data:`RETRY_STATS` and are surfaced by ``/health/deep``.
 Environment variables (defaults in ``app/config.py``)
 -----------------------------------------------------
 ``AWS_ACCESS_KEY_ID`` / ``AWS_SECRET_ACCESS_KEY``  Credentials.
-``BEDROCK_REGION`` or ``AWS_REGION``               Region (default ``ap-south-1``).
+``BEDROCK_REGION`` or ``AWS_REGION``               Region (default ``ap-southeast-2``).
 ``BEDROCK_MODEL_ID``                               Primary model (Nova micro).
 ``BEDROCK_FALLBACK_MODEL_IDS``                     Comma separated fallbacks.
 ``BEDROCK_MAX_ATTEMPTS`` / ``BEDROCK_RETRY_BASE_DELAY`` / ``BEDROCK_RETRY_MAX_DELAY``
@@ -63,6 +63,11 @@ try:
     from app.config import get_settings_safely
 except ImportError:  # package layout (``uvicorn backend.main:app``)
     from backend.app.config import get_settings_safely  # type: ignore[no-redef]
+
+try:
+    from bedrock_models import promote_nova_model_id
+except ImportError:  # package layout (``backend.bedrock_service``)
+    from .bedrock_models import promote_nova_model_id  # type: ignore[no-redef]
 
 try:
     import boto3
@@ -302,7 +307,15 @@ def get_bedrock_settings() -> Dict[str, Any]:
             value = None if raw in (None, "") else str(raw).strip().lower() not in ("0", "false", "no", "off")
         return bool(default if value is None else value)
 
+    region = (
+        _text("BEDROCK_REGION", "BEDROCK_REGION")
+        or _text("AWS_REGION", "AWS_REGION", "AWS_DEFAULT_REGION", default="us-east-1")
+        or "us-east-1"
+    )
+
     primary = _text("BEDROCK_MODEL_ID", "BEDROCK_MODEL_ID", default=DEFAULT_MODEL_ID) or DEFAULT_MODEL_ID
+    # ap-southeast-2 (and other ap-*/eu-* regions) require the regional inference profile.
+    primary = promote_nova_model_id(primary, region) or DEFAULT_MODEL_ID
     fallback_raw = _text("BEDROCK_FALLBACK_MODEL_IDS", "BEDROCK_FALLBACK_MODEL_IDS",
                          default=SECONDARY_MODEL_ID)
     models: List[str] = []
@@ -310,12 +323,6 @@ def get_bedrock_settings() -> Dict[str, Any]:
         name = (candidate or "").strip()
         if name and name not in models:
             models.append(name)
-
-    region = (
-        _text("BEDROCK_REGION", "BEDROCK_REGION")
-        or _text("AWS_REGION", "AWS_REGION", "AWS_DEFAULT_REGION", default="us-east-1")
-        or "us-east-1"
-    )
 
     return {
         "access_key": _text("AWS_ACCESS_KEY_ID", "AWS_ACCESS_KEY_ID", "AWS_ACCESS_KEY"),

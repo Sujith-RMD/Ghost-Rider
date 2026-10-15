@@ -4,7 +4,7 @@ A single :class:`Settings` object (pydantic-settings) is the one source of truth
 for every environment variable the service reads.  Values are resolved in this
 order:
 
-1. real environment variables (``AWS_REGION=ap-south-1``)
+1. real environment variables (``AWS_REGION=ap-southeast-2``)
 2. ``backend/.env`` then ``<repo>/.env``
 3. the documented defaults below
 
@@ -27,12 +27,18 @@ the health endpoint.
 from __future__ import annotations
 
 import logging
+import os
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from pydantic import AliasChoices, Field, field_validator
+from pydantic import AliasChoices, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+try:  # flat layout (``uvicorn main:app`` runs with backend/ on sys.path)
+    from bedrock_models import promote_nova_model_id
+except ImportError:  # package layout (``backend.app.config``)
+    from backend.bedrock_models import promote_nova_model_id  # type: ignore[no-redef]
 
 logger = logging.getLogger("ghost_rider.config")
 
@@ -40,7 +46,11 @@ logger = logging.getLogger("ghost_rider.config")
 BACKEND_DIR: Path = Path(__file__).resolve().parent.parent
 PROJECT_DIR: Path = BACKEND_DIR.parent
 
-ENV_FILES = (BACKEND_DIR / ".env", PROJECT_DIR / ".env")
+# Tests/CI set ``GHOST_RIDER_DISABLE_DOTENV=1`` so a developer's ``backend/.env``
+# (real AWS credentials) never leaks into the test run.
+_DOTENV_DISABLED = os.getenv("GHOST_RIDER_DISABLE_DOTENV", "").strip().lower() in {"1", "true", "yes", "on"}
+
+ENV_FILES: tuple[Path, ...] = () if _DOTENV_DISABLED else (BACKEND_DIR / ".env", PROJECT_DIR / ".env")
 
 
 class Settings(BaseSettings):
@@ -64,7 +74,7 @@ class Settings(BaseSettings):
     AWS_SECRET_ACCESS_KEY: Optional[str] = None
     AWS_SESSION_TOKEN: Optional[str] = None
     AWS_REGION: str = Field(
-        default="ap-south-1",
+        default="ap-southeast-2",
         validation_alias=AliasChoices("AWS_REGION", "AWS_DEFAULT_REGION"),
     )
     BEDROCK_REGION: Optional[str] = None
@@ -157,6 +167,27 @@ class Settings(BaseSettings):
     def _normalise_log_level(cls, value: Any) -> Any:
         text = str(value or "INFO").strip().upper()
         return text if text in {"CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "NOTSET"} else "INFO"
+
+    @model_validator(mode="after")
+    def _promote_nova_inference_profile(self) -> "Settings":
+        """Use the regional cross-region inference profile for Amazon Nova.
+
+        ``ap-southeast-2`` (and other ``ap-*``/``eu-*`` regions) reject on-demand
+        invocation of the bare ``amazon.nova-*-v1:0`` id with a
+        ``ValidationException``; the geo-prefixed profile id is required. Verified
+        live: ``apac.amazon.nova-micro-v1:0`` works in ``ap-southeast-2``. Explicitly
+        configured profile ids and non-Nova models are left unchanged.
+        """
+        promoted = promote_nova_model_id(self.BEDROCK_MODEL_ID, self.bedrock_region)
+        if promoted and promoted != self.BEDROCK_MODEL_ID:
+            logger.debug(
+                "BEDROCK_MODEL_ID %s -> %s (cross-region inference profile for %s)",
+                self.BEDROCK_MODEL_ID,
+                promoted,
+                self.bedrock_region,
+            )
+            self.BEDROCK_MODEL_ID = promoted
+        return self
 
     # -------------------------------------------------- resolved properties --
     @property

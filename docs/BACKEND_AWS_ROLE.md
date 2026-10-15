@@ -81,4 +81,4 @@ The ML AI owns data admission, human annotation, training, scoring and independe
 
 Your work is ready for final acceptance when a new file can be uploaded privately, processed once despite retries, stored with full versions and evidence, returned through the API, and shown without fabricated fields; an actual camera can transmit new frames through that same path; segment data expose real versus unknown coverage; a real Bedrock call produces fact-checked language; and the deployed application survives tested worker/network failures. Publish the API contract, AWS runbook, camera-access/transport findings, cost settings and service measurements under `docs/`.
 
-Do not claim the overall RoadSight AI project is complete until the ML validation, Indian live test, frontend map/UI, and inclination decision meet the final plan's release gates.
+Do not claim the overall Ghost-Rider project is complete until the ML validation, Indian live test, frontend map/UI, and inclination decision meet the final plan's release gates.

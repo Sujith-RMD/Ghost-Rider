@@ -1,7 +1,7 @@
 # Ghost-Rider Project Setup - Complete
 
 **Setup Date:** October 15, 2026  
-**Status:** ✅ Structure Created Successfully
+**Status:** ✅ Structure Created + Backend Ready
 
 ## What Was Created
 
@@ -17,7 +17,15 @@ Ghost-Rider/
 │
 ├── backend/                    ✅ Python backend modules
 │   ├── __init__.py
-│   ├── schemas.py              (existing - backend owned)
+│   ├── schemas.py              ✅ NEW: Full Pydantic API contract
+│   ├── main.py                 ✅ FastAPI app with routes
+│   ├── database.py             ✅ SQLite persistence
+│   ├── s3_service.py           ✅ S3 upload/presign
+│   ├── bedrock_service.py      ✅ Bedrock narrative
+│   ├── pipeline.py             ✅ CV processing pipeline
+│   ├── app/
+│   │   ├── config.py           ✅ pydantic-settings configuration
+│   │   └── health.py           ✅ Health endpoints
 │   ├── ingestion/              ✅ Upload/live/replay adapters
 │   ├── quality/                ✅ ML: validity checks
 │   ├── geometry/               ✅ ML: calibration, transforms
@@ -27,10 +35,10 @@ Ghost-Rider/
 │   ├── scoring/                ✅ ML: SQI and reasons
 │   ├── routes/                 ✅ Backend: segment summaries
 │   ├── reports/                ✅ Backend: Bedrock wrapper
-│   └── api/                    ✅ Backend: FastAPI, jobs
+│   └── api/                    ✅ Backend: API modules
 │
-├── web/                        ✅ Frontend: React/TypeScript/Vite
-├── training/                   ✅ ML: Colab training code
+├── web/                        ✅ Frontend placeholder
+├── training/                   ✅ ML training code
 ├── data_manifests/             ✅ ML: provenance, splits
 ├── annotation_guides/          ✅ ML: annotation assets
 ├── eval/                       ✅ ML: CV and live evaluation
@@ -46,7 +54,7 @@ Ghost-Rider/
 │   └── ml/                     ✅ ML tests
 │
 ├── infra/                      ✅ Backend: Docker, EC2 deployment
-├── demo/                       ✅ Backend: demo assets, replay backup
+├── demo/                       ✅ Backend: demo assets
 │
 ├── reports/
 │   ├── backend/                ✅ Backend-generated exports
@@ -54,115 +62,194 @@ Ghost-Rider/
 │
 └── docs/
     ├── README.md               ✅ Documentation policy
-    ├── final_plan.md           (to be added - authoritative plan)
-    ├── PROJECT_SKELETON_SETUP.md ✅ Copied from Downloads
-    ├── BACKEND_AWS_ROLE.md     ✅ Copied from Downloads
-    ├── ML_ROLE.md              ✅ Copied from Downloads
-    ├── FRONTEND_ROLE.md        ✅ Copied from Downloads
-    ├── contracts/              ✅ Backend: API documentation
-    ├── backend/                ✅ Backend work notes
-    ├── ml/                     ✅ ML work notes
-    ├── frontend/               ✅ Frontend work notes
-    └── decisions/              ✅ Cross-role decisions
+    ├── SETUP_COMPLETE.md       ✅ This file
+    ├── final_plan.md           ✅ Ghost-Rider final plan
+    ├── PROJECT_SKELETON_SETUP.md ✅ Setup instructions
+    ├── BACKEND_AWS_ROLE.md     ✅ Backend role
+    ├── ML_ROLE.md              ✅ ML role
+    ├── FRONTEND_ROLE.md        ✅ Frontend role
+    ├── contracts/
+    │   ├── README.md           ✅ Contract overview
+    │   └── endpoints.md        ✅ Full API endpoint spec
+    ├── backend/
+    │   ├── RUNNING.md          ✅ How to run backend
+    │   └── CONTRACT_STATUS.md  ✅ Contract tracking
+    ├── ml/                     ✅ ML work notes (empty)
+    ├── frontend/               ✅ Frontend work notes (empty)
+    ├── decisions/              ✅ Cross-role decisions (empty)
+    └── .gitkeep files         ✅ Structure preserved
 ```
 
-## Files Created
+## Backend-Specific Changes Made
 
-### Root Level
-- ✅ `README.md` - Project entry point
-- ✅ `pyproject.toml` - Python project metadata
-- ✅ `.gitignore` - Comprehensive ignore rules (Python, datasets, models, secrets, AWS, IDE, Node)
+### 1. Created `backend/schemas.py` (NEW)
+Full Pydantic v2 API contract with:
+- **Enums:** QualityStatus, ScoreStatus, JobStatus, SourceMode, NarrativeStatus
+- **GPS/Sensor:** GPSData, IMUData, FrameMetadata
+- **Measurements:** AreaResult, QualityResult, MetricResult, AggregatedMetrics
+- **Evidence:** DistressEvidence, ReferenceComparison
+- **Scoring:** ScoreResult with proper null/zero semantics
+- **Segment:** SegmentResult (full analysis record)
+- **Sessions/Jobs:** JobState, SessionState
+- **Maps:** SegmentSummary, SegmentList (50m bins)
+- **Reports:** ReportContent, ReportResult
+- **Uploads:** UploadRequest/Response, FinalizeRequest/Response
+- **Health:** HealthStatus, DeepHealthStatus
 
-### Python Package Structure
-- ✅ `backend/__init__.py` - Main package init
-- ✅ All subdirectory `__init__.py` files (10 modules)
+All models use `extra="forbid"` to reject unexpected fields.
 
-### Documentation
-- ✅ `docs/README.md` - Documentation folder policy
-- ✅ `docs/PROJECT_SKELETON_SETUP.md` - Setup instructions (copied)
-- ✅ `docs/BACKEND_AWS_ROLE.md` - Backend role (copied, updated to Ghost-Rider)
-- ✅ `docs/ML_ROLE.md` - ML role (copied, updated to Ghost-Rider)
-- ✅ `docs/FRONTEND_ROLE.md` - Frontend role (copied, updated to Ghost-Rider)
+### 2. Created `docs/contracts/` Documentation
+- [README.md](docs/contracts/README.md) - Contract overview and conventions
+- [endpoints.md](docs/contracts/endpoints.md) - Full endpoint specification with examples
 
-### Structure Markers
-- ✅ `.gitkeep` files in 19 directories to preserve empty structure in Git
+### 3. Updated `docs/final_plan.md`
+- Changed title from "RoadSight AI" to "Ghost-Rider"
+- Updated working name reference
+- Maintained all technical content
+
+### 4. Created Backend Documentation
+- [docs/backend/RUNNING.md](docs/backend/RUNNING.md) - How to run and deploy
+- [docs/backend/CONTRACT_STATUS.md](docs/backend/CONTRACT_STATUS.md) - Contract tracking
+
+### 5. Verified Backend Code
+- ✅ All Python files compile successfully
+- ✅ schemas.py imports correctly
+- ✅ Core modules (schemas, database, s3_service) importable
+- ✅ No "RoadSight" references remaining in .py files
 
 ## Ownership Summary
 
-| Area | Owner |
-|------|-------|
-| `backend/schemas.py`, `ingestion/`, `routes/`, `reports/`, `api/` | Backend & AWS AI |
-| `backend/quality/`, `geometry/`, `aggregate/`, `distress/`, `reference/`, `scoring/` | ML AI |
-| `web/` | Frontend AI |
-| `configs/deployment/`, `infra/`, `demo/` | Backend & AWS AI |
-| `configs/camera/`, `features/`, `scoring/` | ML AI |
-| `training/`, `data_manifests/`, `annotation_guides/`, `eval/` | ML AI |
-| `docs/contracts/`, `docs/decisions/` | Backend & AWS AI (maintainer) |
-| `docs/backend/` | Backend & AWS AI |
-| `docs/ml/` | ML AI |
-| `docs/frontend/` | Frontend AI |
+| Area | Owner | Status |
+|------|-------|--------|
+| `backend/schemas.py` | Backend & AWS AI | ✅ Created |
+| `backend/main.py` | Backend & AWS AI | ✅ Existing |
+| `backend/database.py` | Backend & AWS AI | ✅ Existing |
+| `backend/s3_service.py` | Backend & AWS AI | ✅ Existing |
+| `backend/bedrock_service.py` | Backend & AWS AI | ✅ Existing |
+| `backend/pipeline.py` | Backend & AWS AI | ✅ Existing |
+| `backend/app/config.py` | Backend & AWS AI | ✅ Existing |
+| `backend/app/health.py` | Backend & AWS AI | ✅ Existing |
+| `backend/ingestion/` | Backend & AWS AI | ✅ Structure |
+| `backend/routes/` | Backend & AWS AI | ✅ Structure |
+| `backend/reports/` | Backend & AWS AI | ✅ Structure |
+| `backend/api/` | Backend & AWS AI | ✅ Structure |
+| `docs/contracts/` | Backend & AWS AI | ✅ Created |
+| `docs/backend/` | Backend & AWS AI | ✅ Created |
+| `infra/` | Backend & AWS AI | ✅ Structure |
+| `configs/deployment/` | Backend & AWS AI | ✅ Structure |
+| `tests/backend/` | Backend & AWS AI | ✅ Structure |
+| `reports/backend/` | Backend & AWS AI | ✅ Structure |
+| `demo/` | Backend & AWS AI | ✅ Structure |
 
-## Next Steps
+## ML Role Areas (Ready)
 
-### For All Roles
-1. Review your role document in `docs/`:
-   - Backend: [BACKEND_AWS_ROLE.md](BACKEND_AWS_ROLE.md)
-   - ML: [ML_ROLE.md](ML_ROLE.md)
-   - Frontend: [FRONTEND_ROLE.md](FRONTEND_ROLE.md)
+| Area | Owner | Status |
+|------|-------|--------|
+| `backend/quality/` | ML AI | ✅ Structure |
+| `backend/geometry/` | ML AI | ✅ Structure |
+| `backend/aggregate/` | ML AI | ✅ Structure |
+| `backend/distress/` | ML AI | ✅ Structure |
+| `backend/reference/` | ML AI | ✅ Structure |
+| `backend/scoring/` | ML AI | ✅ Structure |
+| `configs/camera/` | ML AI | ✅ Structure |
+| `configs/features/` | ML AI | ✅ Structure |
+| `configs/scoring/` | ML AI | ✅ Structure |
+| `training/` | ML AI | ✅ Structure |
+| `data_manifests/` | ML AI | ✅ Structure |
+| `annotation_guides/` | ML AI | ✅ Structure |
+| `eval/` | ML AI | ✅ Structure |
+| `tests/ml/` | ML AI | ✅ Structure |
+| `reports/ml/` | ML AI | ✅ Structure |
+| `docs/ml/` | ML AI | ✅ Structure |
 
-2. Add `docs/final_plan.md` (the authoritative project scope)
+## Frontend Role Areas (Ready)
 
-3. Read the ownership rules in [docs/README.md](docs/README.md)
+| Area | Owner | Status |
+|------|-------|--------|
+| `web/` | Frontend AI | ✅ Structure |
+| `docs/frontend/` | Frontend AI | ✅ Structure |
 
-### Backend & AWS Role - First Actions
-1. Create initial Pydantic schemas in `backend/schemas.py`
-2. Publish typed contract in `docs/contracts/`
-3. Set up development environment and document in `docs/backend/`
-4. Coordinate camera access with team
+## Environment Setup
 
-### ML Role - First Actions
-1. Begin Gate 0 data admission (RDD2022 India subset)
-2. Document data decisions in `docs/ml/`
-3. Propose scientific fields to backend in `docs/ml/`
-4. Set up Colab environment in `training/`
+### Backend
+```bash
+cd backend
+.venv\Scripts\activate  # Windows
+pip install -r requirements.txt
+uvicorn main:app --reload
+```
 
-### Frontend Role - First Actions
-1. Define view states and mock fixtures in `web/`
-2. Document API needs in `docs/frontend/`
-3. Set up React/TypeScript/Vite environment
-4. Coordinate with backend on API contract
+### Test Imports
+```bash
+python -c "import backend.schemas; import backend.database; print('✅ Ready')"
+```
 
-## Verification
+## Next Steps by Role
+
+### Backend & AWS (You are here ✅)
+1. ✅ Create schemas.py with full API contract
+2. ✅ Create contract documentation
+3. ⏳ Implement v1/upload endpoints
+4. ⏳ Implement v1/session endpoints  
+5. ⏳ Set up AWS resources (S3, Bedrock)
+6. ⏳ Create deployment runbook
+7. ⏳ Add backend tests
+
+### ML (Ready for them)
+1. ⏳ Begin Gate 0 data admission (RDD2022 India)
+2. ⏳ Document data decisions in docs/ml/
+3. ⏳ Propose scientific fields to backend
+4. ⏳ Create annotation guides
+5. ⏳ Set up training in Colab
+
+### Frontend (Ready for them)
+1. ⏳ Set up React/TypeScript/Vite in web/
+2. ⏳ Define mock fixtures
+3. ⏳ Document API needs in docs/frontend/
+4. ⏳ Integrate Google Maps
+5. ⏳ Build dashboard UI
+
+## Verification Checklist
 
 ```bash
-# Verify structure
-find . -maxdepth 3 -type f \( -name '*.py' -o -name '*.md' -o -name '.gitkeep' \) ! -path './.venv/*' | wc -l
-# Expected: 40+ files
+# ✅ Project structure exists
+find . -type d -name backend -o -name web -o -name docs -o -name configs
 
-# Check Python imports work
-python -c "import backend; print('✅ Package imports successfully')"
+# ✅ Python compiles
+python -m py_compile backend/schemas.py
+python -m py_compile backend/main.py
 
-# Verify documentation
-ls docs/*.md
-# Expected: README.md, PROJECT_SKELETON_SETUP.md, BACKEND_AWS_ROLE.md, ML_ROLE.md, FRONTEND_ROLE.md
+# ✅ Imports work
+python -c "import backend.schemas; import backend.database"
+
+# ✅ No RoadSight references in code
+grep -r "RoadSight" backend/ --include="*.py"  # Should return nothing
+
+# ✅ Documentation complete
+ls docs/*.md docs/backend/*.md docs/contracts/*.md
 ```
 
 ## Notes
 
-- All role documents have been updated to use "Ghost-Rider" instead of "RoadSight AI"
-- Project structure uses `backend/` instead of `src/roadsight/`
-- Existing backend code (`main.py`, `pipeline.py`, `s3_service.py`, etc.) preserved in `backend/`
-- Virtual environment `.venv/` already exists and is gitignored
+- Project renamed from "RoadSight AI" to "Ghost-Rider" throughout
+- Structure uses `backend/` instead of `src/roadsight/`
+- All role documents updated with correct names/paths
 - No credentials, fake data, or fabricated outputs included
-- All empty directories marked with `.gitkeep` for Git tracking
+- Existing backend code preserved and verified
+- Virtual environment `.venv/` gitignored
+- Empty directories preserved with `.gitkeep`
 
 ## Project Status
 
 ✅ **Skeleton Setup Complete**  
-⏳ Awaiting role-specific implementation  
-⏳ Requires `final_plan.md` addition
+✅ **Backend Contract Published**  
+✅ **Backend Code Verified**  
+⏳ Awaiting ML role start  
+⏳ Awaiting Frontend role start  
+⏳ Requires actual AWS/Camera integration
 
 ---
 
 **Setup completed by:** Codebuff AI  
-**Reference:** [PROJECT_SKELETON_SETUP.md](PROJECT_SKELETON_SETUP.md)
+**Reference:** [PROJECT_SKELETON_SETUP.md](PROJECT_SKELETON_SETUP.md)  
+**Backend Contract:** [docs/contracts/README.md](docs/contracts/README.md)

@@ -29,7 +29,7 @@ Object key layout (kept in sync with the lifecycle rule in ``scripts/``):
 Environment variables (all defaulted in ``app/config.py``)
 ----------------------------------------------------------
 ``AWS_ACCESS_KEY_ID`` / ``AWS_SECRET_ACCESS_KEY``  credentials (``AWS_ACCESS_KEY`` ok)
-``AWS_REGION``          target region (default ``ap-south-1``)
+``AWS_REGION``          target region (default ``ap-southeast-2``)
 ``AWS_S3_BUCKET_NAME``  bucket for images (default ``ghost-rider-road-storage``)
 ``AWS_S3_ENDPOINT_URL`` optional S3-compatible endpoint (LocalStack / MinIO)
 ``S3_RETURN_PRESIGNED`` ``true`` (default) -> uploads return a presigned GET URL
@@ -64,12 +64,16 @@ _ENV_LOADED = False
 def load_project_env() -> None:
     """Best-effort ``.env`` loading (no-op when python-dotenv is unavailable).
 
-    Called at import time so every module sees the same environment.
+    Called at import time so every module sees the same environment. Set
+    ``GHOST_RIDER_DISABLE_DOTENV=1`` to skip it (tests/CI must not read a
+    developer's ``.env`` and accidentally talk to real AWS).
     """
     global _ENV_LOADED
     if _ENV_LOADED:
         return
     _ENV_LOADED = True
+    if os.getenv("GHOST_RIDER_DISABLE_DOTENV", "").strip().lower() in {"1", "true", "yes", "on"}:
+        return
     try:  # optional dependency - never fatal
         from dotenv import load_dotenv
     except Exception:  # pragma: no cover - optional dependency
@@ -219,12 +223,32 @@ def get_s3_settings() -> dict:
     }
 
 
+def _resolve_default_credentials() -> Any:
+    """Resolve credentials from boto3's default chain (profile or instance role)."""
+    try:
+        session = boto3.Session(profile_name=os.getenv("AWS_PROFILE") or None)
+        return session.get_credentials()
+    except Exception as exc:
+        logger.debug("No default AWS credentials resolved: %s", exc)
+        return None
+
+
 def is_s3_enabled() -> bool:
-    """True only when boto3 is installed and full credentials + bucket exist."""
+    """True when a bucket is configured and credentials are obtainable.
+
+    Credentials may be explicit keys (env/``.env``), a shared profile, or an
+    EC2/ECS **instance role** resolved through boto3's default chain. The plan
+    requires IAM instance roles in the deployed environment, where no static keys
+    exist, so this must not require ``AWS_ACCESS_KEY_ID`` to be set.
+    """
     if not BOTO3_AVAILABLE:
         return False
     settings = get_s3_settings()
-    return bool(settings["access_key"] and settings["secret_key"] and settings["bucket"])
+    if not settings["bucket"]:
+        return False
+    if settings["access_key"] and settings["secret_key"]:
+        return True
+    return _resolve_default_credentials() is not None
 
 
 def get_s3_client(*, fast: bool = False) -> Optional[Any]:
@@ -244,6 +268,7 @@ def get_s3_client(*, fast: bool = False) -> Optional[Any]:
         settings["region"],
         settings["bucket"],
         settings["endpoint_url"],
+        os.getenv("AWS_PROFILE") or "",
         slot,
     )
 
@@ -266,15 +291,19 @@ def get_s3_client(*, fast: bool = False) -> Optional[Any]:
                     read_timeout=20,
                     signature_version="s3v4",
                 )
-            client = boto3.client(
-                "s3",
-                aws_access_key_id=settings["access_key"],
-                aws_secret_access_key=settings["secret_key"],
-                aws_session_token=settings["session_token"],
-                region_name=settings["region"],
-                endpoint_url=settings["endpoint_url"],
-                config=client_config,
-            )
+            client_kwargs: Dict[str, Any] = {
+                "region_name": settings["region"],
+                "endpoint_url": settings["endpoint_url"],
+                "config": client_config,
+            }
+            # Only pass explicit keys when present; otherwise let boto3 use its
+            # default chain (shared profile or EC2/ECS instance role).
+            if settings["access_key"] and settings["secret_key"]:
+                client_kwargs["aws_access_key_id"] = settings["access_key"]
+                client_kwargs["aws_secret_access_key"] = settings["secret_key"]
+                if settings["session_token"]:
+                    client_kwargs["aws_session_token"] = settings["session_token"]
+            client = boto3.client("s3", **client_kwargs)
             _client_slots[slot] = (cache_key, client)
             logger.info("S3 %s client ready (bucket=%s, region=%s).",
                         slot, settings["bucket"], settings["region"])
@@ -354,6 +383,30 @@ def to_local_url(path_or_key: Any) -> str:
     except Exception as exc:  # pragma: no cover - defensive
         logger.debug("to_local_url fallback failed for %r: %s", path_or_key, exc)
         return UPLOAD_URL_PREFIX
+
+
+def to_local_path(object_key: str) -> Path:
+    """Inverse of :func:`to_local_url`: map an object key to its on-disk media path.
+
+    Used by the local (non-S3) upload path and by tests to locate the file a
+    client uploaded for a given object key. The configured raw/mask prefixes are
+    stripped first, so ``uploads/<id>/frame.jpg`` and ``masks/<id>/mask.jpg``
+    resolve under the local media root. This never raises: a malformed key simply
+    resolves to the media root.
+    """
+    try:
+        key = extract_object_key(object_key)
+        for prefix in (RAW_OBJECT_PREFIX, MASK_OBJECT_PREFIX):
+            if prefix and key.startswith(prefix):
+                key = key[len(prefix):]
+                break
+        key = key.lstrip("/")
+        if not key:
+            return UPLOADS_DIR
+        return UPLOADS_DIR / key
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.debug("to_local_path fallback failed for %r: %s", object_key, exc)
+        return UPLOADS_DIR
 
 
 def get_public_url(object_key: str) -> str:
@@ -488,6 +541,49 @@ def get_presigned_url(object_key: str, expires_in: int = DEFAULT_PRESIGN_TTL) ->
     except Exception as exc:  # pragma: no cover - unexpected SDK failure
         logger.error("Unexpected presign error for '%s' (%s: %s).", key, type(exc).__name__, exc)
         return to_local_url(key)
+
+
+def get_presigned_put_url(object_key: str, content_type: Optional[str] = None,
+                          expires_in: int = DEFAULT_PRESIGN_TTL) -> Optional[str]:
+    """Generate a short-lived HTTP **PUT** presigned URL for uploading ``object_key``.
+
+    Returns ``None`` when S3 is not configured or signing fails, so the caller can
+    fall back to the bounded local upload endpoint. Never raises. When
+    ``content_type`` is supplied it is bound into the signature, so a client cannot
+    store an arbitrary media type under the slot's key.
+    """
+    key = extract_object_key(object_key)
+
+    if not is_s3_enabled():
+        return None
+    client = get_s3_client()
+    if client is None:
+        return None
+
+    settings = get_s3_settings()
+    try:
+        ttl = int(expires_in)
+    except (TypeError, ValueError):
+        ttl = DEFAULT_PRESIGN_TTL
+    ttl = max(60, min(ttl, 604800))
+
+    params: dict = {"Bucket": settings["bucket"], "Key": key}
+    if content_type:
+        params["ContentType"] = str(content_type)
+
+    try:
+        url = client.generate_presigned_url("put_object", Params=params, ExpiresIn=ttl)
+        if url:
+            return url
+        logger.warning("Empty presigned PUT URL for key '%s'.", key)
+        return None
+    except (ClientError, BotoCoreError, NoCredentialsError, PartialCredentialsError, NoRegionError,
+            EndpointConnectionError, ReadTimeoutError) as exc:
+        logger.error("PUT presign failed for '%s' (%s: %s).", key, type(exc).__name__, exc)
+        return None
+    except Exception as exc:  # pragma: no cover - unexpected SDK failure
+        logger.error("Unexpected PUT presign error for '%s' (%s: %s).", key, type(exc).__name__, exc)
+        return None
 
 
 def resolve_media_url(url_or_key: str, expires_in: int = DEFAULT_PRESIGN_TTL) -> str:

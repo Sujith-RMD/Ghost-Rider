@@ -269,7 +269,7 @@ else
 # Fill in real credentials, then: sudo systemctl restart ghost-rider
 AWS_ACCESS_KEY_ID=
 AWS_SECRET_ACCESS_KEY=
-AWS_REGION=ap-south-1
+AWS_REGION=ap-southeast-2
 AWS_S3_BUCKET_NAME=ghost-rider-road-storage
 BEDROCK_MODEL_ID=amazon.nova-micro-v1:0
 YOLO_WEIGHTS_PATH=yolov8n-seg.pt
