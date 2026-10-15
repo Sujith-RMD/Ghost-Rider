@@ -1,0 +1,9 @@
+node_modules/
+dist/
+dist-demo/
+.env*
+playwright-report/
+test-results/
+coverage/
+!src/lib/
+!src/lib/**
