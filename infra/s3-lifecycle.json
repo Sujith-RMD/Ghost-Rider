@@ -1,0 +1,17 @@
+{
+  "Rules": [
+    {
+      "ID": "ghost-rider-expire-raw-uploads",
+      "Status": "Enabled",
+      "Filter": {
+        "Prefix": "uploads/"
+      },
+      "Expiration": {
+        "Days": 7
+      },
+      "AbortIncompleteMultipartUpload": {
+        "DaysAfterInitiation": 7
+      }
+    }
+  ]
+}

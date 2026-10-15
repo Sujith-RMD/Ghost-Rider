@@ -33,12 +33,36 @@
 | S3 private upload smoke test | High | ✅ **PASS** — bucket created in `ap-southeast-2` (SCP is region-scoped); full round-trip verified (`docs/backend/AWS_SMOKE_TEST.md` Run 2) |
 | Bedrock Converse smoke test | High | ✅ Verified live in `ap-southeast-2` (`apac.amazon.nova-micro-v1:0`) |
 | Google Maps data contract render | Medium | Frontend |
-| Real ML artifact wired into worker | High | 🔄 Aggregate + quality **wired live** (`backend/analysis.py`); distress/scoring/reference modules still empty (ML AI) |
+| Real ML artifact wired into worker | High | 🔄 Aggregate + quality **wired live** (`backend/analysis.py`); distress path wired (crack-mask metrics + canonical features); runtime distress **detection** and scoring modules still empty (ML AI) |
 | S3 lifecycle policy (raw-frame expiry) | Low | `s3:PutLifecycleConfiguration` denied by IAM policy — admin-applied, optional |
+| Canonical record persistence | Medium | ✅ **Done** — `canonical_json` column + additive migration; `GET /v1/samples/{id}` returns the §11.5 record (real sha256, geometry, feature list; absent when nothing was measured) |
 | Live camera transport test | High | Camera-access track (hardware) |
-| Canonical record persistence | Medium | Schema migration + sample-id pre-allocation needed |
 
 ## Version History
+
+### v1.3.0 (2026-10-16)
+- **Merged with the frontend team's integration** (`14f196f`, `9ec7999`): S3
+  uploads are fetched via presigned download into a private temp dir during
+  analysis, and jobs complete as **`partial`** (not `succeeded`) whenever no
+  SQI score exists yet — truthful while the scoring module is undelivered;
+  canonical provenance (sha256) is captured before the temp dir is removed and
+  `original_uri` is the S3 object key.
+- **Tiled measurement**: `measure_frame` now uses the ML team's
+  `measure_tiled` (native-resolution tiles, boundary-safe instance merge) —
+  verified: 120 instances on a 1024×768 synthetic frame counted exactly once;
+  small frames unchanged (regression-tested).
+- **Canonical sample records persisted**: `samples.canonical_json` column +
+  additive migration; sample-id allocated before inference so the canonical
+  identity matches the stored row; `GET /v1/samples/{id}` returns the
+  final-plan §11.5 record (real sha256/URI, geometry, camera, feature list);
+  the record is **absent** when nothing was measured (never fabricated).
+- **Distress path wired**: crack-mask measurements translate into
+  `crack_skeleton_length_m` / `crack_total_area_m2` plus canonical feature rows
+  (density, extent); unscaled frames stay `null`. Runtime crack detection
+  still awaits the ML model artifact.
+- 66/66 backend tests pass.
+- Lifecycle rule artifact: `infra/s3-lifecycle.json` (apply command in the
+  runbook) — still IAM-blocked for this user.
 
 ### v1.2.0 (2026-10-16)
 - **Real ML pipeline wired into the worker** (replaces the typed stub):

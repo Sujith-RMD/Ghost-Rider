@@ -323,7 +323,7 @@ async def finalize_upload(
             if client is not None:
                 head = client.head_object(Bucket=s3_service.get_s3_settings()["bucket"], Key=object_key)
                 size = int(head.get("ContentLength") or 0)
-                if size > 0:
+                if 0 < size <= MAX_LOCAL_UPLOAD_BYTES:
                     object_ok = True
         except Exception as exc:
             logger.warning("S3 object check failed for %s: %s", object_key, exc)
@@ -334,7 +334,7 @@ async def finalize_upload(
             s3_service.UPLOADS_DIR / upload_id / slot["filename"],
         ]
         for c in candidates:
-            if c.exists() and c.is_file() and c.stat().st_size > 0:
+            if c.exists() and c.is_file() and 0 < c.stat().st_size <= MAX_LOCAL_UPLOAD_BYTES:
                 object_ok = True
                 break
 
@@ -458,7 +458,10 @@ async def ingest_frame(
     if file is None:
         raise _bad_request("multipart frame file is required", error_code="missing_frame")
 
-    file_bytes = await file.read()
+    file_bytes = await file.read(MAX_LOCAL_UPLOAD_BYTES + 1)
+    if len(file_bytes) > MAX_LOCAL_UPLOAD_BYTES:
+        _increment_session_counter(session_id, "rejected_count")
+        raise _bad_request("frame exceeds upload size limit", error_code="upload_too_large")
     raw_meta = form.get("metadata") or form.get("meta")
 
     frame_index = _next_frame_index(session_id)
@@ -614,7 +617,7 @@ def _get_sample(sample_id: str) -> Optional[SegmentResult]:
                 "SELECT sample_id, segment_id, route_id, image_path, image_url, mask_url, raw_url, "
                 "captured_at, gps_json, geometry_valid, area_json, quality_json, "
                 "metrics_json, evidence_json, score_json, reference_json, "
-                "model_version, feature_version, scoring_version, created_at, error "
+                "model_version, feature_version, scoring_version, created_at, error, canonical_json "
                 "FROM samples WHERE sample_id = ?",
                 (sample_id,),
             ).fetchone()
@@ -637,6 +640,7 @@ def _get_sample(sample_id: str) -> Optional[SegmentResult]:
             evidence = _parse_field(row["evidence_json"], schemas.DistressEvidence)
             score = _parse_field(row["score_json"], schemas.ScoreResult)
             reference = _parse_field(row["reference_json"], schemas.ReferenceComparison)
+            canonical = _parse_field(row["canonical_json"], schemas.CanonicalSampleRecord)
 
             return SegmentResult(
                 segment_id=int(row["segment_id"]),
@@ -655,6 +659,7 @@ def _get_sample(sample_id: str) -> Optional[SegmentResult]:
                 evidence=evidence,
                 score=score,
                 reference=reference,
+                canonical=canonical,
                 model_version=row["model_version"],
                 feature_version=row["feature_version"],
                 scoring_version=row["scoring_version"],
