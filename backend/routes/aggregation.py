@@ -69,26 +69,41 @@ def aggregate_route_segments(
         return SegmentList(
             route_id=parent_route_id,
             segments=[],
-            total_distance_m=0.0,
-            coverage_percentage=0.0,
+            total_distance_m=total_distance_override,
+            coverage_percentage=0.0 if total_distance_override is not None else None,
             unsampled_stretches=[],
         )
 
-    # 1. Determine distance along route for each sample
+    # A distance bin needs a continuous, sufficiently accurate GPS sequence.
+    # Without one, sample locations cannot be placed on a route axis honestly.
     points: List[Tuple[float, float]] = []
-    has_gps = False
     for s in samples:
-        if s.gps and s.gps.lat is not None and s.gps.lon is not None:
-            points.append((s.gps.lat, s.gps.lon))
-            has_gps = True
-        else:
-            points.append((0.0, 0.0))
+        gps = s.gps
+        if (
+            gps is None
+            or gps.lat is None
+            or gps.lon is None
+            or (gps.accuracy_m is not None and gps.accuracy_m > bin_length_m)
+        ):
+            return SegmentList(
+                route_id=parent_route_id,
+                segments=[],
+                total_distance_m=total_distance_override,
+                coverage_percentage=None,
+                unsampled_stretches=[],
+            )
+        points.append((gps.lat, gps.lon))
 
-    if has_gps:
-        distances = compute_cumulative_distances(points)
-    else:
-        # Fallback to nominal frame interval spacing (e.g. 5m per frame if unlocated)
-        distances = [float(i * 5.0) for i in range(len(samples))]
+    if len(points) < 2 and total_distance_override is None:
+        return SegmentList(
+            route_id=parent_route_id,
+            segments=[],
+            total_distance_m=None,
+            coverage_percentage=None,
+            unsampled_stretches=[],
+        )
+
+    distances = compute_cumulative_distances(points)
 
     # 2. Pair each sample with its along-track distance
     sample_distances: List[Tuple[float, SegmentResult]] = []
@@ -97,8 +112,6 @@ def aggregate_route_segments(
 
     max_dist = max(distances) if distances else 0.0
     total_dist = max_dist if total_distance_override is None else max(max_dist, total_distance_override)
-    if total_dist <= 0.0:
-        total_dist = float(len(samples) * 5.0)
 
     # 3. Determine number of bins
     num_bins = max(1, int(math.ceil(total_dist / bin_length_m)))
@@ -216,7 +229,11 @@ def aggregate_route_segments(
         )
 
     sampled_bins = sum(1 for s in summaries if not s.unknown_coverage)
-    coverage_pct = round((sampled_bins / num_bins) * 100.0, 1) if num_bins > 0 else 0.0
+    coverage_pct = (
+        round((sampled_bins / num_bins) * 100.0, 1)
+        if num_bins > 0 and total_dist > 0.0
+        else None
+    )
 
     return SegmentList(
         route_id=parent_route_id,

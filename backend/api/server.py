@@ -98,7 +98,8 @@ def create_app() -> FastAPI:
     # Mount uploads directory for local static file serving
     uploads_dir = s3_service.UPLOADS_DIR
     uploads_dir.mkdir(parents=True, exist_ok=True)
-    app.mount("/uploads", StaticFiles(directory=str(uploads_dir)), name="uploads")
+    if settings.LOCAL_UPLOADS_PUBLIC:
+        app.mount("/uploads", StaticFiles(directory=str(uploads_dir)), name="uploads")
 
     # Global health check at root
     @app.get("/", tags=["health"])

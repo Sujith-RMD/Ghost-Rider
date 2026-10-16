@@ -272,6 +272,7 @@ AWS_SECRET_ACCESS_KEY=
 AWS_REGION=ap-southeast-2
 AWS_S3_BUCKET_NAME=ghost-rider-road-storage
 BEDROCK_MODEL_ID=amazon.nova-micro-v1:0
+LOCAL_UPLOADS_PUBLIC=false
 YOLO_WEIGHTS_PATH=yolov8n-seg.pt
 # CAMERA_MOUNT_PITCH_DEG is the NOMINAL mounting angle. The imu.pitch_deg sent
 # with each upload must be the DEVIATION from that nominal angle (the pipeline
@@ -287,6 +288,13 @@ ENVEOF
     chown "${SERVICE_USER}:${SERVICE_USER}" "${ENV_FILE}" 2>/dev/null || true
     ok "created ${ENV_FILE} (mode 600) - add your AWS credentials before going live"
   fi
+fi
+
+# Local static media is for development only. Preserve any explicit choice and
+# secure older deployment env files that predate this setting.
+if [[ -f "${ENV_FILE}" ]] && ! grep -qE '^[[:space:]]*LOCAL_UPLOADS_PUBLIC=' "${ENV_FILE}"; then
+  printf '\nLOCAL_UPLOADS_PUBLIC=false\n' >> "${ENV_FILE}"
+  chmod 600 "${ENV_FILE}"
 fi
 
 # Ensure the uploads directory exists and is owned by the service user.

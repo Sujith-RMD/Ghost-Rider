@@ -34,6 +34,7 @@ __all__ = [
     "WatershedConfig",
     "InstanceProps",
     "segment_aggregate",
+    "segment_aggregate_with_stages",
     "instance_properties",
     "renumber_labels",
 ]
@@ -363,6 +364,22 @@ def segment_aggregate(image: np.ndarray, config: WatershedConfig | None = None) 
     integers are instance identifiers starting at 1. Instances below
     ``config.min_instance_area_px`` are removed before the map is returned.
     """
+    return _segment_aggregate(image, config, capture_stages=False)[0]
+
+
+def segment_aggregate_with_stages(
+    image: np.ndarray, config: WatershedConfig | None = None
+) -> tuple[np.ndarray, dict[str, np.ndarray]]:
+    """Return the usual labels and actual intermediate arrays from that pass."""
+    return _segment_aggregate(image, config, capture_stages=True)
+
+
+def _segment_aggregate(
+    image: np.ndarray,
+    config: WatershedConfig | None,
+    *,
+    capture_stages: bool,
+) -> tuple[np.ndarray, dict[str, np.ndarray]]:
     config = config or WatershedConfig()
     gray = _to_gray(image)
     if min(gray.shape) < 3:
@@ -376,10 +393,17 @@ def segment_aggregate(image: np.ndarray, config: WatershedConfig | None = None) 
     if config.polarity == "darker":
         flat = -flat
     score = _score_to_uint8(flat, config)
+    stages = {"illumination_flattened": flat, "contrast_normalized": score} if capture_stages else {}
     if not score.any():
-        return np.zeros(gray.shape, dtype=np.int32)
+        empty = np.zeros(gray.shape, dtype=np.int32)
+        if capture_stages:
+            stages.update(otsu_binary=empty.astype(np.uint8), morphology_foreground=empty.astype(np.uint8),
+                          distance_transform=empty.astype(np.float32), markers=empty)
+        return empty, stages
 
     _, foreground = cv2.threshold(score, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    if capture_stages:
+        stages["otsu_binary"] = foreground.copy()
     kernel_px = int(config.noise_kernel_px)
     if kernel_px >= 3:
         if kernel_px % 2 == 0:
@@ -390,22 +414,29 @@ def segment_aggregate(image: np.ndarray, config: WatershedConfig | None = None) 
     # bridges the visible joint between touching chips and destroys the boundary
     # evidence the instance split depends on.
     foreground = _fill_enclosed_holes(foreground, config.hole_fill_max_area_px)
+    if capture_stages:
+        stages["morphology_foreground"] = foreground.copy()
     fg_bool = foreground > 0
     if not fg_bool.any():
-        return np.zeros(gray.shape, dtype=np.int32)
+        empty = np.zeros(gray.shape, dtype=np.int32)
+        if capture_stages:
+            stages.update(distance_transform=np.zeros(gray.shape, dtype=np.float32), markers=empty)
+        return empty, stages
 
     distance = cv2.distanceTransform(foreground, cv2.DIST_L2, 5)
     if config.marker_method == "h_maxima":
         peaks = _select_markers_h_maxima(fg_bool, distance, config)
     else:
         peaks = _select_markers(distance, config)
+    if capture_stages:
+        stages["distance_transform"] = distance.copy()
+        stages["markers"] = peaks.copy()
     if peaks.max() == 0:
         # Foreground exists but no resolvable peak: report one merged instance
         # rather than silently returning nothing.
         labels = np.where(fg_bool, 1, 0).astype(np.int32)
-        return _drop_small_instances(
-            renumber_labels(labels), config.min_instance_area_px
-        )
+        labels = _drop_small_instances(renumber_labels(labels), config.min_instance_area_px)
+        return labels, stages
 
     # Watershed on the *negated distance transform*, not on the image gradient.
     #
@@ -424,7 +455,8 @@ def segment_aggregate(image: np.ndarray, config: WatershedConfig | None = None) 
     surface = np.clip(255.0 - normalised * 255.0, 0.0, 255.0).astype(np.uint8)
     surface_bgr = cv2.cvtColor(surface, cv2.COLOR_GRAY2BGR)
     labels = _basin_labels(fg_bool, peaks.astype(np.int32), surface_bgr)
-    return _drop_small_instances(renumber_labels(labels), config.min_instance_area_px)
+    labels = _drop_small_instances(renumber_labels(labels), config.min_instance_area_px)
+    return labels, stages
 
 
 def _basin_labels(
