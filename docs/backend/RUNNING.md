@@ -61,6 +61,7 @@ S3_RAW_PREFIX=uploads/
 S3_MASK_PREFIX=masks/
 
 # Model
+DISTRESS_MODEL_PATH=models/india_rdd2022_yolov8n/best.pt
 WARMUP_MODEL=true
 
 # Worker / durable jobs

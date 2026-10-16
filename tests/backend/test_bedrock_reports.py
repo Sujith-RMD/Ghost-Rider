@@ -60,7 +60,7 @@ def test_deterministic_factual_template():
 
 
 def test_bedrock_output_fact_checking():
-    facts = {"assessment_id": "test-1"}
+    facts = {"assessment_id": "test-1", "crack_total_area_m2": 0.2}
 
     # Valid response
     valid_json = """{
@@ -92,6 +92,26 @@ def test_bedrock_output_fact_checking():
     }"""
     parsed_bad2 = _parse_and_validate_bedrock_json(prohibited_subbase_json, "test-1", facts)
     assert parsed_bad2 is None
+
+
+def test_bedrock_rejects_unsupported_distress_action_and_reference():
+    facts = {"quality_status": "limited", "pothole_count": None, "crack_total_area_m2": None}
+    unsupported = """{
+        "summary": "The condition rating is unknown.",
+        "evidence_references": ["sample:test-1"],
+        "limitations": ["Scale missing"],
+        "inspection_actions": ["Confirm pothole edge stability"]
+    }"""
+    assert _parse_and_validate_bedrock_json(unsupported, "test-1", facts) is None
+
+    invented_reference = unsupported.replace("Confirm pothole edge stability", "Review the source image").replace("sample:test-1", "sample:other")
+    assert _parse_and_validate_bedrock_json(invented_reference, "test-1", facts) is None
+
+    invented_number = invented_reference.replace("sample:other", "sample:test-1").replace("unknown", "72/100")
+    assert _parse_and_validate_bedrock_json(invented_number, "test-1", facts) is None
+
+    invented_absence = invented_reference.replace("sample:other", "sample:test-1").replace("The condition rating is unknown.", "No defect identifications are available.")
+    assert _parse_and_validate_bedrock_json(invented_absence, "test-1", facts) is None
 
 
 def test_generate_report_fallback_when_bedrock_unconfigured():

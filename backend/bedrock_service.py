@@ -337,7 +337,13 @@ def get_bedrock_settings() -> Dict[str, Any]:
         "retry_base_delay": max(0.0, float(_number("BEDROCK_RETRY_BASE_DELAY", "BEDROCK_RETRY_BASE_DELAY", 0.5, float))),
         "retry_max_delay": max(0.05, float(_number("BEDROCK_RETRY_MAX_DELAY", "BEDROCK_RETRY_MAX_DELAY", 6.0, float))),
         "budget_sec": max(1.0, float(_number("BEDROCK_TOTAL_BUDGET_SEC", "BEDROCK_TOTAL_BUDGET_SEC", 20.0, float))),
-        "enabled": _flag("BEDROCK_ENABLED", "BEDROCK_ENABLED", True),
+        "enabled": (
+            _flag("BEDROCK_ENABLED", "BEDROCK_ENABLED", True)
+            and not (
+                (settings is not None and settings.GHOST_RIDER_LOCAL_ONLY)
+                or env("GHOST_RIDER_LOCAL_ONLY", "").strip().lower() in {"1", "true", "yes", "on"}
+            )
+        ),
     }
 
 

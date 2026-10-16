@@ -78,7 +78,7 @@ def create_app() -> FastAPI:
             "Exposes durable uploads, live camera capture, route aggregation, "
             "and Amazon Bedrock factual narration."
         ),
-        version="1.0.0",
+        version="1.2.0",
         lifespan=lifespan,
     )
 
@@ -106,7 +106,7 @@ def create_app() -> FastAPI:
     async def root_health():
         return {
             "name": "Ghost-Rider API",
-            "version": "1.0.0",
+            "version": "1.2.0",
             "status": "online",
             "docs_url": "/docs",
             "v1_base": "/v1",

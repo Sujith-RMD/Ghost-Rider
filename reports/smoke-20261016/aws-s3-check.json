@@ -1,0 +1,27 @@
+{
+  "region": "ap-southeast-2",
+  "bucket": "ghost-rider-road-storage",
+  "sts": {
+    "ok": true,
+    "elapsed_ms": 1298.3,
+    "account_suffix": "4441"
+  },
+  "head_bucket": {
+    "http_status": 200,
+    "elapsed_ms": 897.8
+  },
+  "put": {
+    "http_status": 200,
+    "elapsed_ms": 607.8,
+    "bytes": 49
+  },
+  "get": {
+    "http_status": 200,
+    "elapsed_ms": 313.0,
+    "sha256_matches": true
+  },
+  "cleanup": {
+    "http_status": 204,
+    "elapsed_ms": 308.0
+  }
+}

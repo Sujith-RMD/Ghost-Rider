@@ -1179,3 +1179,58 @@
 }
 
 .quality-tile .quality-name { color: #a4aaa1; }
+.distress-detection {
+  display: grid;
+  gap: 0.55rem;
+  margin-block: 1rem;
+}
+
+.distress-detection h3,
+.distress-detection p,
+.detection-list {
+  margin: 0;
+}
+
+.detection-image-frame {
+  position: relative;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.detection-image-frame > img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.detection-boxes {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.detection-boxes rect {
+  fill: rgb(254 211 77 / 10%);
+  stroke: #fed34d;
+  stroke-width: 3;
+  vector-effect: non-scaling-stroke;
+}
+
+.detection-boxes text {
+  fill: #101614;
+  stroke: #fed34d;
+  stroke-width: 5px;
+  paint-order: stroke;
+  font: 600 14px system-ui, sans-serif;
+}
+
+.detection-list {
+  padding-left: 1.2rem;
+}
+
+.detection-limit {
+  color: var(--text-muted, #a9b6b0);
+}

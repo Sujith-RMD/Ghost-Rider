@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiBase, readSample, type ActualSample } from "../../api/real-assessment";
 import { Card } from "../../components/primitives";
+import { DistressDetectionOverlay } from "../../components/DistressDetectionOverlay";
 
 export default function ActualSamplePage({ id }: { id: string }) {
   const [sample, setSample] = useState<ActualSample | null>(null);
@@ -23,12 +24,12 @@ export default function ActualSamplePage({ id }: { id: string }) {
       <Card title="Assessment result">
         {error ? <p role="alert">{error}</p> : !sample ? <p>Loading stored sample…</p> : (
           <div className="actual-result">
-            {sample.image_url && <img src={new URL(sample.image_url, apiBase).toString()} alt="Original uploaded road image" />}
+            {sample.image_url && <DistressDetectionOverlay imageUrl={new URL(sample.image_url, apiBase).toString()} evidence={sample.distress_detection} />}
             <p>Image quality: {sample.quality?.status ?? "Unavailable"}</p>
             {!!sample.quality?.reasons?.length && <p>Quality reasons: {sample.quality.reasons.join(", ")}</p>}
             <p>Road score: {sample.score?.value == null ? "Unavailable — scoring has not been validated" : `${sample.score.value} / 100 (${sample.score.status})`}</p>
             <p>Physical scale: {sample.geometry_valid ? "Validated" : "Uncalibrated; physical units unavailable"}</p>
-            <p>Exploratory visible instance count: {sample.metrics?.chip_count ?? "Unavailable"}</p>
+            <p>Watershed candidate regions (unverified): {sample.metrics?.chip_count ?? "Unavailable"}. May include non-road pixels.</p>
             <p>Count per m²: {sample.metrics?.chip_density_per_m2 ?? "Unavailable without calibrated area"}</p>
             {sample.error && <p>Analysis limitation: {sample.error}</p>}
             <p>Model: {sample.model_version ?? "Unavailable"}</p>

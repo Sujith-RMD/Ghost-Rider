@@ -1,0 +1,144 @@
+{
+  "viewport": {
+    "width": 1920,
+    "height": 1080
+  },
+  "sample_path": "/samples/bd749952-b197-463f-822e-69050552c535",
+  "evidence": "India distress detector\nalligator crack 64%\n\nModel rdd2022-india-yolov8n · SHA-256 ff477bb3aaeb · 2301 ms\n\nalligator crack · 64%\n\nDetection boxes show localization. They are not masks, physical measurements, or a road-quality score.",
+  "geometry": {
+    "natural_width": 0,
+    "natural_height": 0,
+    "svg_viewbox": "0 0 720 720",
+    "box_xywh": [
+      1.7007910013198853,
+      503.9307861328125,
+      658.6212304830551,
+      194.76025390625
+    ],
+    "display_alignment_px": {
+      "left": 0,
+      "top": 0,
+      "width": 0,
+      "height": 0
+    }
+  },
+  "responses": [
+    {
+      "path": "/v1/uploads",
+      "status": 200
+    },
+    {
+      "path": "/v1/uploads/571f2ea4-7ab4-4787-ab48-f76b237ddd28/local",
+      "status": 200
+    },
+    {
+      "path": "/v1/uploads/571f2ea4-7ab4-4787-ab48-f76b237ddd28/finalize",
+      "status": 200
+    },
+    {
+      "path": "/v1/jobs/fd7f5738-bb04-4870-81a4-169c7d968d10",
+      "status": 200
+    },
+    {
+      "path": "/v1/jobs/fd7f5738-bb04-4870-81a4-169c7d968d10",
+      "status": 200
+    },
+    {
+      "path": "/v1/jobs/fd7f5738-bb04-4870-81a4-169c7d968d10",
+      "status": 200
+    },
+    {
+      "path": "/v1/jobs/fd7f5738-bb04-4870-81a4-169c7d968d10",
+      "status": 200
+    },
+    {
+      "path": "/v1/jobs/fd7f5738-bb04-4870-81a4-169c7d968d10",
+      "status": 200
+    },
+    {
+      "path": "/v1/jobs/fd7f5738-bb04-4870-81a4-169c7d968d10",
+      "status": 200
+    },
+    {
+      "path": "/v1/jobs/fd7f5738-bb04-4870-81a4-169c7d968d10",
+      "status": 200
+    },
+    {
+      "path": "/v1/samples/bd749952-b197-463f-822e-69050552c535",
+      "status": 200
+    },
+    {
+      "path": "/uploads/571f2ea4-7ab4-4787-ab48-f76b237ddd28/India_000024.jpg",
+      "status": 200
+    },
+    {
+      "path": "/v1/samples/bd749952-b197-463f-822e-69050552c535",
+      "status": 200
+    },
+    {
+      "path": "/v1/samples/bd749952-b197-463f-822e-69050552c535",
+      "status": 200
+    },
+    {
+      "path": "/uploads/571f2ea4-7ab4-4787-ab48-f76b237ddd28/India_000024.jpg",
+      "status": 304
+    }
+  ],
+  "timings": [
+    {
+      "path": "/v1/uploads",
+      "duration_ms": 2067,
+      "status": 200
+    },
+    {
+      "path": "/v1/uploads/571f2ea4-7ab4-4787-ab48-f76b237ddd28/local",
+      "duration_ms": 16,
+      "status": 200
+    },
+    {
+      "path": "/v1/uploads/571f2ea4-7ab4-4787-ab48-f76b237ddd28/finalize",
+      "duration_ms": 2025,
+      "status": 200
+    },
+    {
+      "path": "/v1/jobs/fd7f5738-bb04-4870-81a4-169c7d968d10",
+      "duration_ms": 10,
+      "status": 200
+    },
+    {
+      "path": "/v1/jobs/fd7f5738-bb04-4870-81a4-169c7d968d10",
+      "duration_ms": 6,
+      "status": 200
+    },
+    {
+      "path": "/v1/jobs/fd7f5738-bb04-4870-81a4-169c7d968d10",
+      "duration_ms": 8,
+      "status": 200
+    },
+    {
+      "path": "/v1/jobs/fd7f5738-bb04-4870-81a4-169c7d968d10",
+      "duration_ms": 10,
+      "status": 200
+    },
+    {
+      "path": "/v1/jobs/fd7f5738-bb04-4870-81a4-169c7d968d10",
+      "duration_ms": 8,
+      "status": 200
+    },
+    {
+      "path": "/v1/jobs/fd7f5738-bb04-4870-81a4-169c7d968d10",
+      "duration_ms": 9,
+      "status": 200
+    },
+    {
+      "path": "/v1/jobs/fd7f5738-bb04-4870-81a4-169c7d968d10",
+      "duration_ms": 7,
+      "status": 200
+    },
+    {
+      "path": "/v1/samples/bd749952-b197-463f-822e-69050552c535",
+      "duration_ms": 2044,
+      "status": 200
+    }
+  ]
+}

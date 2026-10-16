@@ -83,6 +83,7 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("AWS_S3_BUCKET_NAME", "S3_BUCKET_NAME"),
     )
     AWS_S3_ENDPOINT_URL: Optional[str] = None  # LocalStack / MinIO / S3-compatible
+    GHOST_RIDER_LOCAL_ONLY: bool = False  # hard-disable S3 and Bedrock, including profile credentials
 
     # --------------------------------------------------------------- Bedrock --
     BEDROCK_MODEL_ID: str = "amazon.nova-micro-v1:0"
@@ -105,6 +106,7 @@ class Settings(BaseSettings):
     YOLO_CONF: float = 0.25
     YOLO_IOU: float = 0.45
     YOLO_IMGSZ: int = 640
+    DISTRESS_MODEL_PATH: str = "models/india_rdd2022_yolov8n/best.pt"
     CAMERA_MOUNT_PITCH_DEG: float = 25.0
     CAMERA_HEIGHT_M: float = 1.3
     CAMERA_HFOV_DEG: float = 70.0
@@ -220,6 +222,12 @@ class Settings(BaseSettings):
         return path.resolve() if path.is_absolute() else (BACKEND_DIR / path).resolve()
 
     @property
+    def distress_model_path(self) -> Path:
+        """Resolved optional India distress detector checkpoint."""
+        path = Path(self.DISTRESS_MODEL_PATH).expanduser()
+        return path.resolve() if path.is_absolute() else (PROJECT_DIR / path).resolve()
+
+    @property
     def bedrock_region(self) -> str:
         return (self.BEDROCK_REGION or self.AWS_REGION).strip() or "us-east-1"
 
@@ -247,11 +255,11 @@ class Settings(BaseSettings):
 
     @property
     def s3_configured(self) -> bool:
-        return bool(self.aws_credentials_present and self.AWS_S3_BUCKET_NAME)
+        return bool(not self.GHOST_RIDER_LOCAL_ONLY and self.aws_credentials_present and self.AWS_S3_BUCKET_NAME)
 
     @property
     def bedrock_configured(self) -> bool:
-        return bool(self.BEDROCK_ENABLED and self.aws_credentials_present)
+        return bool(not self.GHOST_RIDER_LOCAL_ONLY and self.BEDROCK_ENABLED and self.aws_credentials_present)
 
     @property
     def max_upload_bytes(self) -> int:
@@ -266,6 +274,7 @@ class Settings(BaseSettings):
             "s3_bucket": self.AWS_S3_BUCKET_NAME,
             "s3_endpoint_url": self.AWS_S3_ENDPOINT_URL,
             "s3_configured": self.s3_configured,
+            "local_only": self.GHOST_RIDER_LOCAL_ONLY,
             "bedrock_model": self.BEDROCK_MODEL_ID,
             "bedrock_models": self.bedrock_models,
             "bedrock_configured": self.bedrock_configured,
@@ -291,7 +300,9 @@ class Settings(BaseSettings):
     def warnings(self) -> List[str]:
         """Configuration problems worth surfacing at startup / in health checks."""
         problems: List[str] = []
-        if not self.aws_credentials_present:
+        if self.GHOST_RIDER_LOCAL_ONLY:
+            problems.append("GHOST_RIDER_LOCAL_ONLY is enabled: S3 and Bedrock network calls are disabled.")
+        elif not self.aws_credentials_present:
             problems.append(
                 "AWS credentials are missing: S3 uploads fall back to local /uploads URLs and "
                 "Bedrock recommendations use the deterministic rule templates."

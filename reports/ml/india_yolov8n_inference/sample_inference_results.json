@@ -1,0 +1,63 @@
+{
+  "model_sha256": "ff477bb3aaeb3559bf8f3c040acf55ab3b468b520c21fb8d6bc1fa9d03204881",
+  "samples": [
+    {
+      "status": "success",
+      "reason": null,
+      "model_version": "rdd2022-india-yolov8n",
+      "model_sha256": "ff477bb3aaeb3559bf8f3c040acf55ab3b468b520c21fb8d6bc1fa9d03204881",
+      "class_names": {
+        "0": "alligator crack",
+        "1": "block crack",
+        "2": "longitudinal crack",
+        "3": "other corruption",
+        "4": "pothole",
+        "5": "repair",
+        "6": "transverse crack"
+      },
+      "image_width": 720,
+      "image_height": 720,
+      "inference_ms": 2373.5717000090517,
+      "confidence_threshold": 0.25,
+      "detections": [
+        {
+          "class_id": 0,
+          "class_name": "alligator crack",
+          "confidence": 0.6418276429176331,
+          "bbox_xyxy": [
+            1.7007910013198853,
+            503.9307861328125,
+            660.322021484375,
+            698.6910400390625
+          ]
+        }
+      ],
+      "image": "India_000024.jpg",
+      "preview": "India_000024_predictions.jpg",
+      "split": "dev"
+    },
+    {
+      "status": "success",
+      "reason": null,
+      "model_version": "rdd2022-india-yolov8n",
+      "model_sha256": "ff477bb3aaeb3559bf8f3c040acf55ab3b468b520c21fb8d6bc1fa9d03204881",
+      "class_names": {
+        "0": "alligator crack",
+        "1": "block crack",
+        "2": "longitudinal crack",
+        "3": "other corruption",
+        "4": "pothole",
+        "5": "repair",
+        "6": "transverse crack"
+      },
+      "image_width": 720,
+      "image_height": 720,
+      "inference_ms": 78.42930001788773,
+      "confidence_threshold": 0.25,
+      "detections": [],
+      "image": "India_000022.jpg",
+      "preview": "India_000022_predictions.jpg",
+      "split": "dev"
+    }
+  ]
+}

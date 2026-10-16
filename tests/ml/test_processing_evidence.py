@@ -68,3 +68,21 @@ def test_rejected_image_keeps_original_and_marks_unrun_stages_unavailable(tmp_pa
     assert manifest["quality"]["status"] == "rejected"
     assert manifest["candidate_count"]["count"] is None
     assert all(stage["status"] == "unavailable" for stage in manifest["stages"].values())
+
+
+def test_bundle_records_and_measures_human_road_roi(tmp_path):
+    import cv2
+
+    source = tmp_path / "oblique.jpg"
+    image = np.random.default_rng(9).integers(30, 220, (320, 320, 3), dtype=np.uint8)
+    assert cv2.imwrite(str(source), image)
+    mask = np.zeros((320, 320), dtype=np.uint8)
+    mask[:, :160] = 255
+    roi_path = tmp_path / "road_roi.png"
+    assert cv2.imwrite(str(roi_path), mask)
+
+    manifest = build_bundle(source, tmp_path / "roi-evidence", roi_path)
+
+    assert manifest["roi"]["available"] is True
+    assert manifest["candidate_count"]["count"] == manifest["reported_pixel_metrics"]["chip_count"]
+    assert "manual_surface_roi_applied" in manifest["limitations"]

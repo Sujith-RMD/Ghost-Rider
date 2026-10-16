@@ -1,0 +1,37 @@
+{
+  "job": {
+    "status_code": 200,
+    "response_ms": 50.9,
+    "id": "cf77162f-39eb-4b9e-aca9-0fa03b629461",
+    "state": "partial",
+    "result_sample_id": "0abe0b4f-6f21-4169-b52e-6492cf679a12"
+  },
+  "sample": {
+    "status_code": 200,
+    "response_ms": 2057.5,
+    "reload_status_code": 200,
+    "reload_response_ms": 2057.8,
+    "id": "0abe0b4f-6f21-4169-b52e-6492cf679a12",
+    "score": null,
+    "distress_detection": {
+      "status": "unavailable",
+      "reason": "weights_not_found",
+      "model_version": null,
+      "model_sha256": null,
+      "class_names": {},
+      "image_width": 720,
+      "image_height": 720,
+      "inference_ms": null,
+      "confidence_threshold": 0.25,
+      "detections": []
+    }
+  },
+  "report": {
+    "create_status_code": 200,
+    "response_ms": 2035.8,
+    "fetch_status_code": 200,
+    "fetch_response_ms": 19.1,
+    "id": "8ae24ae8-97c8-468c-bfc7-55d3f84264d3",
+    "narrative_status": "not_requested"
+  }
+}

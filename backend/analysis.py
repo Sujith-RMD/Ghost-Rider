@@ -47,6 +47,7 @@ from .schemas import (
     QualityStatus,
     SegmentResult,
 )
+from .distress.inference import detect_distress
 
 logger = logging.getLogger("ghost_rider.analysis")
 
@@ -183,7 +184,8 @@ def measure_frame(image: np.ndarray,
                   metadata: Optional[FrameMetadata] = None,
                   crack_mask: Optional[np.ndarray] = None,
                   distress_mask: Optional[np.ndarray] = None,
-                  include_processing_stages: bool = False) -> Dict[str, Any]:
+                  include_processing_stages: bool = False,
+                  valid_surface_mask: Optional[np.ndarray] = None) -> Dict[str, Any]:
     """Run the real pipeline on a decoded image. Never raises.
 
     Returns a dict with ``quality``, ``observed_area``, ``metrics``,
@@ -191,9 +193,9 @@ def measure_frame(image: np.ndarray,
     spread into a :class:`SegmentResult` / canonical record alongside the
     worker's identifiers/provenance.
 
-    ``crack_mask`` / ``distress_mask`` are booleans masks of the same H×W as
-    the image. A runtime crack/pothole detector (the ML training track) will
-    supply them; until then they are ``None`` and distress fields stay ``null``.
+    ``crack_mask`` / ``distress_mask`` are measurement masks matching the image.
+    The current detector returns separate box localization evidence; boxes do
+    not supply these masks or produce physical distress measurements.
     """
     outcome: Dict[str, Any] = {
         "quality": None,
@@ -203,6 +205,7 @@ def measure_frame(image: np.ndarray,
         "limitations": [],
         "image_shape": tuple(int(v) for v in image.shape[:2]),
         "distress": None,
+        "distress_detection": detect_distress(image),
     }
 
     if not ML_AVAILABLE:
@@ -219,7 +222,14 @@ def measure_frame(image: np.ndarray,
             outcome["limitations"].append("quality_rejected")
             return outcome
 
-        valid_surface = np.ones(image.shape[:2], dtype=bool)
+        if valid_surface_mask is None:
+            valid_surface = np.ones(image.shape[:2], dtype=bool)
+        else:
+            valid_surface = np.asarray(valid_surface_mask)
+            if valid_surface.ndim != 2 or valid_surface.shape != image.shape[:2]:
+                outcome["limitations"].append("invalid_surface_roi_shape")
+                return outcome
+            valid_surface = valid_surface.astype(bool)
         if include_processing_stages:
             measurement_config = MeasurementConfig()
             labels, stages = segment_tiled_with_stages(
@@ -248,7 +258,8 @@ def measure_frame(image: np.ndarray,
         outcome["geometry_valid"] = bool(scale.is_scaled)
         outcome["limitations"].extend(measurements.limitations or [])
         outcome["limitations"].append(
-            "valid_surface_mask_is_full_frame:no_plane_detector_yet"
+            "manual_surface_roi_applied" if valid_surface_mask is not None
+            else "valid_surface_mask_is_full_frame:no_plane_detector_yet"
         )
 
         if crack_mask is not None:
@@ -301,6 +312,7 @@ def build_segment_result(*, segment_id: int,
         quality=measured.get("quality"),
         metrics=measured.get("metrics"),
         evidence=None,
+        distress_detection=measured.get("distress_detection"),
         score=None,
         reference=None,
         model_version=model_version,

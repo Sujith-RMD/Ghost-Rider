@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Literal, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -232,6 +232,34 @@ class DistressEvidence(BaseModel):
     overlay_url: Optional[str] = Field(default=None, description="URL to combined evidence overlay")
 
 
+class DistressDetection(BaseModel):
+    """One YOLO distress box in native image pixel coordinates."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    class_id: int = Field(..., ge=0)
+    class_name: str
+    confidence: float = Field(..., ge=0.0, le=1.0)
+    bbox_xyxy: List[float] = Field(..., min_length=4, max_length=4, description="[x1, y1, x2, y2] in original image pixels")
+
+
+class DistressDetectionEvidence(BaseModel):
+    """Versioned detector output; boxes are localization evidence only."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    status: Literal["success", "unavailable", "error"]
+    reason: Optional[str] = None
+    model_version: Optional[str] = None
+    model_sha256: Optional[str] = None
+    class_names: Dict[int, str] = Field(default_factory=dict)
+    image_width: Optional[int] = Field(default=None, ge=1)
+    image_height: Optional[int] = Field(default=None, ge=1)
+    inference_ms: Optional[float] = Field(default=None, ge=0.0)
+    confidence_threshold: float = Field(default=0.25, ge=0.0, le=1.0)
+    detections: List[DistressDetection] = Field(default_factory=list)
+
+
 class ReferenceComparison(BaseModel):
     """Comparison against known-good reference."""
 
@@ -394,6 +422,7 @@ class SegmentResult(BaseModel):
     # Measurements and evidence
     metrics: Optional[AggregatedMetrics] = Field(default=None, description="Aggregate and distress metrics")
     evidence: Optional[DistressEvidence] = Field(default=None, description="Visual evidence references")
+    distress_detection: Optional[DistressDetectionEvidence] = Field(default=None, description="Versioned distress boxes in original image coordinates")
 
     # Scoring and reference
     score: Optional[ScoreResult] = Field(default=None, description="Surface condition score")

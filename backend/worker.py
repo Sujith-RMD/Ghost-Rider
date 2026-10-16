@@ -157,9 +157,9 @@ def run_inference(frame: QueueItem, *, sample_id: Optional[str] = None,
 _SAMPLE_INSERT = (
     "INSERT INTO samples (sample_id, segment_id, route_id, image_path, image_url, mask_url, raw_url, "
     "captured_at, gps_json, geometry_valid, area_json, quality_json, "
-    "metrics_json, evidence_json, score_json, reference_json, "
+    "metrics_json, evidence_json, detection_json, score_json, reference_json, "
     "model_version, feature_version, scoring_version, created_at, error, canonical_json) "
-    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 )
 
 
@@ -184,6 +184,7 @@ def _sample_row_values(sample_id: str, result: SegmentResult) -> Tuple[Any, ...]
         _json_or_none(result.quality),
         _json_or_none(result.metrics),
         _json_or_none(result.evidence),
+        _json_or_none(result.distress_detection),
         _json_or_none(result.score),
         _json_or_none(result.reference),
         result.model_version,

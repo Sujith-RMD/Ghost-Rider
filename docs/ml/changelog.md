@@ -7,6 +7,17 @@ evaluation, manifests, annotation guides, ML configs, tests and reports.
 
 ## Current navigation
 
+### 2026-10-16 — India distress detector integration (verified)
+
+Installed the hash-verified RDD2022 India YOLOv8n checkpoint outside Git and
+added optional box-localization evidence to API v1.2.0. Evidence is persisted
+with samples and displayed over the original image in desktop assessment and
+sample views. Missing weights and inference errors remain explicit. Local CPU
+inference succeeded; the 783 empty-label dev-image audit found 95 images with
+one or more boxes at confidence 0.25. Since empty labels may omit real defects,
+this is not a confirmed false-positive rate. No physical measurement or score
+uses these boxes. See [the run and local audit](INDIA_RDD2022_YOLOV8N_RUN.md).
+
 ### 2026-10-16 — uploaded-image processing latency (verified)
 
 The 1702 × 866 `A_00007.jpg` upload spent 260 seconds processing. Profiling
@@ -57,6 +68,12 @@ Local CPU work covers classical CV, geometry, tests and evaluation. Backend-owne
 installation is recorded below, not retroactively applied to this baseline.
 
 ## History
+
+### 2026-10-16 — RDD2022 India YOLOv8n Colab baseline completed
+
+- **Verified:** trained pretrained YOLOv8n for 60 epochs on the frozen RDD2022 India train split (6,165 images), effective 736-pixel input (720 rounded to model stride), batch 8, seed 0, Colab Tesla T4. On the 1,541-image random-held-out development split (1,640 boxes): precision 0.395, recall 0.349, mAP50 0.337, mAP50-95 0.152. Report: `reports/ml/rdd_india_yolov8n_colab_final_metrics.json`; run notes: `docs/ml/INDIA_RDD2022_YOLOV8N_RUN.md`.
+- Archive/image/label checks found zero corrupt images and zero invalid label rows; 783 development images have empty labels and remained in standard validation. The additional separate empty-image prediction-count audit OOMed and is incomplete. Block crack and repair have no India examples; transverse crack has 23 development boxes.
+- Colab checkpoint `best.pt`: 6,527,786 bytes, SHA-256 `ff477bb3aaeb3559bf8f3c040acf55ab3b468b520c21fb8d6bc1fa9d03204881`. Bundle ZIP: 6,623,293 bytes, SHA-256 `335c88959c85df631a0f67d18b7a64247c72066043d3ff553cab523d9cf39a9a`. ZIP CRC test passed in Colab. Local browser download/inference validation could not be completed, so the checkpoint has not been installed or approved for product integration. Metrics do not establish road/session-independent India accuracy, physical measurements, or a calibrated Good/Bad score.
 
 ### 2026-10-16 — Share project evidence without exposing raw data or secrets
 

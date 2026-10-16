@@ -22,6 +22,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from ..schemas import NarrativeStatus, ReportContent
 from ..bedrock_models import promote_nova_model_id
+from ..app.config import get_settings_safely
 from .template import build_factual_template
 
 logger = logging.getLogger("ghost_rider.reports.bedrock")
@@ -38,8 +39,18 @@ FALLBACK_BEDROCK_MODEL_ID = os.getenv("BEDROCK_FALLBACK_MODEL_ID", "anthropic.cl
 _NARRATIVE_CACHE: Dict[str, Tuple[ReportContent, str]] = {}
 
 
+def _local_only_enabled() -> bool:
+    settings = get_settings_safely()
+    return bool(
+        (settings is not None and settings.GHOST_RIDER_LOCAL_ONLY)
+        or os.getenv("GHOST_RIDER_LOCAL_ONLY", "").strip().lower() in {"1", "true", "yes", "on"}
+    )
+
+
 def is_bedrock_configured() -> bool:
     """Check if Bedrock client can be initialized with credentials or IAM role."""
+    if _local_only_enabled():
+        return False
     try:
         import boto3
         session = boto3.Session()
@@ -51,6 +62,8 @@ def is_bedrock_configured() -> bool:
 
 def get_bedrock_client(region: Optional[str] = None) -> Optional[Any]:
     """Obtain boto3 bedrock-runtime client."""
+    if _local_only_enabled():
+        return None
     try:
         import boto3
         target_region = region or DEFAULT_BEDROCK_REGION
@@ -86,12 +99,14 @@ Your sole job is to translate strictly verified pavement measurements into clear
 RULES:
 1. DO NOT invent, hallucinate, or recalculate any numbers, scores, dimensions, or particle counts.
 2. DO NOT estimate repair costs, financial budgets, or prescribe structural sub-base reconstruction.
-3. Recommend ONLY human physical inspection actions (e.g. check crack width manually, confirm pothole edge stability).
-4. Clearly state engineering limitations (RGB visible surface only; internal load capacity unknown).
-5. Output ONLY a valid JSON object matching this exact schema:
+3. Recommend human review of the source image. Name crack or pothole inspection only when the corresponding input measurement is positive; null means unavailable.
+4. Do not write numeric quantities in prose. The application renders measured numbers directly from stored facts.
+5. Use exactly one evidence reference: "sample:<assessment_id>" from the input. Clearly state engineering limitations.
+6. Null measurements mean unmeasured. Do not claim that no defects or measurements exist; other evidence may be present outside these fields.
+7. Output ONLY a valid JSON object matching this exact schema:
 {
   "summary": "Concise 2-3 sentence factual summary rendered from the input facts",
-  "evidence_references": ["sample:<id>", ...],
+  "evidence_references": ["sample:<assessment_id>"],
   "limitations": ["Limitation 1", ...],
   "inspection_actions": ["Action 1", ...]
 }
@@ -109,6 +124,9 @@ def generate_bedrock_narrative(
     Returns:
         (ReportContent, bedrock_model_id_used)
     """
+    if _local_only_enabled():
+        return build_factual_template(assessment_id, stored_facts), None
+
     # 1. Check cache first
     cache_key = f"{assessment_id}:{factual_input_hash}"
     if cache_key in _NARRATIVE_CACHE:
@@ -222,9 +240,9 @@ def _parse_and_validate_bedrock_json(
         logger.warning("Bedrock response contained prohibited keywords; rejecting")
         return None
 
-    evidence_refs = data.get("evidence_references") or [f"sample:{assessment_id}"]
-    if not isinstance(evidence_refs, list):
-        evidence_refs = [f"sample:{assessment_id}"]
+    evidence_refs = data.get("evidence_references")
+    if evidence_refs != [f"sample:{assessment_id}"]:
+        return None
 
     limitations = data.get("limitations") or []
     if not isinstance(limitations, list):
@@ -233,6 +251,16 @@ def _parse_and_validate_bedrock_json(
     inspection_actions = data.get("inspection_actions") or []
     if not isinstance(inspection_actions, list):
         inspection_actions = [str(inspection_actions)]
+
+    prose = " ".join([summary, *map(str, limitations), *map(str, inspection_actions)]).lower()
+    if re.search(r"\d", prose):
+        return None
+    if re.search(r"\bno\b.{0,50}\b(?:defects?|damage|distress|cracks?|potholes?|measurements?)\b", prose):
+        return None
+    if not stored_facts.get("pothole_count") and re.search(r"\bpotholes?\b|\bpitting\b", prose):
+        return None
+    if not stored_facts.get("crack_total_area_m2") and re.search(r"\bcracks?\b|\bcracking\b|\bfissures?\b", prose):
+        return None
 
     return {
         "summary": summary,

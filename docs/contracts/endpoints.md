@@ -1,8 +1,8 @@
 # Ghost-Rider API Endpoints
 
-**Version:** 1.0.0  
-**Format:** OpenAPI 3.0 compatible  
-**Base URL:** `/v1`  
+**Version:** 1.2.0
+**Format:** OpenAPI 3.0 compatible
+**Base URL:** `/v1`
 
 See `backend/schemas.py` for detailed model definitions.
 
@@ -444,7 +444,7 @@ Service health check.
 ```json
 {
   "status": "healthy",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "services": {
     "database": {"status": "ok", "path": "/path/to/db"},
     "s3": {"status": "configured", "bucket": "ghost-rider-road-storage"},
@@ -467,7 +467,7 @@ Detailed health with dependency probes.
 ```json
 {
   "status": "healthy",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "services": {
     "database": {"latency_ms": 0.5, "status": "ok"},
     "s3": {"bucket": "ghost-rider-road-storage", "region": "ap-southeast-2"},
@@ -513,3 +513,13 @@ All errors follow this format:
 - `already_processing` - Route already being processed
 - `s3_unavailable` - S3 service unavailable
 - `bedrock_unavailable` - Bedrock service unavailable
+
+### India distress localization (v1.2.0)
+
+`GET /v1/samples/{id}` may include `distress_detection`. Successful results carry
+boxes as `[x1, y1, x2, y2]` in original-image pixels, confidence values, class
+names, and the exact checkpoint hash. `unavailable` means weights are absent;
+`error` means inference failed. A successful empty `detections` list means the
+model returned no boxes at its configured confidence threshold, not proof that
+no road defect exists. This evidence is localization only and does not alter
+quality or score fields.

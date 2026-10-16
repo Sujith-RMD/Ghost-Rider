@@ -631,7 +631,7 @@ def _get_sample(sample_id: str) -> Optional[SegmentResult]:
             row = conn.execute(
                 "SELECT sample_id, segment_id, route_id, image_path, image_url, mask_url, raw_url, "
                 "captured_at, gps_json, geometry_valid, area_json, quality_json, "
-                "metrics_json, evidence_json, score_json, reference_json, "
+                "metrics_json, evidence_json, detection_json, score_json, reference_json, "
                 "model_version, feature_version, scoring_version, created_at, error, canonical_json "
                 "FROM samples WHERE sample_id = ?",
                 (sample_id,),
@@ -653,6 +653,7 @@ def _get_sample(sample_id: str) -> Optional[SegmentResult]:
             quality = _parse_field(row["quality_json"], schemas.QualityResult)
             metrics = _parse_field(row["metrics_json"], schemas.AggregatedMetrics)
             evidence = _parse_field(row["evidence_json"], schemas.DistressEvidence)
+            distress_detection = _parse_field(row["detection_json"], schemas.DistressDetectionEvidence)
             score = _parse_field(row["score_json"], schemas.ScoreResult)
             reference = _parse_field(row["reference_json"], schemas.ReferenceComparison)
             canonical = _parse_field(row["canonical_json"], schemas.CanonicalSampleRecord)
@@ -682,6 +683,7 @@ def _get_sample(sample_id: str) -> Optional[SegmentResult]:
                 quality=quality,
                 metrics=metrics,
                 evidence=evidence,
+                distress_detection=distress_detection,
                 score=score,
                 reference=reference,
                 canonical=canonical,
@@ -853,7 +855,7 @@ async def v1_health() -> HealthStatus:
     overall = "healthy" if db_ok else "degraded"
     return HealthStatus(
         status=overall,
-        version="1.0.0",
+        version="1.2.0",
         services=services,
     )
 

@@ -113,6 +113,7 @@ def ensure_v1_tables() -> None:
             quality_json     TEXT,
             metrics_json     TEXT,
             evidence_json    TEXT,
+            detection_json   TEXT,
             score_json       TEXT,
             reference_json   TEXT,
             model_version    TEXT,
@@ -162,7 +163,7 @@ def ensure_v1_tables() -> None:
                     _ensure_column(conn, "jobs", column, ddl_type)
                 except Exception as exc:
                     logger.warning("Could not migrate jobs.%s: %s", column, exc)
-            for column, ddl_type in (("canonical_json", "TEXT"),):
+            for column, ddl_type in (("canonical_json", "TEXT"), ("detection_json", "TEXT")):
                 try:
                     _ensure_column(conn, "samples", column, ddl_type)
                 except Exception as exc:
