@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect } from "react";
-import { NavLink, Route, Routes, useLocation, Link } from "react-router-dom";
+import { NavLink, Route, Routes, useLocation, Link, Navigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   Route as RouteIcon,
@@ -80,7 +80,7 @@ export default function App() {
           </span>
         </Link>
         <nav aria-label="Main navigation">
-          {navigation.map(({ to, label, Icon }) => (
+          {navigation.filter(({ to }) => dataSource.mock || to !== "/").map(({ to, label, Icon }) => (
             <NavLink
               key={to}
               to={to}
@@ -101,7 +101,9 @@ export default function App() {
         </Link>
       </header>
       <main id="main" tabIndex={-1}>
-        {query.isPending ? (
+        {!dataSource.mock && location.pathname === "/" ? (
+          <Navigate to="/assess" replace />
+        ) : query.isPending ? (
           <div
             className="loading-layout"
             aria-label="Loading assessment workspace"
@@ -116,19 +118,17 @@ export default function App() {
           </Suspense>
         ) : query.isError ? (
           <div className="content-page">
-            <h1>Connect the assessment service</h1>
+            <h1>This screen is not connected yet</h1>
             <ErrorPanel
               family="integration"
-              title="Backend contract pending"
-              code="contract_not_published"
-              retry={() => void query.refetch()}
+              title="Production data unavailable"
             >
-              <p>{query.error.message}</p>
+              <p>Route, live, sample-list, and report data are still being connected.</p>
             </ErrorPanel>
             <p>
-              There are no measurements to display. Publish the OpenAPI
-              contract, pin the client and connect the real service.
+              Image assessment is available now. Other screens will appear when their real data is ready.
             </p>
+            <Link className="button primary" to="/assess">Open assessment</Link>
             <Link className="button secondary" to="/system">
               System readiness
             </Link>
