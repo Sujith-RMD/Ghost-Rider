@@ -21,6 +21,7 @@ import {
 const RoutePage = lazy(() => import("../features/route-map/RoutePage"));
 const SamplePage = lazy(() => import("../features/sample/SamplePage"));
 const ActualSamplePage = lazy(() => import("../features/sample/ActualSamplePage"));
+const RecentSamplesPage = lazy(() => import("../features/sample/RecentSamplesPage"));
 const AssessPage = lazy(() => import("../features/assess/AssessPage"));
 const LivePage = lazy(() => import("../features/live/LivePage"));
 const SessionPage = lazy(() => import("../features/session/SessionPage"));
@@ -112,9 +113,9 @@ export default function App() {
             <div className="skeleton" />
             <div className="skeleton" />
           </div>
-        ) : query.isError && !dataSource.mock && (location.pathname === "/assess" || location.pathname.startsWith("/samples/") || location.pathname === "/system") ? (
+        ) : query.isError && !dataSource.mock && (location.pathname === "/assess" || location.pathname === "/samples" || location.pathname.startsWith("/samples/") || location.pathname === "/system") ? (
           <Suspense fallback={<div className="loading-layout"><div className="skeleton" /></div>}>
-            {location.pathname === "/assess" ? <AssessPage mock={false} /> : location.pathname === "/system" ? <ActualSystemPage /> : <ActualSamplePage id={location.pathname.slice("/samples/".length)} />}
+            {location.pathname === "/assess" ? <AssessPage mock={false} /> : location.pathname === "/samples" ? <RecentSamplesPage /> : location.pathname === "/system" ? <ActualSystemPage /> : <ActualSamplePage id={location.pathname.slice("/samples/".length)} />}
           </Suspense>
         ) : query.isError ? (
           <div className="content-page">
@@ -123,7 +124,7 @@ export default function App() {
               family="integration"
               title="Production data unavailable"
             >
-              <p>Route, live, sample-list, and report data are still being connected.</p>
+              <p>Route, live and report data are still being connected.</p>
             </ErrorPanel>
             <p>
               Image assessment is available now. Other screens will appear when their real data is ready.
