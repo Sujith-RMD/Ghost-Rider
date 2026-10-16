@@ -7,6 +7,19 @@ evaluation, manifests, annotation guides, ML configs, tests and reports.
 
 ## Current navigation
 
+### 2026-10-16 — uploaded-image processing latency (verified)
+
+The 1702 × 866 `A_00007.jpg` upload spent 260 seconds processing. Profiling
+identified full-tile watershed calls per cluster and full-frame centroid scans
+per particle. Watershed now uses each component's bounding box plus a one-pixel
+rim; centroid calculation is batched. Segmentation is versioned
+`agg-classical-v4` because restricting flood context can change basin boundaries;
+existing stored results are preserved. Direct analysis of that upload took 2.23
+seconds; a fresh upload through the restarted API completed as `partial` in 9.5
+seconds including transport and polling. All 136 targeted measurement and
+upload/canonical integration tests passed. These timings do not validate chip
+accuracy, physical scale, or road-condition scoring.
+
 - [TASKS.md](TASKS.md): task status, user actions and implementation review.
 - [DATA_ADMISSION.md](DATA_ADMISSION.md): dataset acquisition, provenance,
   permissions, visibility evidence and admission decisions.

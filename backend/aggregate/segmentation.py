@@ -47,7 +47,7 @@ class WatershedConfig:
     change in segmentation behaviour is traceable (final plan section 9.2).
     """
 
-    config_version: str = "agg-classical-v3"
+    config_version: str = "agg-classical-v4"
     polarity: str = "brighter"
     """``brighter``: exposed aggregate is lighter than binder. ``darker``: the
     opposite. Must match the dataset/surface appearance, not per-image guessing."""
@@ -477,21 +477,27 @@ def _basin_labels(
         take = np.isin(components, group_comp[single])
         result[take] = lut[components[take]]
 
-    # Case 2: several markers -> a real cluster; flood inside this component only.
+    # A background rim keeps the watershed boundary outside interior components.
+    boxes = ndi.find_objects(components)
     for comp in group_comp[counts > 1].tolist():
-        region = components == comp
-        sub_markers = np.where(region, markers, 0).astype(np.int32)
+        ys, xs = boxes[comp - 1]
+        crop = (
+            slice(max(0, ys.start - 1), min(foreground.shape[0], ys.stop + 1)),
+            slice(max(0, xs.start - 1), min(foreground.shape[1], xs.stop + 1)),
+        )
+        region = components[crop] == comp
+        sub_markers = np.where(region, markers[crop], 0).astype(np.int32)
         if sub_markers.max() == 0:
             continue
-        cv2.watershed(surface_bgr, sub_markers)
+        cv2.watershed(np.ascontiguousarray(surface_bgr[crop]), sub_markers)
         take = region & (sub_markers > 0)
-        result[take] = sub_markers[take]
+        result[crop][take] = sub_markers[take]
 
     # Case 3: a component with no marker keeps its pixels, as one merged region.
     covered = np.zeros(n_components + 1, dtype=bool)
     covered[group_comp] = True
-    for comp in (np.flatnonzero(~covered[1:]) + 1).tolist():
-        result[components == comp] = comp
+    take = (components > 0) & ~covered[components]
+    result[take] = components[take]
 
     return result
 
