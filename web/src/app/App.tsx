@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect } from "react";
-import { NavLink, Route, Routes, useLocation, Link, Navigate } from "react-router-dom";
+import { NavLink, Route, Routes, useLocation, useParams, Link, Navigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   Route as RouteIcon,
@@ -24,6 +24,8 @@ const ActualSamplePage = lazy(() => import("../features/sample/ActualSamplePage"
 const RecentSamplesPage = lazy(() => import("../features/sample/RecentSamplesPage"));
 const AssessPage = lazy(() => import("../features/assess/AssessPage"));
 const LivePage = lazy(() => import("../features/live/LivePage"));
+const ActualLivePage = lazy(() => import("../features/live/ActualLivePage"));
+const ActualReportsPage = lazy(() => import("../features/report/ActualReportsPage"));
 const SessionPage = lazy(() => import("../features/session/SessionPage"));
 const ReportPage = lazy(() => import("../features/report/ReportPage"));
 const SystemPage = lazy(() => import("../features/system/SystemPage"));
@@ -36,11 +38,16 @@ const navigation = [
   { to: "/reports", label: "Reports", Icon: FileText },
   { to: "/system", label: "System", Icon: Activity },
 ];
+function ActualSampleRoute() {
+  const { id } = useParams();
+  return <ActualSamplePage id={id || ""} />;
+}
 export default function App() {
   const location = useLocation();
   const query = useQuery({
     queryKey: ["workspace", dataSource.mock],
     queryFn: dataSource.load,
+    enabled: dataSource.mock,
     retry: false,
     refetchInterval: dataSource.mock ? false : 30000,
     refetchIntervalInBackground: false,
@@ -102,8 +109,20 @@ export default function App() {
         </Link>
       </header>
       <main id="main" tabIndex={-1}>
-        {!dataSource.mock && location.pathname === "/" ? (
-          <Navigate to="/assess" replace />
+        {!dataSource.mock ? (
+          <Suspense fallback={<div className="loading-layout"><div className="skeleton" /></div>}>
+            <Routes>
+              <Route path="/" element={<Navigate to="/assess" replace />} />
+              <Route path="/assess" element={<AssessPage mock={false} />} />
+              <Route path="/live" element={<ActualLivePage />} />
+              <Route path="/samples" element={<RecentSamplesPage />} />
+              <Route path="/samples/:id" element={<ActualSampleRoute />} />
+              <Route path="/reports" element={<ActualReportsPage />} />
+              <Route path="/reports/:id" element={<ActualReportsPage />} />
+              <Route path="/system" element={<ActualSystemPage />} />
+              <Route path="*" element={<div className="content-page"><h1>Page not found</h1><Link to="/assess">Open assessment</Link></div>} />
+            </Routes>
+          </Suspense>
         ) : query.isPending ? (
           <div
             className="loading-layout"
@@ -113,10 +132,6 @@ export default function App() {
             <div className="skeleton" />
             <div className="skeleton" />
           </div>
-        ) : query.isError && !dataSource.mock && (location.pathname === "/assess" || location.pathname === "/samples" || location.pathname.startsWith("/samples/") || location.pathname === "/system") ? (
-          <Suspense fallback={<div className="loading-layout"><div className="skeleton" /></div>}>
-            {location.pathname === "/assess" ? <AssessPage mock={false} /> : location.pathname === "/samples" ? <RecentSamplesPage /> : location.pathname === "/system" ? <ActualSystemPage /> : <ActualSamplePage id={location.pathname.slice("/samples/".length)} />}
-          </Suspense>
         ) : query.isError ? (
           <div className="content-page">
             <h1>This screen is not connected yet</h1>

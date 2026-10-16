@@ -79,6 +79,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/sessions/{session_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read live session processing status */
+        get: operations["get_session_v1_sessions__session_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/sessions/{session_id}/frames": {
         parameters: {
             query?: never;
@@ -193,6 +210,23 @@ export interface paths {
          * @description Generate a structured report and optional Bedrock narrative from stored facts.
          */
         post: operations["generate_report_v1_reports_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/reports/{report_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read a saved assessment report */
+        get: operations["get_report_v1_reports__report_id__get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1465,6 +1499,17 @@ export interface components {
              * @description Unique session identifier
              */
             session_id: string;
+            /**
+             * Status
+             * @description Session lifecycle: live or finished
+             * @default live
+             */
+            status: string;
+            /**
+             * Latest Sample Id
+             * @description Latest stored sample, if a frame has been processed
+             */
+            latest_sample_id?: string | null;
             /** @description Capture mode: live, replay, upload */
             mode: components["schemas"]["SourceMode"];
             /**
@@ -1740,6 +1785,37 @@ export interface operations {
             };
         };
     };
+    get_session_v1_sessions__session_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionState"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     ingest_frame_v1_sessions__session_id__frames_post: {
         parameters: {
             query?: never;
@@ -1911,6 +1987,37 @@ export interface operations {
                 };
             };
         };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_report_v1_reports__report_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                report_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {

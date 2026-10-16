@@ -35,6 +35,7 @@ export default function ActualSamplePage({ id }: { id: string }) {
           </div>
         )}
         <Link className="button secondary" to="/assess">Back to assessment</Link>
+        {sample?.sample_id && <Link className="button secondary" to={`/reports?sample=${encodeURIComponent(sample.sample_id)}`}>Generate report</Link>}
       </Card>
     </div>
   );

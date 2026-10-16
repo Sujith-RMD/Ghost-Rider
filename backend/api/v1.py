@@ -429,6 +429,15 @@ async def create_session(
     return session
 
 
+@router.get("/sessions/{session_id}", response_model=SessionState, summary="Read live session processing status")
+async def get_session(session_id: str) -> SessionState:
+    _ensure_v1_tables()
+    session = _get_session(session_id)
+    if session is None:
+        raise _not_found("session", session_id)
+    return session
+
+
 @router.post(
     "/sessions/{session_id}/frames",
     response_model=SessionState,
@@ -444,6 +453,9 @@ async def ingest_frame(
     session = _get_session(session_id)
     if session is None:
         raise _not_found("session", session_id)
+
+    if session.status != "live":
+        raise HTTPException(status_code=409, detail="This session has finished. Start a new session.")
 
     content_type = request.headers.get("content-type") or ""
     if "multipart/form-data" not in content_type:
@@ -481,6 +493,9 @@ async def ingest_frame(
 
     # Update session counters
     _increment_session_counter(session_id, "frame_count")
+    with database.get_connection() as conn:
+        conn.execute("UPDATE sessions SET last_capture_at=? WHERE session_id=?",
+                     ((record.get("metadata") or {}).get("captured_at"), session_id))
     if record.get("dropped"):
         _increment_session_counter(session_id, "dropped_count")
 
@@ -744,28 +759,18 @@ async def generate_report(
     if not assessment_id:
         raise _bad_request("assessment_id, sample_id or job_id is required", error_code="missing_assessment_id")
 
-    # Load sample or job facts from database
-    stored_facts: Dict[str, Any] = {}
+    # Report facts come only from stored evidence; request fields cannot supply measurements.
     sample = _get_sample(assessment_id)
-    if sample is not None:
-        stored_facts = extract_facts_from_sample(sample)
-    else:
-        # Check if it corresponds to a job
+    if sample is None:
         job = _get_job(assessment_id)
-        if job is not None:
-            stored_facts = {
-                "assessment_id": assessment_id,
-                "quality_status": "accepted" if job.status == JobStatus.SUCCEEDED else "limited",
-                "score_status": "unknown",
-            }
-        else:
-            # Fallback to direct provided facts or default baseline
-            stored_facts = {
-                "assessment_id": assessment_id,
-                "quality_status": body.get("quality_status", "accepted"),
-                "score_status": body.get("score_status", "unknown"),
-                "score_value": body.get("score_value"),
-            }
+        if job is not None and job.result_sample_id:
+            sample = _get_sample(job.result_sample_id)
+        elif job is not None:
+            raise HTTPException(status_code=409, detail="This assessment has no stored result yet.")
+    if sample is None:
+        raise _not_found("assessment", assessment_id)
+    assessment_id = sample.sample_id or assessment_id
+    stored_facts = extract_facts_from_sample(sample)
 
     report = generate_report_for_assessment(
         assessment_id=assessment_id,
@@ -790,9 +795,25 @@ async def generate_report(
                 ),
             )
     except Exception as exc:
-        logger.warning("Could not persist report record: %s", exc)
+        logger.exception("Could not persist report record: %s", exc)
+        raise HTTPException(status_code=503, detail="Could not save the report. Please retry.") from exc
 
     return report
+
+
+@router.get("/reports/{report_id}", response_model=ReportResult, summary="Read a saved assessment report")
+async def get_report(report_id: str) -> ReportResult:
+    _ensure_v1_tables()
+    with database.read_connection() as conn:
+        row = conn.execute("SELECT * FROM reports WHERE report_id=?", (report_id,)).fetchone()
+    if row is None:
+        raise _not_found("report", report_id)
+    return ReportResult(
+        report_id=row["report_id"], assessment_id=row["assessment_id"],
+        content=ReportContent.model_validate_json(row["content_json"]),
+        generated_at=row["generated_at"], bedrock_model_id=row["bedrock_model_id"],
+        factual_input_hash=row["factual_input_hash"],
+    )
 
 
 # --------------------------------------------------------------------------- #
@@ -853,8 +874,14 @@ def _get_session(session_id: str) -> Optional[SessionState]:
             ).fetchone()
             if row is None:
                 return None
+            latest = conn.execute(
+                "SELECT sample_id FROM samples WHERE route_id=? ORDER BY created_at DESC, segment_id DESC LIMIT 1",
+                (session_id,),
+            ).fetchone()
             return SessionState(
                 session_id=row["session_id"],
+                status=row["status"],
+                latest_sample_id=latest["sample_id"] if latest else None,
                 mode=SourceMode(row["mode"]),
                 camera_id=row["camera_id"],
                 calibration_id=row["calibration_id"],

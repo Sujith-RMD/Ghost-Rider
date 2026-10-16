@@ -49,8 +49,8 @@ def extract_facts_from_sample(sample: SegmentResult) -> Dict[str, Any]:
     """Extract normalized factual dictionary from a SegmentResult model."""
     facts: Dict[str, Any] = {
         "assessment_id": sample.sample_id or str(sample.segment_id),
-        "quality_status": sample.quality.status.value if sample.quality else "accepted",
-        "quality_reasons": sample.quality.reasons if sample.quality else [],
+        "quality_status": sample.quality.status.value if sample.quality else "limited",
+        "quality_reasons": sample.quality.reasons if sample.quality else ["quality_not_measured"],
         "scale_source": sample.observed_area.scale_source if sample.observed_area else "unscaled",
         "observed_area_m2": sample.observed_area.observed_area_m2 if sample.observed_area else None,
         "score_value": sample.score.value if sample.score else None,
@@ -59,7 +59,7 @@ def extract_facts_from_sample(sample: SegmentResult) -> Dict[str, Any]:
         "chip_count": sample.metrics.chip_count if sample.metrics else None,
         "chip_density_per_m2": sample.metrics.chip_density_per_m2 if sample.metrics else None,
         "gap_median_mm": sample.metrics.gap_median_mm if sample.metrics else None,
-        "pothole_count": sample.metrics.pothole_count if sample.metrics else 0,
+        "pothole_count": sample.metrics.pothole_count if sample.metrics else None,
         "crack_total_area_m2": sample.metrics.crack_total_area_m2 if sample.metrics else None,
         "grade_percent": sample.grade.grade_percent if sample.grade else None,
     }

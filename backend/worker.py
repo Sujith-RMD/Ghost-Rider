@@ -614,6 +614,7 @@ def worker_loop(stop_event: Optional[threading.Event] = None,
             time.sleep(idle_sleep_sec)
             continue
 
+        stored = None
         try:
             stored = process_frame(frame)
             if stored is None:
@@ -623,6 +624,13 @@ def worker_loop(stop_event: Optional[threading.Event] = None,
         except Exception as exc:
             queue.mark_rejected()
             logger.exception("Worker error for %s:%d: %s", frame.session_id, frame.frame_index, exc)
+        if stored is None:
+            try:
+                with database.get_connection() as conn:
+                    conn.execute("UPDATE sessions SET rejected_count=rejected_count+1 WHERE session_id=?",
+                                 (frame.session_id,))
+            except Exception:
+                logger.exception("Could not update rejection count for session %s", frame.session_id)
 
     logger.info("Worker stopped")
 

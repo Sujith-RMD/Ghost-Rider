@@ -1,6 +1,6 @@
 # RoadSight frontend status
 
-**Phase 1 integration update (16 October 2026):** The production Assess screen now performs the real upload → finalize → job → sample workflow. Stored sample detail and live System health are also connected. Other production screens remain disconnected. See `PHASE1_INTEGRATION_REPORT.md` for evidence and limits; the older status below describes the pre-integration baseline.
+**Integration update (16 October 2026):** Production connects Assess, recent Samples, stored sample detail, Live browser-camera capture, Reports, and System health. Live samples frames at most every five seconds, waits for outstanding processing, and releases the camera on stop/navigation. Reports use stored assessments, support saved report URLs and JSON download, and label Bedrock fallback. See `LIVE_REPORTS_INTEGRATION.md` for evidence and limits; the older status below describes the pre-integration baseline.
 
 **Current priority:** the user’s **1920 × 1080** desktop only. Existing mobile styles are left in place; further mobile/tablet refinement and their browser test are deferred.
 

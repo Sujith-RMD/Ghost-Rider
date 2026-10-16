@@ -1,5 +1,5 @@
 import { afterEach, expect, test, vi } from "vitest";
-import { startAssessment } from "./real-assessment";
+import { startAssessment, sendFrame, createReport } from "./real-assessment";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -32,4 +32,22 @@ test("a failed byte transfer never finalizes an upload", async () => {
   await expect(startAssessment(new File(["bytes"], "road.png", { type: "image/png" })))
     .rejects.toThrow("Image upload failed (500)");
   expect(fetcher).toHaveBeenCalledTimes(2);
+});
+
+test("live frames use multipart bytes and real capture metadata", async () => {
+  const fetcher = vi.fn(async () => ({ ok: true, json: async () => ({ session_id: "session-1" }) }));
+  vi.stubGlobal("fetch", fetcher);
+  await sendFrame("session-1", new Blob(["camera bytes"], { type: "image/jpeg" }), "2026-10-16T06:00:00Z");
+  const init = (fetcher.mock.calls as unknown as [URL, RequestInit][])[0][1];
+  expect(init.headers).not.toHaveProperty("Content-Type");
+  expect((init.body as FormData).get("frame")).toBeInstanceOf(File);
+  expect(JSON.parse(String((init.body as FormData).get("metadata")))).toEqual({ captured_at: "2026-10-16T06:00:00Z", source_mode: "live" });
+});
+
+test("reports send only an assessment reference and narrative choice", async () => {
+  const fetcher = vi.fn(async () => ({ ok: true, json: async () => ({ report_id: "r1" }) }));
+  vi.stubGlobal("fetch", fetcher);
+  await createReport("stored-sample", false);
+  const init = (fetcher.mock.calls as unknown as [URL, RequestInit][])[0][1];
+  expect(JSON.parse(String(init.body))).toEqual({ assessment_id: "stored-sample", include_narrative: false });
 });

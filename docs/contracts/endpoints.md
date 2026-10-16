@@ -12,6 +12,21 @@ None required for local development. Production deployments use AWS IAM or JWT t
 
 ## Endpoints
 
+### Live and report integration additions (2026-10-16)
+
+- `GET /v1/sessions/{id}` returns `SessionState`, including lifecycle `status`
+  (`live` or `finished`) and nullable `latest_sample_id`. Counters and capture /
+  processing timestamps come from the stored session. Unknown sessions return 404.
+- `POST /v1/sessions/{id}/frames` requires multipart camera bytes and metadata;
+  finished sessions return 409. The browser waits for its outstanding frame before
+  sending another and captures at most once every five seconds.
+- `POST /v1/reports` requires an existing sample or a job with a stored sample.
+  Unknown assessments return 404; unfinished jobs return 409. Supplied measurement
+  fields are ignored. Report persistence failure returns 503.
+- `GET /v1/reports/{id}` returns the saved `ReportResult`, or 404 if absent.
+
+The published OpenAPI snapshot and frontend generated types include these changes.
+
 ### Uploads
 
 #### POST /v1/uploads

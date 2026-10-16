@@ -6,11 +6,13 @@ type UploadSlot = components["schemas"]["UploadResponse"];
 export type Job = components["schemas"]["JobState"];
 export type ActualSample = components["schemas"]["SegmentResult"];
 export type ActualHealth = components["schemas"]["HealthStatus"];
+export type ActualSession = components["schemas"]["SessionState"];
+export type ActualReport = components["schemas"]["ReportResult"];
 
 async function json<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(new URL(path, apiBase), {
     ...init,
-    headers: { "Content-Type": "application/json", ...init?.headers },
+    headers: { ...(init?.body instanceof FormData ? {} : { "Content-Type": "application/json" }), ...init?.headers },
     signal: init?.signal ?? AbortSignal.timeout(15000),
   });
   if (!response.ok) {
@@ -53,3 +55,19 @@ export const readSample = (sampleId: string) =>
   json<ActualSample>(`/v1/samples/${encodeURIComponent(sampleId)}`);
 
 export const readHealth = () => json<ActualHealth>("/v1/health");
+
+export const createLiveSession = (camera: string, signal?: AbortSignal) =>
+  json<ActualSession>("/v1/sessions", { method: "POST", body: JSON.stringify({ mode: "live", camera_id: camera }), signal });
+export const readSession = (id: string, signal?: AbortSignal) =>
+  json<ActualSession>(`/v1/sessions/${encodeURIComponent(id)}`, { signal });
+export const finishSession = (id: string) =>
+  json<ActualSession>(`/v1/sessions/${encodeURIComponent(id)}/finish`, { method: "POST" });
+export function sendFrame(id: string, frame: Blob, capturedAt: string, signal?: AbortSignal) {
+  const body = new FormData();
+  body.append("frame", frame, "camera-frame.jpg");
+  body.append("metadata", JSON.stringify({ captured_at: capturedAt, source_mode: "live" }));
+  return json<ActualSession>(`/v1/sessions/${encodeURIComponent(id)}/frames`, { method: "POST", body, signal });
+}
+export const createReport = (id: string, includeNarrative: boolean) =>
+  json<ActualReport>("/v1/reports", { method: "POST", body: JSON.stringify({ assessment_id: id, include_narrative: includeNarrative }), signal: AbortSignal.timeout(60000) });
+export const readReport = (id: string) => json<ActualReport>(`/v1/reports/${encodeURIComponent(id)}`);

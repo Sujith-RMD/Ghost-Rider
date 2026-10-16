@@ -197,6 +197,48 @@
         }
       }
     },
+    "/v1/sessions/{session_id}": {
+      "get": {
+        "tags": [
+          "v1"
+        ],
+        "summary": "Read live session processing status",
+        "operationId": "get_session_v1_sessions__session_id__get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionState"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/sessions/{session_id}/frames": {
       "post": {
         "tags": [
@@ -444,6 +486,48 @@
           },
           "required": true
         },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/reports/{report_id}": {
+      "get": {
+        "tags": [
+          "v1"
+        ],
+        "summary": "Read a saved assessment report",
+        "operationId": "get_report_v1_reports__report_id__get",
+        "parameters": [
+          {
+            "name": "report_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Report Id"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -3059,6 +3143,24 @@
             "type": "string",
             "title": "Session Id",
             "description": "Unique session identifier"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Session lifecycle: live or finished",
+            "default": "live"
+          },
+          "latest_sample_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Sample Id",
+            "description": "Latest stored sample, if a frame has been processed"
           },
           "mode": {
             "$ref": "#/components/schemas/SourceMode",
