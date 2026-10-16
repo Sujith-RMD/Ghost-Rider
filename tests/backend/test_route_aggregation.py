@@ -169,3 +169,54 @@ def test_unsampled_stretch_accounting():
     # Checked unsampled stretches list
     assert len(res.unsampled_stretches) >= 1
     assert any(s["start_m"] == 50.0 for s in res.unsampled_stretches)
+
+
+def test_missing_gps_does_not_invent_route_distance():
+    samples = [SegmentResult(segment_id=i, route_id="no-gps") for i in (1, 2)]
+
+    result = aggregate_route_segments(samples)
+
+    assert result.total_distance_m is None
+    assert result.coverage_percentage is None
+    assert result.segments == []
+
+
+def test_mixed_gps_does_not_bridge_an_unlocated_sample():
+    samples = [
+        SegmentResult(segment_id=1, gps=GPSData(lat=12.9716, lon=77.5946)),
+        SegmentResult(segment_id=2),
+        SegmentResult(segment_id=3, gps=GPSData(lat=12.9720, lon=77.5946)),
+    ]
+
+    result = aggregate_route_segments(samples)
+
+    assert result.total_distance_m is None
+    assert result.coverage_percentage is None
+    assert result.segments == []
+
+
+def test_poor_gps_accuracy_does_not_place_samples_in_distance_bins():
+    samples = [
+        SegmentResult(
+            segment_id=i,
+            gps=GPSData(lat=12.9716 + i * 0.0001, lon=77.5946, accuracy_m=100.0),
+        )
+        for i in (0, 1)
+    ]
+
+    result = aggregate_route_segments(samples, bin_length_m=50.0)
+
+    assert result.total_distance_m is None
+    assert result.coverage_percentage is None
+    assert result.segments == []
+
+
+def test_external_route_distance_without_sample_positions_has_unknown_coverage():
+    result = aggregate_route_segments(
+        [SegmentResult(segment_id=1), SegmentResult(segment_id=2)],
+        total_distance_override=250.0,
+    )
+
+    assert result.total_distance_m == 250.0
+    assert result.coverage_percentage is None
+    assert result.segments == []

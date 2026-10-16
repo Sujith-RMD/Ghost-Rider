@@ -487,7 +487,7 @@ class SegmentList(BaseModel):
 
     route_id: str = Field(..., description="Route or session identifier")
     segments: List[SegmentSummary] = Field(default_factory=list, description="Reporting bin summaries")
-    total_distance_m: float = Field(default=0.0, ge=0.0, description="Total route distance in meters")
+    total_distance_m: Optional[float] = Field(default=None, ge=0.0, description="Total route distance in meters (null when unknown)")
     coverage_percentage: Optional[float] = Field(default=None, ge=0.0, le=100.0, description="Percentage of route covered (null if unknown)")
     unsampled_stretches: List[Dict[str, float]] = Field(default_factory=list, description="Unsampled distance ranges [{'start_m': ..., 'end_m': ...}]")
 
