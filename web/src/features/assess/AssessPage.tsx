@@ -5,6 +5,7 @@ import { DevFixturePanel } from "virtual:roadsight-data";
 import { Link } from "react-router-dom";
 import type { JobState, Session } from "../../api/display";
 import { apiBase, readJob, readSample, startAssessment, type ActualSample } from "../../api/real-assessment";
+import { rememberSample } from "../../api/recent-samples";
 import {
   Card,
   ErrorPanel,
@@ -48,7 +49,10 @@ export default function AssessPage({
           return;
         }
         if (job.status === "partial" || job.status === "succeeded") {
-          if (job.result_sample_id) setSample(await readSample(job.result_sample_id));
+          if (job.result_sample_id) {
+            setSample(await readSample(job.result_sample_id));
+            rememberSample(job.result_sample_id);
+          }
           setRunning(false);
           return;
         }
