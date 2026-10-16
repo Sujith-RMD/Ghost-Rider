@@ -9,7 +9,7 @@
     "_min_gap_note": "Declared lower reporting limit for gaps in pixels (final plan section 13.2)."
   },
   "watershed": {
-    "config_version": "agg-classical-v3",
+    "config_version": "agg-classical-v4",
     "polarity": "brighter",
     "flatten_sigma_fraction": 0.125,
     "flatten_sigma_min": 6.0,

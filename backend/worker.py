@@ -485,6 +485,14 @@ def run_upload_inference(job: Dict[str, Any], *, sample_id: Optional[str] = None
     return result
 
 
+def _assessment_job_status(score: Optional[Dict[str, Any]], quality: Optional[Dict[str, Any]]) -> str:
+    return "succeeded" if (
+        score and score.get("value") is not None
+        and score.get("status") in {"Good", "Bad"}
+        and quality and quality.get("status") == "accepted"
+    ) else "partial"
+
+
 def process_upload_job(job: Dict[str, Any]) -> Optional[str]:
     """Process a claimed upload job exactly once; returns the stored sample id."""
     job_id = str(job["job_id"])
@@ -499,10 +507,11 @@ def process_upload_job(job: Dict[str, Any]) -> Optional[str]:
         if existing is not None and existing["sample_id"]:
             with database.read_connection() as conn:
                 row = conn.execute(
-                    "SELECT score_json FROM samples WHERE sample_id = ?", (existing["sample_id"],)
+                "SELECT score_json, quality_json FROM samples WHERE sample_id = ?", (existing["sample_id"],)
                 ).fetchone()
             prior_score = json.loads(row["score_json"]) if row and row["score_json"] else None
-            prior_status = "succeeded" if prior_score and prior_score.get("value") is not None else "partial"
+            prior_quality = json.loads(row["quality_json"]) if row and row["quality_json"] else None
+            prior_status = _assessment_job_status(prior_score, prior_quality)
             _complete_job(job_id, existing["sample_id"], note="idempotent_replay", status=prior_status)
             return existing["sample_id"]
     except Exception as exc:  # pragma: no cover
@@ -542,7 +551,10 @@ def process_upload_job(job: Dict[str, Any]) -> Optional[str]:
             return None
         conn.execute(_SAMPLE_INSERT, _sample_row_values(sample_id, result))
 
-    status = "succeeded" if result.score is not None and result.score.value is not None else "partial"
+    status = _assessment_job_status(
+        result.score.model_dump() if result.score else None,
+        result.quality.model_dump() if result.quality else None,
+    )
     _complete_job(job_id, sample_id, note=f"sha256={file_sha}" if file_sha else None, status=status)
     logger.info("Persisted sample %s for upload job %s", sample_id, job_id)
     return sample_id
@@ -602,6 +614,7 @@ def worker_loop(stop_event: Optional[threading.Event] = None,
             time.sleep(idle_sleep_sec)
             continue
 
+        stored = None
         try:
             stored = process_frame(frame)
             if stored is None:
@@ -611,6 +624,13 @@ def worker_loop(stop_event: Optional[threading.Event] = None,
         except Exception as exc:
             queue.mark_rejected()
             logger.exception("Worker error for %s:%d: %s", frame.session_id, frame.frame_index, exc)
+        if stored is None:
+            try:
+                with database.get_connection() as conn:
+                    conn.execute("UPDATE sessions SET rejected_count=rejected_count+1 WHERE session_id=?",
+                                 (frame.session_id,))
+            except Exception:
+                logger.exception("Could not update rejection count for session %s", frame.session_id)
 
     logger.info("Worker stopped")
 

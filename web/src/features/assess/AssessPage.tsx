@@ -4,6 +4,8 @@ import { AbstractBackdrop } from "../../components/AbstractBackdrop";
 import { DevFixturePanel } from "virtual:roadsight-data";
 import { Link } from "react-router-dom";
 import type { JobState, Session } from "../../api/display";
+import { apiBase, readJob, readSample, startAssessment, type ActualSample } from "../../api/real-assessment";
+import { rememberSample } from "../../api/recent-samples";
 import {
   Card,
   ErrorPanel,
@@ -14,7 +16,7 @@ export default function AssessPage({
   session,
   mock,
 }: {
-  session: Session;
+  session?: Session;
   mock: boolean;
 }) {
   const [file, setFile] = useState<File | null>(null);
@@ -23,30 +25,108 @@ export default function AssessPage({
   const [error, setError] = useState<string | null>(null);
   const [state, setState] = useState<JobState>("received");
   const [started, setStarted] = useState(false);
+  const [jobId, setJobId] = useState<string | null>(() => mock ? null : sessionStorage.getItem("roadsight.activeJob"));
+  const [sample, setSample] = useState<ActualSample | null>(null);
+  const [running, setRunning] = useState(false);
+  const [validImage, setValidImage] = useState(false);
+  const [pollAttempt, setPollAttempt] = useState(0);
   const input = useRef<HTMLInputElement>(null);
+  const submitting = useRef(false);
+  useEffect(() => {
+    if (!jobId || mock) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout>;
+    const poll = async () => {
+      try {
+        const job = await readJob(jobId);
+        if (cancelled) return;
+        setError(null);
+        setStarted(true);
+        setState(job.status);
+        if (job.status === "failed") {
+          setError(job.error_reason || "Analysis failed.");
+          setRunning(false);
+          return;
+        }
+        if (job.status === "partial" || job.status === "succeeded") {
+          if (job.result_sample_id) {
+            setSample(await readSample(job.result_sample_id));
+            rememberSample(job.result_sample_id);
+          }
+          setRunning(false);
+          return;
+        }
+        timer = setTimeout(poll, 1200);
+      } catch (cause) {
+        if (!cancelled) {
+          setError(cause instanceof Error ? cause.message : "Could not check analysis status.");
+          setRunning(false);
+        }
+      }
+    };
+    void poll();
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [jobId, mock, pollAttempt]);
+  async function analyse() {
+    if (!file || !validImage || mock || submitting.current) return;
+    submitting.current = true;
+    setError(null);
+    setSample(null);
+    setRunning(true);
+    setStarted(true);
+    setState("received");
+    try {
+      const id = await startAssessment(file);
+      sessionStorage.setItem("roadsight.activeJob", id);
+      setJobId(id);
+      setState("queued");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Upload failed.");
+      setState("failed");
+      setRunning(false);
+    } finally {
+      submitting.current = false;
+    }
+  }
   useEffect(() => {
     if (!file) return;
     const url = URL.createObjectURL(file);
     setPreview(url);
     const image = new Image();
-    image.onload = () =>
+    setValidImage(false);
+    image.onload = () => {
+      setValidImage(true);
       setDimensions(
         `${image.naturalWidth} × ${image.naturalHeight} native pixels`,
       );
-    image.onerror = () =>
+    };
+    image.onerror = () => {
+      setValidImage(false);
       setError("This image could not be decoded. Choose a valid JPEG or PNG.");
+    };
     image.src = url;
     return () => URL.revokeObjectURL(url);
   }, [file]);
   function choose(next: File | undefined) {
     if (!next) return;
     if (!["image/jpeg", "image/png"].includes(next.type)) {
+      setFile(null);
+      setValidImage(false);
       setError("Choose a JPEG or PNG image.");
+      return;
+    }
+    if (!next.size || next.size > 25 * 1024 * 1024) {
+      setFile(null);
+      setValidImage(false);
+      setError("Choose an image smaller than 25 MB.");
       return;
     }
     setError(null);
     setFile(next);
     setStarted(false);
+    setSample(null);
+    setJobId(null);
+    sessionStorage.removeItem("roadsight.activeJob");
   }
   return (
     <div className="content-page assess-page">
@@ -106,7 +186,7 @@ export default function AssessPage({
             <div className="upload-requirements">
               <span>JPEG / PNG</span>
               <p>
-                Upload limit awaiting confirmation. Use a verified camera
+                Maximum 25 MB. Use a verified camera
                 profile or scale reference for physical measurements.
               </p>
             </div>
@@ -122,22 +202,24 @@ export default function AssessPage({
         <div className="assessment-workflow">
           <Card title="Analysis progress">
             <p>
-              {file
-                ? "Image selected. The analysis service is not connected yet."
-                : "Choose an image to start an assessment. Originals and evidence stay separate."}
+              {mock
+                ? "Fixture preview; values are not measurements."
+                : file
+                  ? "Selected image ready for the real assessment service."
+                  : jobId
+                    ? "Checking your previous analysis job."
+                    : "Choose an image to start an assessment. Originals and evidence stay separate."}
             </p>
             <div className="analysis-action">
               <button
                 className="button primary"
-                disabled
-                title="Backend upload and finalize schemas are not published"
+                disabled={mock || !file || !validImage || running}
+                onClick={() => void analyse()}
               >
                 Analyse image
               </button>
               <span>
-                {file
-                  ? "Analysis service not connected."
-                  : "Choose an image to continue."}
+                {running ? "Uploading or analysing…" : mock ? "Fixture mode; real upload is disabled." : file ? "The uploaded image will be processed by the backend." : "Choose an image to continue."}
               </span>
             </div>
             {started ? (
@@ -145,9 +227,9 @@ export default function AssessPage({
                 state={state}
                 reason={
                   state === "partial"
-                    ? "Scale not calibrated. Density unavailable."
+                    ? "Analysis is incomplete; score or calibrated measurements may be unavailable."
                     : state === "failed"
-                      ? "Fixture worker failure. Retry the real analysis when connected."
+                      ? error || "Analysis failed. Choose a valid image and retry."
                       : undefined
                 }
               />
@@ -173,13 +255,33 @@ export default function AssessPage({
                 <p>Analysis has not started.</p>
               </div>
             )}
-            {started && state === "succeeded" && (
+            {!mock && jobId && error && (
+              <button className="button secondary" onClick={() => setPollAttempt((attempt) => attempt + 1)}>
+                Check job again
+              </button>
+            )}
+            {mock && started && state === "succeeded" && (
               <Link
                 className="button primary"
-                to={`/samples/${session.samples[0]?.id}`}
+                to={`/samples/${session?.samples[0]?.id}`}
               >
                 Open fixture evidence
               </Link>
+            )}
+            {!mock && sample && (
+              <div className="actual-result" aria-live="polite">
+                <h3>Assessment evidence</h3>
+                {sample.image_url && <img src={new URL(sample.image_url, apiBase).toString()} alt="Original uploaded road image" />}
+                <p>Image quality: {sample.quality?.status ?? "Unavailable"}</p>
+                {!!sample.quality?.reasons?.length && <p>Quality reasons: {sample.quality.reasons.join(", ")}</p>}
+                <p>Road score: {sample.score?.value == null ? "Unavailable — scoring is not implemented for this image" : `${sample.score.value} / 100 (${sample.score.status})`}</p>
+                <p>Physical scale: {sample.geometry_valid ? "Validated" : "Uncalibrated; physical units unavailable"}</p>
+                <p>Exploratory visible instance count (not validated): {sample.metrics?.chip_count ?? "Unavailable"}</p>
+                <p>Count per m²: {sample.metrics?.chip_density_per_m2 ?? "Unavailable without calibrated area"}</p>
+                {sample.error && <p>Analysis limitation: {sample.error}</p>}
+                <p>Model: {sample.model_version ?? "Unavailable"}</p>
+                {sample.sample_id && <Link className="button secondary" to={`/samples/${sample.sample_id}`}>Open sample detail</Link>}
+              </div>
             )}
           </Card>
           <Card title="Before you measure">

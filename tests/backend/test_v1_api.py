@@ -152,7 +152,10 @@ def test_v1_segments_endpoint(client):
     assert seg_list["segments"][0]["sample_count"] >= 1
 
 
-def test_v1_reports_endpoint(client):
+def test_v1_reports_endpoint(client, monkeypatch):
+    from backend.api import v1
+    from backend.schemas import SegmentResult
+    monkeypatch.setattr(v1, "_get_sample", lambda _: SegmentResult(segment_id=1, sample_id="test-assessment-001"))
     report_res = client.post(
         "/v1/reports",
         json={

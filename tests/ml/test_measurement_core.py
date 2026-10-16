@@ -589,7 +589,28 @@ def test_disconnected_regions_are_never_stolen_by_another_basin():
 def test_the_segmentation_version_changed_when_the_basin_rule_changed():
     # Splitting basins per connected component changes measured output, so the
     # version moves rather than silently re-using agg-classical-v2.
-    assert WatershedConfig().config_version == "agg-classical-v3"
+    assert WatershedConfig().config_version == "agg-classical-v4"
+
+
+def test_cluster_watershed_is_bounded_to_component(monkeypatch):
+    from backend.aggregate.segmentation import _basin_labels
+
+    foreground = np.zeros((512, 512), dtype=bool)
+    foreground[100:112, 100:124] = True
+    markers = np.zeros(foreground.shape, dtype=np.int32)
+    markers[105, 105], markers[105, 118] = 1, 2
+    original = cv2.watershed
+    shapes = []
+
+    def record_shape(surface, seeds):
+        shapes.append(seeds.shape)
+        return original(surface, seeds)
+
+    monkeypatch.setattr(cv2, "watershed", record_shape)
+    labels = _basin_labels(foreground, markers, np.zeros((512, 512, 3), dtype=np.uint8))
+    assert shapes and max(h * w for h, w in shapes) <= 14 * 26
+    assert set(np.unique(labels)) == {0, 1, 2}
+    assert not labels[~foreground].any()
 
 
 def _chain_image(joints: bool) -> np.ndarray:
@@ -941,7 +962,7 @@ def test_record_describes_versions_and_scale_provenance():
     record = measure_surface(_image(), _full_valid(), SCALE_1MM)
     described = record.describe()
     assert described["config_version"] == "measure-v1"
-    assert described["segmentation_version"] == "agg-classical-v3"
+    assert described["segmentation_version"] == "agg-classical-v4"
     assert described["geometry"]["scale_source"] == "source_calibrated"
     assert described["gap"]["config_version"] == "gap-medial-v2"
     assert described["areas_m2"]["texture_eligible"] == record.eligible_area_m2

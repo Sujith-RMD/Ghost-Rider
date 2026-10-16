@@ -1,4 +1,15 @@
 /* Desktop refinement: supplied dashboard reference, 1920 × 1080 target. */
+.report-assessment-select {
+  display: block;
+  width: min(100%, 640px);
+  margin-top: 12px;
+  padding: 14px 16px;
+  color: var(--ivory);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  font: inherit;
+}
 :root {
   --surface-1: #0e1d1c;
   --surface-2: #172726;

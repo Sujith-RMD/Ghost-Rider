@@ -442,8 +442,10 @@ def particle_size_stats(
         if eligible.shape != labels.shape:
             raise ValueError("eligible_mask shape does not match labels")
         selected = {}
-        for label, area in area_per_instance.items():
-            cy, cx = ndi.center_of_mass(labels == label)
+        centroids = ndi.center_of_mass(
+            np.ones(labels.shape, dtype=np.uint8), labels, index=list(area_per_instance)
+        )
+        for (label, area), (cy, cx) in zip(area_per_instance.items(), centroids):
             y, x = int(round(cy)), int(round(cx))
             if eligible[y, x]:
                 selected[label] = area

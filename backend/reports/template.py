@@ -83,6 +83,8 @@ def build_factual_template(
         summary_sentences.append(f"Condition rating status: {score_status} (numerical SQI withheld).")
 
     # 4. Distress Evidence
+    if stored_facts.get("pothole_count") is None and crack_area is None:
+        limitations.append("Distress measurements are unavailable; absence of detected damage has not been established.")
     if severe_flag or pothole_count > 0:
         evidence_refs.append(f"defect:severe_flag:{assessment_id}")
         summary_sentences.append("Severe surface deterioration detected in inspected area.")
@@ -115,7 +117,7 @@ def build_factual_template(
     limitations.append("No automatic structural reconstruction or repair cost claims are made.")
 
     if not inspection_actions:
-        inspection_actions.append("Routine scheduled visual monitoring; no urgent localized defect flagged.")
+        inspection_actions.append("Review the source image and unavailable measurements before making a maintenance decision.")
 
     return ReportContent(
         summary=" ".join(summary_sentences),

@@ -11,6 +11,20 @@ from backend import database, s3_service, worker
 from backend.queues import ensure_v1_tables
 
 
+def test_local_media_url_preserves_nested_path_with_custom_root(monkeypatch, tmp_path):
+    root = tmp_path / "private-media"
+    image = root / "job-1" / "road.jpg"
+    monkeypatch.setattr(s3_service, "UPLOADS_DIR", root)
+    assert s3_service.to_local_url(image) == "/uploads/job-1/road.jpg"
+
+
+def test_job_completion_requires_accepted_quality_and_final_score():
+    final = {"value": 83, "status": "Good"}
+    assert worker._assessment_job_status(final, {"status": "accepted"}) == "succeeded"
+    assert worker._assessment_job_status(final, {"status": "rejected"}) == "partial"
+    assert worker._assessment_job_status({"value": 83, "status": "review"}, {"status": "accepted"}) == "partial"
+
+
 def test_s3_only_upload_is_read_before_a_job_can_complete(monkeypatch):
     database.init_db()
     ensure_v1_tables()

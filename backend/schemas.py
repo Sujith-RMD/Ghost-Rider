@@ -439,6 +439,8 @@ class SessionState(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     session_id: str = Field(..., description="Unique session identifier")
+    status: str = Field(default="live", description="Session lifecycle: live or finished")
+    latest_sample_id: Optional[str] = Field(default=None, description="Latest stored sample, if a frame has been processed")
     mode: SourceMode = Field(..., description="Capture mode: live, replay, upload")
     camera_id: Optional[str] = Field(default=None, description="Camera hardware ID")
     calibration_id: Optional[str] = Field(default=None, description="Calibration profile ID")

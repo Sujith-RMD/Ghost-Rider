@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect } from "react";
-import { NavLink, Route, Routes, useLocation, Link } from "react-router-dom";
+import { NavLink, Route, Routes, useLocation, useParams, Link, Navigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   Route as RouteIcon,
@@ -20,11 +20,16 @@ import {
 } from "../components/primitives";
 const RoutePage = lazy(() => import("../features/route-map/RoutePage"));
 const SamplePage = lazy(() => import("../features/sample/SamplePage"));
+const ActualSamplePage = lazy(() => import("../features/sample/ActualSamplePage"));
+const RecentSamplesPage = lazy(() => import("../features/sample/RecentSamplesPage"));
 const AssessPage = lazy(() => import("../features/assess/AssessPage"));
 const LivePage = lazy(() => import("../features/live/LivePage"));
+const ActualLivePage = lazy(() => import("../features/live/ActualLivePage"));
+const ActualReportsPage = lazy(() => import("../features/report/ActualReportsPage"));
 const SessionPage = lazy(() => import("../features/session/SessionPage"));
 const ReportPage = lazy(() => import("../features/report/ReportPage"));
 const SystemPage = lazy(() => import("../features/system/SystemPage"));
+const ActualSystemPage = lazy(() => import("../features/system/ActualSystemPage"));
 const navigation = [
   { to: "/", label: "Route map", Icon: MapPin },
   { to: "/assess", label: "Assess", Icon: Upload },
@@ -33,11 +38,16 @@ const navigation = [
   { to: "/reports", label: "Reports", Icon: FileText },
   { to: "/system", label: "System", Icon: Activity },
 ];
+function ActualSampleRoute() {
+  const { id } = useParams();
+  return <ActualSamplePage id={id || ""} />;
+}
 export default function App() {
   const location = useLocation();
   const query = useQuery({
     queryKey: ["workspace", dataSource.mock],
     queryFn: dataSource.load,
+    enabled: dataSource.mock,
     retry: false,
     refetchInterval: dataSource.mock ? false : 30000,
     refetchIntervalInBackground: false,
@@ -78,7 +88,7 @@ export default function App() {
           </span>
         </Link>
         <nav aria-label="Main navigation">
-          {navigation.map(({ to, label, Icon }) => (
+          {navigation.filter(({ to }) => dataSource.mock || to !== "/").map(({ to, label, Icon }) => (
             <NavLink
               key={to}
               to={to}
@@ -95,11 +105,25 @@ export default function App() {
         </nav>
         <Link to="/system" className="api-status">
           <span className="status-ring" />
-          API not connected
+          {dataSource.mock ? "Preview mode" : "Assessment service"}
         </Link>
       </header>
       <main id="main" tabIndex={-1}>
-        {query.isPending ? (
+        {!dataSource.mock ? (
+          <Suspense fallback={<div className="loading-layout"><div className="skeleton" /></div>}>
+            <Routes>
+              <Route path="/" element={<Navigate to="/assess" replace />} />
+              <Route path="/assess" element={<AssessPage mock={false} />} />
+              <Route path="/live" element={<ActualLivePage />} />
+              <Route path="/samples" element={<RecentSamplesPage />} />
+              <Route path="/samples/:id" element={<ActualSampleRoute />} />
+              <Route path="/reports" element={<ActualReportsPage />} />
+              <Route path="/reports/:id" element={<ActualReportsPage />} />
+              <Route path="/system" element={<ActualSystemPage />} />
+              <Route path="*" element={<div className="content-page"><h1>Page not found</h1><Link to="/assess">Open assessment</Link></div>} />
+            </Routes>
+          </Suspense>
+        ) : query.isPending ? (
           <div
             className="loading-layout"
             aria-label="Loading assessment workspace"
@@ -110,19 +134,17 @@ export default function App() {
           </div>
         ) : query.isError ? (
           <div className="content-page">
-            <h1>Connect the assessment service</h1>
+            <h1>This screen is not connected yet</h1>
             <ErrorPanel
               family="integration"
-              title="Backend contract pending"
-              code="contract_not_published"
-              retry={() => void query.refetch()}
+              title="Production data unavailable"
             >
-              <p>{query.error.message}</p>
+              <p>Route, live and report data are still being connected.</p>
             </ErrorPanel>
             <p>
-              There are no measurements to display. Publish the OpenAPI
-              contract, pin the client and connect the real service.
+              Image assessment is available now. Other screens will appear when their real data is ready.
             </p>
+            <Link className="button primary" to="/assess">Open assessment</Link>
             <Link className="button secondary" to="/system">
               System readiness
             </Link>

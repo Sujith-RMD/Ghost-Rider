@@ -367,6 +367,12 @@ def to_local_url(path_or_key: Any) -> str:
         raw = str(path_or_key or "").replace("\\", "/").strip()
         if not raw:
             return ""
+        source = Path(raw)
+        if source.is_absolute():
+            try:
+                return f"{UPLOAD_URL_PREFIX}/{source.resolve().relative_to(UPLOADS_DIR.resolve()).as_posix()}"
+            except ValueError:
+                pass
         parts = [segment for segment in raw.split("/") if segment not in ("", ".", "..")]
         if "uploads" in parts:
             index = len(parts) - 1 - parts[::-1].index("uploads")
