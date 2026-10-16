@@ -20,11 +20,13 @@ import {
 } from "../components/primitives";
 const RoutePage = lazy(() => import("../features/route-map/RoutePage"));
 const SamplePage = lazy(() => import("../features/sample/SamplePage"));
+const ActualSamplePage = lazy(() => import("../features/sample/ActualSamplePage"));
 const AssessPage = lazy(() => import("../features/assess/AssessPage"));
 const LivePage = lazy(() => import("../features/live/LivePage"));
 const SessionPage = lazy(() => import("../features/session/SessionPage"));
 const ReportPage = lazy(() => import("../features/report/ReportPage"));
 const SystemPage = lazy(() => import("../features/system/SystemPage"));
+const ActualSystemPage = lazy(() => import("../features/system/ActualSystemPage"));
 const navigation = [
   { to: "/", label: "Route map", Icon: MapPin },
   { to: "/assess", label: "Assess", Icon: Upload },
@@ -95,7 +97,7 @@ export default function App() {
         </nav>
         <Link to="/system" className="api-status">
           <span className="status-ring" />
-          API not connected
+          {dataSource.mock ? "Preview mode" : "Assessment service"}
         </Link>
       </header>
       <main id="main" tabIndex={-1}>
@@ -108,6 +110,10 @@ export default function App() {
             <div className="skeleton" />
             <div className="skeleton" />
           </div>
+        ) : query.isError && !dataSource.mock && (location.pathname === "/assess" || location.pathname.startsWith("/samples/") || location.pathname === "/system") ? (
+          <Suspense fallback={<div className="loading-layout"><div className="skeleton" /></div>}>
+            {location.pathname === "/assess" ? <AssessPage mock={false} /> : location.pathname === "/system" ? <ActualSystemPage /> : <ActualSamplePage id={location.pathname.slice("/samples/".length)} />}
+          </Suspense>
         ) : query.isError ? (
           <div className="content-page">
             <h1>Connect the assessment service</h1>

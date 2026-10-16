@@ -642,14 +642,24 @@ def _get_sample(sample_id: str) -> Optional[SegmentResult]:
             reference = _parse_field(row["reference_json"], schemas.ReferenceComparison)
             canonical = _parse_field(row["canonical_json"], schemas.CanonicalSampleRecord)
 
+            # Recreate media URLs from the stored object/path so expired S3 links
+            # and older local URLs remain usable when a sample is reopened.
+            if row["image_path"]:
+                if s3_service.is_s3_enabled():
+                    image_url = s3_service.get_presigned_url(row["image_path"])
+                else:
+                    image_url = s3_service.to_local_url(row["image_path"])
+            else:
+                image_url = row["image_url"]
+
             return SegmentResult(
                 segment_id=int(row["segment_id"]),
                 route_id=row["route_id"],
                 sample_id=row["sample_id"],
                 image_path=row["image_path"],
-                image_url=row["image_url"],
+                image_url=image_url,
                 mask_url=row["mask_url"],
-                raw_url=row["raw_url"],
+                raw_url=image_url or row["raw_url"],
                 captured_at=row["captured_at"],
                 gps=gps,
                 geometry_valid=bool(row["geometry_valid"]),
