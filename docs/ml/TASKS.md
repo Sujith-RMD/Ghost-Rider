@@ -6,10 +6,33 @@ Navigation: [Data admission and visibility evidence](DATA_ADMISSION.md) · [Chan
 
 Gate 0 remains incomplete. Software foundations and synthetic tests exist, but verified delivered-image scale, independent human chip/gap labels, Indian mask/rights/grouping admission, the seasonal challenge data and camera access remain outstanding. RDD2022 India is now locally obtained and integrity-audited (9,665 decoded images); acquisition is not admission or accuracy. Foreign public imagery, synthetic metrics and evaluator self-checks do not establish Indian-road, live-camera or physical-measurement accuracy. No evidence-backed model-accuracy gain is claimed.
 
+**State of play 2026-10-16.** The distress branch is now well ahead of the aggregate branch — a Colab runbook exists covering both models, RDD India is extracted with a frozen split and 51% negatives, and neither model has actually been trained yet. Meanwhile final_plan §14 Phase 2 (the aggregate measurement slice) is still synthetic-only and Phase 0 camera acquisition has not begun. The binding constraint has moved from modelling to **labels and hardware**. Human annotation is not uniformly blocked: distress masks are achievable solo today (B13, A2.6), chip and gap annotation is not (A2.2, A2.3).
+
 This document consolidates the task tracker, user decisions/actions and the 2026-10-16 implementation review. Task IDs and statuses are retained; historical run counts and claims below are snapshots, not current validation. The [implementation review](#implementation-review) supersedes historical greedy-matching, quality-v1 and source-independence claims: current quality policy is quality-v2, valid instance matching is no longer greedy, and ancestry must be confirmed before claiming cross-source independence. The final plan remains authoritative. Decision IDs such as D3/D4/D8 are distinct from similarly named feature task IDs.
 
 Derived **only** from `docs/ML_ROLE.md` and `docs/final_plan.md`. Every task cites
 its source section so it can be re-checked, and nothing here invents a requirement.
+
+**Provenance of the task IDs.** The `A1.x` / `B` / `C` / `D7` / `E10` / `I16` / `J7`
+numbering is **agent-derived for tracking**. It appears in neither `final_plan.md`
+nor `ML_ROLE.md`; the final plan uses section numbers and prose, and ML_ROLE names
+capabilities without IDs. Every task below still cites its upstream section, so the
+*content* is checkable even though the labels are ours. Do not quote these IDs as if
+they were plan identifiers.
+
+**Ordering deviation from the plan, recorded 2026-10-16.** `final_plan.md` §14 places
+Phase 2 ("one actual image → QC → metric ROI → classical masks/count/size/gaps →
+versioned JSON") **before** Phase 4 ("frozen data and learned challenger ... Indian
+distress mask subset"). Work so far has run the other way round: distress
+segmentation, cross-source evaluation and the India detector are substantially done
+while the **aggregate** measurement slice is still synthetic-only and blocked on
+human labels. Both models are now trained-or-ready in the Colab runbook, which makes
+Phase 2 the binding constraint on the whole project rather than Phase 4. Camera
+acquisition is also a **Phase 0** item per §14 ("Camera acquisition and platform
+smoke tests begin in Phase 0, not Phase 6") and has not been started.
+
+**Consequence:** the highest-value remaining work is now A2.6/B13 (annotation, the
+thing that unblocks everything) and C8 (camera access), not more distress modelling.
 
 Status legend:
 
@@ -26,7 +49,8 @@ plan's phase table (final plan §14).
 - **Completed this implementation batch:** A1.8 (Indian archive acquisition/integrity inventory), C12 (standalone calibration-profile guard), C15 (evidence-type-safe error reporting), D10 (reference-definition guard), I16a (distress metric reporting), I16b (real-mask trivial comparison floor). These do not imply model or live acceptance.
 - **Real-data reports:** RDD India has 7,706 train images/8,175 boxes and 1,959 unannotated test images, all decoded. CRKWH100 has 0.357479% foreground; trivial all-foreground pooled Dice is 0.007124 and all-background Dice is 0. No intact negatives means no false-alarm performance estimate. Reports are under `reports/ml/` and reproducible with [FEATURE_SPEC.md §9](FEATURE_SPEC.md#9-runnable-evaluation-and-provenance-tools).
 - **Available software:** explicit-group split freezing; pooled/positive-only segmentation metrics and guarded intervals; count/gap/length bias/MAE/p95 with suppression coverage; local-weight inference hashes, optional raster outputs and scoped p50/p95 timing. No actual trained weights were available to run.
-- **Next real unblockers:** verify RDD original rights, review overlays and candidate negatives, resolve conservative ancestry groups, then annotate actual-width Indian masks. Obtain independently human-labelable chip imagery and live calibration. Do not convert boxes into precise area or mark a training requirement done from evaluator tests.
+- **Next real unblockers, in priority order.** (1) **B13 + A2.6** — annotate distress masks and pass the self-consistency gate; solo-viable and unblocks Phase 2 and Phase 4. (2) **A14** — start camera acquisition and an AWS/Bedrock/Maps smoke test, both Phase 0 items per §14 that are currently absent. (3) **A3.5** — rebuild the Phase 2 measurement slice as a committed script, since the one-off accuracy script was deleted and nothing currently reproduces a real-image measurement. (4) **A1.9/A1.10** — request the scaled aggregate datasets, because without one of them the chip task has no scale at all. Do not convert boxes into precise area, and do not mark a training requirement done from evaluator tests.
+- **Colab:** `training/COLAB_TRAINING.ipynb` + `training/COLAB_TRAINING.md` cover both distress models end to end — clone, Drive data, smoke test, real run, evaluation, and bring-the-results home. No data is committed to the repo, so Google Drive is the bridge. Start with the two-epoch smoke test; it costs two minutes and catches bad paths before a 60-epoch run wastes an hour.
 
 ---
 
@@ -56,8 +80,10 @@ Source: ML_ROLE §2 "Gate 0", final plan §5.1, §4.2, §4.3, §6.1.
 Source: ML_ROLE §2 "Two humans independently decide…", final plan §5.1 steps 2, 4, 6.
 
 - ~~A2.1 Contact sheet of native-resolution tiles~~ — `reports/ml/crkhw100_contact_sheet.png` (20 native 256 px centre-crops, **pixel-only `10 px` bar** - no mm bar, because the 1 mm/px claim is unverified; never resized, sampled evenly across the set). A second, fillable artifact now exists for A2.3: `reports/ml/crkhw100_annotation_patches.png` (10 numbered native 256 px patches, no model overlay) with `annotation_guides/aggregate_patch_annotation_template.csv` (20 prefilled rows, coordinates included, judgements blank).
-- `[!]` **A2.2 Two people independently judge at native resolution whether separate chips are distinguishable and adjacent boundary gaps are locatable.** Not done. Zooming must not merely magnify ambiguity.
-- `[!]` **A2.3 Double-annotate 10 small patches with no model suggestions, and measure the disagreement floor.** Not done.
+- `[!]` **A2.2 Two people independently judge at native resolution whether separate chips are distinguishable and adjacent boundary gaps are locatable.** Not done. Zooming must not merely magnify ambiguity. **Blocked on a second human, not on skill.** One person cannot produce an inter-annotator number, so this is a structural blocker and must not be faked with a self-consistency figure.
+- `[!]` **A2.3 Double-annotate 10 small patches with no model suggestions, and measure the disagreement floor.** Not done. **Blocked on two people.** Achievable substitutes are A2.6 (intra-annotator, clearly labelled as such) and A2.4a (one domain reviewer over the hardest patches). Neither is inter-annotator agreement.
+- `[ ]` A2.6 **Solo intra-annotator self-consistency protocol.** *(2026-10-16: added, and achievable now by one person with no domain background.)* Annotate 20 images, wait ≥3 days, re-annotate the same 20 blind, measure agreement. Report as `intra_annotator_agreement` — **never** as `inter_annotator_agreement`. Its real output is diagnostic: images you disagree with yourself on are images you cannot reliably label and must go to `ignore`. Full protocol in `annotation_guides/ANNOTATION_GUIDE.md` §"If you have no domain expertise". Tooling: `annotation_guides/annotate.html`, verified by `node annotation_guides/verify_annotate.js`.
+- `[ ]` A2.4a **One domain reviewer over the 20 hardest patches.** Lower bar than full double-annotation (A2.3) and still expert-checked. Candidate reviewers: the project's pavement-engineering contact, or an ISTD-PDS author (A1.9). Record the reviewer's identity and scope.
 - `[!]` **A2.4 Declare separate go/no-go for chip count and for gap width, plus the minimum resolvable size for each.** Not done — depends on A2.2/A2.3.
 - `[ ]` A2.5 Inspect ~20–30 scaled images at native resolution (superset of A2.2's sample).
 
@@ -69,6 +95,8 @@ Source: final plan §5.1 step 5, §8.1.
 - `[~]` **A3.2 Tune the classical baseline for real imagery.** *(updated 2026-10-16: two genuine baseline defects were found by measurement and fixed — the 3x3 morphological close was bridging the visible binder joint between touching chips (903 of 1,380 joint pixels flipped back, 59 chip components collapsed to 21), and greedy NMS marker seeding fragmented flat distance plateaus (a uniform 20x120 region returned 26 fragments). Touching-scenario instance F1 went 0.148 -> 0.877 on held-out-validated settings. Real-image tuning is still blocked on labels and verified scale, so this stays partial.)* Original note: The synthetic-tuned config **fails to transfer**: it returns ~2,150 instances/image (polarity `brighter`) and ~3,742 (polarity `darker`) with a 3.91–5.53 mm median "diameter" and up to 0.54 coverage. Real chip counts are hundreds per m², not thousands, and 3.91 mm is far too small for road aggregate. Cause: marker density (`marker_min_distance_px`, `min_marker_radius_px`) and the foreground threshold are tuned to clean synthetic disks. **No result from this pilot may be reported as a chip measurement.**
 - `[ ]` A3.3 Compare model error against the human disagreement floor (A2.3). Blocked on A2.3.
 - `[ ]` A3.4 Inspect split/merge errors specifically, not just total count, because opposing errors can cancel.
+- `[!]` **A3.5 Phase 2 measurement slice: one real image → QC → metric ROI → classical masks/count/size/gaps → versioned JSON.** *(2026-10-16: elevated to the binding constraint.)* This is the plan's own named critical deliverable — final_plan §14 Phase 2 — and it is **not done**. The aggregate engine exists (`backend/aggregate/{segmentation,features,measurement,tiling}.py`, `measure-v1` / `gap-medial-v1`) but has only been exercised on **synthetic** data and on the CRKWH100 classical pilot, which changelog records as "pathological oversegmentation, not real chip counts". The one-off accuracy script that produced real-image numbers was **deleted** as temporary ("four radius-12 disks each measured 441 px…"), so nothing in the repo reproduces a real-image measurement today; there is no `scripts/` directory. **Blocked on B13** (chip labels) and A1.6 (verified scale). Until a reproducible script exists, no count/size/gap figure may be published, and the aggregate requirement stays unaddressed however complete the distress branch becomes.
+- `[!]` **A14 Acquire live camera access.** *(added 2026-10-16)* final_plan §14 is explicit: "Camera acquisition and platform smoke tests begin in **Phase 0**, not Phase 6. Phase 6 is integration/completion, not the first attempt to find hardware." §1 calls live access a "first-stage dependency" and §18 keeps it open. **Not started.** Nothing in this tracker currently asks anyone to go and get a camera, so the omission is silent. This blocks Phase 6, C8 and the entire live/local acceptance requirement (§2: "Actual live road-camera capture is required. Replay is backup only.").
 
 ---
 
@@ -86,7 +114,8 @@ Source: ML_ROLE §2 "Splits, annotation and human review", final plan §6.2, §6
 - `[ ]` B6 If a test failure informs a change, obtain a **fresh independent group** for a new headline result.
 - ~~B7 Write the annotation guide for `visible_aggregate_instance`, `ignore`, `valid_surface`, `crack`, `pothole`, `repair_or_patch`, `surface_family`, `human_condition` (ML_ROLE's exact label set).~~ — **written 2026-10-16.** `annotation_guides/ANNOTATION_GUIDE.md` defines all eight labels, the ground rules (label from native pixels not a model; use `ignore` when unsure; **do not manufacture chip ground truth** on an unresolvable speckle field; group before splitting) and the aggregation/denominator notes. It is a *definitions* document, not a result: no double-labelled set exists yet, so the disagreement floor is unmeasured (B8/A2.3 still blocked on two humans).
 - `[ ]` B8 Pilot: 10 double-labelled aggregate crops, 20 distress examples/negatives, 20 condition ratings.
-- `[ ]` B9 First useful training round: **80–150 aggregate crops from ≥ 30 distinct parent images**, ~150–300 Indian distress mask images, 150–250 reviewable condition patches.
+- `[ ]` **B9 First useful training round.** *(updated 2026-10-16)* **The distress half is now achievable by one person with no domain background** and is the highest-value open task: ~150–300 Indian distress mask images (`crack`, `pothole`, `repair_or_patch`, plus `ignore` and `valid_surface`) drawn with `annotation_guides/annotate.html`. See B13. The aggregate half (80–150 aggregate crops from ≥30 distinct parent images) stays blocked on A2.2/A2.3.
+- `[ ]` B13 **Distress annotation workflow (solo-viable).** *(added 2026-10-16)* Draw `crack`/`pothole`/`repair_or_patch` masks at the crack's real width on CRKWH100 or RDD India images, pass the A2.6 self-consistency gate, then scale to the B9 target. This is the tier that does **not** require domain expertise — crack/pothole/repair are visual categories, and RDD2022 itself was labelled by crowd workers. Use `ignore` freely. **Never** annotate `visible_aggregate_instance` or chip gaps: those are Tier 3, blocked on verified scale (A1.6) and domain judgement (A2.4a). *final_plan §6.3, §4.3.*
 - `[ ]` B10 Two blinded condition raters plus a third adjudicator; seek pavement expertise for the rubric. *(Pending D3: the judge's exact definitions of "chip boundary width" and "roughness".)*
 - `[ ]` B11 Independently review ≥ 20% of routine annotations and every ambiguous case.
 - `[ ]` B12 SAM2 only as a *proposal* tool **after** the unaided pilot, with every accepted proposal reviewed; test set labelled independently.

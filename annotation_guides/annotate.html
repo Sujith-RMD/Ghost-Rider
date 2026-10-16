@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>RoadSight annotator</title>
+<style>
+  :root { --bg:#111; --panel:#1b1b1b; --line:#333; --fg:#eee; --dim:#999; --ok:#4caf50; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg);
+         font:14px/1.45 system-ui,Segoe UI,Roboto,sans-serif; }
+  header { padding:8px 12px; background:var(--panel); border-bottom:1px solid var(--line);
+           display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  header h1 { font-size:15px; margin:0 8px 0 0; font-weight:600; }
+  button, select, label.btn { background:#2a2a2a; color:var(--fg); border:1px solid var(--line);
+           border-radius:4px; padding:5px 10px; cursor:pointer; font:inherit; }
+  button:hover, label.btn:hover { background:#3a3a3a; }
+  button:disabled { opacity:.4; cursor:not-allowed; }
+  button.primary { background:#1f6feb; border-color:#1f6feb; }
+  #stage { margin:12px; text-align:center; }
+  /* #img is IN FLOW so it sizes #view; #mask overlays it absolutely. If both were
+     absolute, #view would collapse to zero height and nothing would render. */
+  #view { position:relative; display:inline-block; border:1px solid var(--line); }
+  #img  { display:block; position:relative; max-width:100%; }
+  #mask { position:absolute; top:0; left:0; width:100%; height:100%;
+          opacity:.5; cursor:crosshair; touch-action:none; }
+  #status { padding:0 12px 14px; color:var(--dim); }
+  .hint { color:var(--dim); font-size:12px; }
+  kbd { background:#333; border-radius:3px; padding:1px 5px; font-size:11px; }
+  #progress { font-variant-numeric:tabular-nums; }
+  .saved { color:var(--ok); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>RoadSight annotator</h1>
+
+  <label class="btn">Open folder&hellip;
+    <input id="picker" type="file" webkitdirectory multiple hidden>
+  </label>
+
+  <select id="label">
+    <option value="crack">crack</option>
+    <option value="pothole">pothole</option>
+    <option value="repair_or_patch">repair_or_patch</option>
+    <option value="ignore">ignore</option>
+    <option value="valid_surface">valid_surface</option>
+  </select>
+
+  <label class="hint">brush <input id="brush" type="range" min="2" max="160" value="18"></label>
+  <label class="hint"><input id="erase" type="checkbox"> erase (E)</label>
+
+  <button id="undo" title="undo last stroke (U)">Undo</button>
+  <button id="prev" title="previous (A)">&larr;</button>
+  <button id="next" title="next (D)">Next</button>
+  <span id="progress">no folder</span>
+
+  <button id="save" class="primary" disabled>Save &amp; download</button>
+  <label class="btn">Reload&hellip;
+    <input id="reload" type="file" accept=".json,application/json" multiple hidden>
+  </label>
+</header>
+
+<div id="stage">
+  <div id="view"><img id="img" alt=""><canvas id="mask"></canvas></div>
+</div>
+
+<div id="status">
+  <strong>Rules</strong> — outline the crack's <em>real width</em>, not its centreline.
+  If you are unsure, pick <code>ignore</code> and paint over it: uncertain regions are
+  excluded from training <em>and</em> evaluation. Never label in millimetres.
+  <span class="hint">Keys: <kbd>[</kbd>/<kbd>]</kbd> brush &middot; <kbd>E</kbd> erase &middot;
+  <kbd>U</kbd> undo &middot; <kbd>A</kbd>/<kbd>D</kbd> navigate &middot;
+  <kbd>1</kbd>&ndash;<kbd>5</kbd> label.</span>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var LABELS = ["crack", "pothole", "repair_or_patch", "ignore", "valid_surface"];
+  var COLORS = {
+    crack: "#ff3b30", pothole: "#ff9500", repair_or_patch: "#af52de",
+    ignore: "#8e8e93", valid_surface: "#34c759"
+  };
+
+  var picker   = document.getElementById("picker");
+  var reloader = document.getElementById("reload");
+  var labelSel = document.getElementById("label");
+  var brush    = document.getElementById("brush");
+  var eraseBox = document.getElementById("erase");
+  var undoBtn  = document.getElementById("undo");
+  var prevBtn  = document.getElementById("prev");
+  var nextBtn  = document.getElementById("next");
+  var saveBtn  = document.getElementById("save");
+  var img      = document.getElementById("img");
+  var mask     = document.getElementById("mask");
+  var progress = document.getElementById("progress");
+
+  var view = document.getElementById("view");
+  var ctx  = mask.getContext("2d");
+
+  var files = [], index = 0, painting = false, last = null, erasing = false;
+  var ready = false;
+  var undoStack = [];
+
+  // One off-DOM canvas per label, at native image resolution. Each holds its
+  // own coloured strokes, so erasing one label can never touch another.
+  var layers = {}, layerCtx = {};
+
+  // data[fileName][label] = "data:image/png;base64,..." (the persisted form)
+  var data = {};
+
+  function L() { return labelSel.value; }
+  function currentName() { return files[index].name; }
+
+  function resetLayers(w, h) {
+    layers = {}; layerCtx = {};
+    LABELS.forEach(function (n) {
+      var c = document.createElement("canvas");
+      c.width = w; c.height = h;
+      layers[n] = c; layerCtx[n] = c.getContext("2d");
+    });
+  }
+
+  // Draw every layer onto the visible canvas.
+  function composite() {
+    ctx.clearRect(0, 0, mask.width, mask.height);
+    LABELS.forEach(function (n) {
+      if (layerCtx[n] && layers[n].width) ctx.drawImage(layers[n], 0, 0);
+    });
+  }
+
+  // Restore layers from persisted data URLs.
+  function loadLayers() {
+    var stored = data[currentName()] || {};
+    var pending = LABELS.length;
+    resetLayers(mask.width, mask.height);
+    function done() {
+      composite();
+      ready = true;   // only now is painting safe
+    }
+    LABELS.forEach(function (n) {
+      var url = stored[n];
+      if (!url) { if (--pending === 0) done(); return; }
+      var im = new Image();
+      im.onload = function () {
+        layerCtx[n].clearRect(0, 0, mask.width, mask.height);
+        layerCtx[n].drawImage(im, 0, 0, mask.width, mask.height);
+        if (--pending === 0) done();
+      };
+      im.onerror = function () { if (--pending === 0) done(); };
+      im.src = url;
+    });
+  }
+
+  function setStatus(text, ok) {
+    progress.textContent = text;
+    progress.className = ok ? "saved" : "";
+  }
+
+  function show() {
+    if (!files.length) { setStatus("no folder"); return; }
+    var f = files[index];
+    prevBtn.disabled = index === 0;
+    nextBtn.disabled = index === files.length - 1;
+    saveBtn.disabled = false;
+    undoStack.length = 0;
+    setStatus("image " + (index + 1) + " of " + files.length + " — " + f.name);
+
+    img.onload = function () {
+      if (!img.naturalWidth) { setStatus("could not decode " + f.name); return; }
+      mask.width = img.naturalWidth;
+      mask.height = img.naturalHeight;
+      loadLayers();
+    };
+    img.onerror = function () { setStatus("failed to load " + f.name); };
+    img.src = URL.createObjectURL(f);
+  }
+
+  function store() {
+    var name = currentName();
+    if (!data[name]) data[name] = {};
+    if (layers[L()] && layers[L()].width) {
+      data[name][L()] = layers[L()].toDataURL("image/png");
+    }
+  }
+
+  function pushUndo() {
+    if (!ready || !layerCtx[L()] || !mask.width) return;
+    if (undoStack.length > 40) undoStack.shift();
+    undoStack.push(layerCtx[L()].getImageData(0, 0, mask.width, mask.height));
+  }
+
+  function undo() {
+    var snap = undoStack.pop();
+    if (!snap || !ready) return;
+    layerCtx[L()].putImageData(snap, 0, 0);
+    composite();
+    store();
+  }
+
+  // Guard against a click landing between "folder picked" and "image decoded",
+  // when the layer canvases do not exist yet. Without this the first click after
+  // picking a folder crashes on layerCtx[L()] being undefined.
+  function canPaint() {
+    return files.length > 0 && ready && !!layerCtx[L()] && mask.width > 0;
+  }
+
+  function stroke(x, y) {
+    var c = layerCtx[L()];
+    var r = parseFloat(brush.value);
+    if (erasing) {
+      c.clearRect(x - r / 2, y - r / 2, r, r);
+    } else {
+      if (last) {
+        c.strokeStyle = COLORS[L()];
+        c.lineWidth = r; c.lineCap = "round"; c.lineJoin = "round";
+        c.beginPath(); c.moveTo(last.x, last.y); c.lineTo(x, y); c.stroke();
+      }
+      c.fillStyle = COLORS[L()];
+      c.beginPath(); c.arc(x, y, r / 2, 0, Math.PI * 2); c.fill();
+    }
+    last = { x: x, y: y };
+    composite();
+  }
+
+  function at(ev) {
+    var r = mask.getBoundingClientRect();
+    return {
+      x: (ev.clientX - r.left) * (mask.width / r.width),
+      y: (ev.clientY - r.top) * (mask.height / r.height)
+    };
+  }
+
+  mask.addEventListener("pointerdown", function (ev) {
+    if (!canPaint()) return;
+    ev.preventDefault();
+    try { mask.setPointerCapture(ev.pointerId); } catch (e) {}
+    painting = true; last = null;
+    pushUndo();
+    stroke(at(ev).x, at(ev).y);
+  });
+
+  mask.addEventListener("pointermove", function (ev) {
+    if (!painting) return;
+    ev.preventDefault();
+    var p = at(ev);
+    stroke(p.x, p.y);
+  });
+
+  eraseBox.addEventListener("change", function () { erasing = eraseBox.checked; });
+
+  function endStroke() {
+    if (painting) { painting = false; last = null; store(); }
+  }
+  mask.addEventListener("pointerup", endStroke);
+  mask.addEventListener("pointercancel", endStroke);
+  window.addEventListener("blur", endStroke);
+
+  /* ---- loading --------------------------------------------------------- */
+
+  picker.addEventListener("change", function () {
+    files = Array.prototype.filter.call(picker.files, function (f) {
+      return f.type.indexOf("image/") === 0;
+    }).sort(function (a, b) {
+      return a.name.localeCompare(b.name, undefined, { numeric: true });
+    });
+    index = 0; data = {};
+    if (!files.length) { setStatus("no images in that folder"); return; }
+    show();
+  });
+
+  reloader.addEventListener("change", function () {
+    var left = reloader.files.length;
+    if (!left) return;
+    Array.prototype.forEach.call(reloader.files, function (f) {
+      var rd = new FileReader();
+      rd.onload = function () {
+        try {
+          var json = JSON.parse(rd.result);
+          var imgs = json.images || {};
+          Object.keys(imgs).forEach(function (k) { data[k] = imgs[k]; });
+          setStatus("reloaded " + Object.keys(data).length + " annotated images", true);
+        } catch (e) {
+          alert("Could not read " + f.name + ": " + e.message);
+        }
+        if (--left === 0) show();
+      };
+      rd.readAsText(f);
+    });
+  });
+
+  /* ---- saving ---------------------------------------------------------- */
+
+  function download(name, text, mime) {
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([text], { type: mime }));
+    a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+
+  saveBtn.addEventListener("click", function () {
+    if (!files.length) return;
+    var names = Object.keys(data).sort();
+    if (!names.length) { alert("Nothing annotated yet."); return; }
+
+    var rows = [["image", "labels_painted", "crack", "pothole", "repair_or_patch",
+                 "ignore", "valid_surface"].join(",")].concat(names.map(function (name) {
+      var layer = data[name] || {};
+      var have = LABELS.filter(function (l) { return layer[l]; });
+      function bit(l) { return have.indexOf(l) >= 0 ? 1 : 0; }
+      return [name, have.join("|"), bit("crack"), bit("pothole"),
+              bit("repair_or_patch"), bit("ignore"), bit("valid_surface")].join(",");
+    }));
+
+    var payload = {
+      format: "roadsight-annotation/1",
+      label_vocabulary: LABELS,
+      source: "manual brush annotation, annotation_guides/annotate.html",
+      coordinate_space: "pixels at the image's native resolution",
+      scale_note: "pixels only; no mm measurement is implied or permitted",
+      annotation_type: "intra-annotator unless declared otherwise",
+      n_images: names.length,
+      images: data
+    };
+
+    download("annotation_manifest.json", JSON.stringify(payload), "application/json");
+    download("annotation_index.csv", rows.join("\n"), "text/csv");
+    setStatus("downloaded " + names.length + " annotated images", true);
+  });
+
+  /* ---- buttons & keys -------------------------------------------------- */
+
+  undoBtn.addEventListener("click", undo);
+  prevBtn.addEventListener("click", function () { if (index > 0) { index--; show(); } });
+  nextBtn.addEventListener("click", function () {
+    if (index < files.length - 1) { index++; show(); }
+  });
+
+  document.addEventListener("keydown", function (ev) {
+    var t = ev.target.tagName;
+    if (t === "INPUT" || t === "SELECT" || t === "TEXTAREA") return;
+    var k = ev.key.toLowerCase();
+    if (k === "u") { ev.preventDefault(); undo(); }
+    else if (k === "e") { eraseBox.checked = !eraseBox.checked; erasing = eraseBox.checked; }
+    else if (k === "a") { prevBtn.click(); }
+    else if (k === "d") { nextBtn.click(); }
+    else if (k === "[") { brush.value = Math.max(2, +brush.value - 3); }
+    else if (k === "]") { brush.value = Math.min(160, +brush.value + 3); }
+    else if (k >= "1" && k <= "5") { labelSel.selectedIndex = +k - 1; }
+  });
+
+  // Not ready until an image has decoded and the label layers exist.
+  saveBtn.disabled = true;
+  ready = false;
+  show();
+})();
+</script>
+</body>
+</html>

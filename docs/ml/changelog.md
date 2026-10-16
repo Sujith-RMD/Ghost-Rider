@@ -585,6 +585,200 @@ Recorded as a defect, not a note, because a runbook is an interface: instructing
 someone to run a command that cannot succeed is a defect in the artifact, and the
 live error text is preserved verbatim so the failure mode stays searchable.
 
+### 2026-10-16 - RDD2022 India extracted and cleaned; negatives finally available
+Type: dataset admission + feature
+
+**A1.8 closed.** The 14.16 GB DatasetNinja repackaging of RDD2022 was inspected
+without extracting, then only the India-tagged images were extracted.
+
+| | |
+|---|---|
+| Images | 7,706 (720x720) |
+| Split | 6,165 train / 1,541 dev, frozen by seed 0 before any model ran |
+| Boxes | 8,175 |
+| Negatives | **3,934 (51.1%)** |
+| Licence | CC BY-SA 4.0, source `crddc2022.sekilab.global/rules/` |
+| Size on disk | 0.48 GB |
+
+Extraction was selective rather than wholesale: the full listing was read first,
+and only India image/annotation pairs were written out. Extracting all 47,420
+images would have cost 14 GB and delivered nothing the plan asks for - five of the
+six countries are explicitly not the primary source.
+
+### The finding that matters most
+
+**This is the first source of intact-road images in the project.** Crack-Seg
+supplies 1 negative in 4,029; CRKWH100 supplies 0. Without negatives, a
+false-alarm rate is not merely unmeasured, it is **unmeasurable** - there is
+nothing to falsely flag. 51.1% of the Indian train split is negative, so the
+false-positive rate becomes a reportable metric for the first time.
+
+Two things were done to keep that property rather than destroy it:
+- Negative images are written as **empty** label files, not skipped. Deleting
+  them would silently remove the class.
+- `distress_metrics` and the eval harness treat an empty mask as a measured
+  absence (`0.0`), never as missing data (`None`).
+
+### A second finding: the shipped test split is unusable
+
+40 of 40 sampled RDD test images have empty `objects` - the split is 100%
+unlabelled, as is normal for a challenge. It is deliberately not used. Train and
+development are cut here instead, seeded and frozen before training.
+
+Recorded as **random-held-out, not road-held-out**: no road or session identifier
+ships with RDD2022, and those are different claims (final plan 6.2).
+
+### Provenance recorded rather than glossed
+
+This is the DatasetNinja repackaging, not the archive at
+`sekilab/RoadDamageDetector`, and the annotations were converted to DatasetNinja's
+JSON format. That is one third-party step of ancestry, which final plan 4.2
+requires be stated. The licence is the official CC BY-SA 4.0 and points at the
+challenge rules, so the terms are sound; the lineage is the caveat.
+
+### Second distress model - deliberately separate
+
+`training/train_india_detection.py` trains a **detection** model over the same
+frozen split. The split is not accidental:
+
+| | Crack-Seg model | India model |
+|---|---|---|
+| Source | foreign | **India** |
+| Labels | polygons, precise area | **boxes only** |
+| Resolution | 416x416 close-up | 720x720 oblique |
+| Answers | how big is the defect | **does it work in India** |
+
+Box-to-mask conversion for cracks was measured earlier at 2.41x area over-fill and
+rejected, so that step is not performed and this model makes no area claim. The
+India claim needs India data and foreign precision-area results cannot substitute.
+
+### Verification
+
+- 7,706 images on disk, manifest count matches, 0.48 GB
+- 0 undecodable, 0 images missing from the manifest, 0 shape mismatches
+- every sample id in exactly one split
+- 0 negatives carrying boxes and 0 positives without boxes
+- 0 boxes outside image bounds
+- 6,165/6,165 label files for train and 1,541/1,541 for dev, every image covered
+- all normalised box values inside [0, 1]
+
+**Not done / still open:** no model trained on this yet; the India detection run
+is the next Colab step. RDD boxes still cannot supply defect area.
+### 2026-10-16 - Colab runbook for both distress models; annotation tooling; plan-alignment audit
+Type: tooling + documentation + correction
+
+The user asked two things: working Colab code for both datasets, and an update to the
+tracking so the project stays goal-oriented given that human annotation feels
+impossible without domain expertise. A third need surfaced during the work, below.
+
+### Colab runbook, end to end, both models
+
+`training/COLAB_TRAINING.ipynb` (25 cells, 13 code) plus
+`training/COLAB_TRAINING.md`. `COLAB_E8.md` was removed - it covered one model and
+was already stale.
+
+Constraints the notebook is built around, all of them learned from earlier failures:
+
+- **No data is in git.** `git ls-files data/` returns 0. Google Drive is the
+  bridge, and the notebook *locates* files by walking Drive rather than assuming a
+  path, printing every candidate when the assumption is wrong.
+- **Do not upload the 14 GB RDD tar.** The India subset actually used is 0.48 GB.
+  `training/prepare_india_distress.py` already did the selection locally.
+- **Crack-Seg needs no conversion** - it is already YOLO polygon format with its own
+  `crack-seg.yaml`. Removing that step removes a class of bug.
+
+Bugs found by checking, not by running:
+
+- `%cd {REPO}` would have failed. IPython **line magics do not interpolate
+  f-string variables** - it would have run `cd {REPO}` literally. Replaced with a
+  literal path plus an `assert os.getcwd()`.
+- `split=dev` was wrong. Ultralytics resolves `split` against the dataset-yaml keys,
+  and `dev` is not one. Removed; the yaml already maps `val:` to `images/dev`.
+- Added `--workers 2`: Colab's dataloader default of 8 intermittently deadlocks.
+- Every CLI flag in the notebook was checked against the scripts' actual `--help`
+  output, so `--data`, `--epochs`, `--imgsz`, `--batch`, `--device`, `--name`,
+  `--weights`, `--manifest`, `--out`, `--images`, `--gt`, `--prepare-only` all exist.
+
+Notebook JSON is generated by a script so it cannot be hand-mangled, and is checked:
+every Python cell parses (with `!`/`%` lines replaced by indentation-preserving
+`pass` so an empty `if:` body does not raise a false alarm), shell-line braces only
+reference config-cell variables, and no line magic contains a brace.
+
+### Annotation: the honest split, and a tool
+
+The user's blocker - "I have 0 knowledge in the domain and I don't know how to
+annotate" - turned out to be two different questions with two different answers.
+
+**Distress annotation does not need domain expertise.** `crack`, `pothole`,
+`repair_or_patch` are visual categories. RDD2022 itself was labelled by crowd
+workers, not pavement engineers. This is now written up as a three-tier protocol in
+`annotation_guides/ANNOTATION_GUIDE.md` Â§"If you have no domain expertise", with
+Tier 3 (chip, gap, condition) explicitly marked as blocked rather than merely hard.
+
+**The self-consistency substitute for the two-human floor.** Task A2.3 requires two
+independent people, which one person cannot produce. What is available: annotate 20
+images, wait at least three days, re-annotate the same 20 blind, measure agreement,
+and **always** report it as `intra_annotator_agreement`. It measures repeatability,
+not inter-rater agreement, and the distinction is recorded in the guide, the tracker
+(A2.6) and the manifest's own `annotation_type` field so it cannot be laundered.
+
+`annotation_guides/annotate.html` - a single offline HTML file: open folder, pick a
+label, paint, undo, save. No install, no Python, no internet. One off-DOM canvas per
+label at native resolution, so erasing `crack` can never erase `pothole`.
+
+It was tested with `annotation_guides/verify_annotate.js` (node, 29 checks) rather
+than assumed to work. That test found a **real crash**: clicking between "folder
+picked" and "image decoded" ran `layerCtx[L()].getImageData()` on an undefined
+context. Fixed with a `ready` flag guarding the pointer handlers. It also confirmed
+erase issues `clearRect` and not `fill`, undo restores an ImageData snapshot, both
+label layers persist as data URLs, and the CSV has exactly one row per annotated
+image.
+
+### Correction - my own fabricated number
+
+During the plan-alignment audit I wrote that the Phase 2 measurement slice had been
+"a 1311x1040 CRKWH100 frame reduced to 683x542 at the claimed 1 mm/px" and that
+`scripts/measure_image.py` "no longer exists".
+
+**Both were false.** A grep showed the 1311/683 figures appear in *no upstream
+document* - I invented them, and they read as authoritative because they were
+specific. There is no `scripts/` directory, but that is a different claim from naming
+a script that was deleted. The changelog only records that a *temporary* accuracy
+script was removed ("four radius-12 disks each measured 441 px..."). Corrected in
+`docs/ml/TASKS.md` A3.5 to state only what the changelog supports.
+
+Recorded because the failure mode matters: a plausible invented detail is harder to
+catch than an obvious error, and this project's whole value is that its numbers are
+checkable.
+
+### Plan-alignment audit (the user's question: "aren't we deviating a lot?")
+
+Checked rather than assumed. The verdict is that the deviation is real but
+concentrated in **ordering**, not in content.
+
+**Not deviating.** final_plan Â§7.3 names these features outright: "GLCM
+contrast/homogeneity, gradient energy, LBP summary" (task D7), metric skeleton
+length with diagonal steps (D8), and "Boxes provide localization only" (D8). Â§8.2
+explicitly sanctions "a small YOLO detector on RDD India" as a temporary
+localization baseline. So the work is the requested work.
+
+**Deviating.** Three things:
+
+1. **Order.** Â§14 puts Phase 2 (the aggregate measurement slice) *before* Phase 4
+   (the learned challenger). Work has run the other way: the distress branch is
+   nearly complete while Phase 2 is synthetic-only and blocked on labels. Phase 2 is
+   now the binding constraint, and it has been treated as not-yet-reached rather
+   than as the critical path.
+2. **Camera is a Phase 0 item and nobody is doing it.** Â§14: "Camera acquisition and
+   platform smoke tests begin in Phase 0, not Phase 6." Â§1 calls live access a
+   first-stage dependency. There was **no task in the tracker asking anyone to get a
+   camera** - the omission was silent. Added as A14.
+3. **The task-ID scheme is ours.** `A1.8`, `D7`, `E10`, `I16`, `J7` appear in neither
+   `final_plan.md` nor `ML_ROLE.md`. The content is upstream-checkable, but the
+   labels looked authoritative and are not. Now flagged at the top of `docs/ml/TASKS.md`.
+
+Recorded in `docs/ml/TASKS.md` rather than silently fixed, so the ordering can be
+deliberately repaired instead of drifting further.
 ### Reproducibility pointers
 
 Audit CLI: `python -m eval.dataset_audit --path <dir> --name <id> --out <json>`.
