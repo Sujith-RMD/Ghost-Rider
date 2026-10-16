@@ -58,6 +58,13 @@ installation is recorded below, not retroactively applied to this baseline.
 
 ## History
 
+### 2026-10-16 — India-only dataset packaged for handoff
+
+Created `Ghost-Rider-RDD2022-India-only.zip` on the Desktop, outside Git: **442,498,774 bytes**, 15,416 entries, all CRC checks passed. Contains 6,165 training and 1,541 development Indian images with YOLO bounding-box labels, source provenance manifest, source mirror licence text and usage/sharing caveats. Excludes the 14 GB multinational tar, Crack-Seg and CRKWH100. The ZIP-only YAML uses portable `path: .` and omits the misleading development-as-test alias; original dataset files are unchanged. Training must run from the extracted `rdd2022_india_yolo` directory. Development is not independent final-test evidence; rights/attribution/share-alike and grouping caveats remain. Removed only our interrupted full-dataset backup; pre-existing ZIPs were preserved.
+
+SHA-256: `2c4ca198f0a4a4c123b778b3463f740fd4ffc6c954350466e3624bfc5dfdf07b`; a sibling `.zip.sha256` file was written. No new model metrics or training were performed.
+
+
 ### 2026-10-16 — Tracker, usage and portable validation updated
 
 - Marked A1.8 acquisition, C12 profile gate, C15 evidence-type reporting and D10 reference-version enforcement complete at their documented software/acquisition scope. Added completed I16a/I16b metric/baseline subtasks; B1/B2/B4, E13/E14 and I6/I15 remain partial where actual data/run/review evidence is missing. A1.8a explicitly retains Indian rights/overlay/grouping/mask gates. Updated `DATA_ADMISSION.md` with the actual archive inventory and class counts; no mask/negative/independence inference from boxes or empty JSON.
