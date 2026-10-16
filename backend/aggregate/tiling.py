@@ -44,7 +44,11 @@ from dataclasses import dataclass, replace
 import numpy as np
 
 from backend.aggregate.measurement import MeasurementConfig, measure_surface
-from backend.aggregate.segmentation import WatershedConfig, segment_aggregate
+from backend.aggregate.segmentation import (
+    WatershedConfig,
+    segment_aggregate,
+    segment_aggregate_with_stages,
+)
 from backend.geometry.scale import PlanarScale
 
 __all__ = [
@@ -52,6 +56,7 @@ __all__ = [
     "TileWindow",
     "tile_windows",
     "segment_tiled",
+    "segment_tiled_with_stages",
     "measure_tiled",
 ]
 
@@ -232,6 +237,25 @@ def segment_tiled(
     no disk has no signal, so Otsu splits pure noise and invents foreground.
     Tiling makes that fragmentation visible far more often.
     """
+    return _segment_tiled(image, config, watershed, capture_stages=False)[0]
+
+
+def segment_tiled_with_stages(
+    image: np.ndarray,
+    config: TilingConfig | None = None,
+    watershed: WatershedConfig | None = None,
+) -> tuple[np.ndarray, dict[str, np.ndarray]]:
+    """Return the production stitched labels and native-resolution tile stages."""
+    return _segment_tiled(image, config, watershed, capture_stages=True)
+
+
+def _segment_tiled(
+    image: np.ndarray,
+    config: TilingConfig | None,
+    watershed: WatershedConfig | None,
+    *,
+    capture_stages: bool,
+) -> tuple[np.ndarray, dict[str, np.ndarray]]:
     config = config or TilingConfig()
     watershed = watershed or WatershedConfig()
 
@@ -261,6 +285,7 @@ def segment_tiled(
     tile_watershed = _pin_watershed_to_image_scale(watershed, (height, width))
 
     labels_full = np.zeros((height, width), dtype=np.int64)
+    stage_full: dict[str, np.ndarray] = {}
     # fragment key = within-tile unique id, globally offset so tiles never share
     next_fragment = 1
     unions = _UnionFind()
@@ -273,7 +298,14 @@ def segment_tiled(
         # crash: those regions contain no measurable instances anyway.
         if min(tile.shape) < 3:
             continue
-        local = segment_aggregate(tile, tile_watershed)
+        if capture_stages:
+            local, tile_stages = segment_aggregate_with_stages(tile, tile_watershed)
+            for name, stage in tile_stages.items():
+                stage_full.setdefault(name, np.zeros((height, width), dtype=stage.dtype))[
+                    window.local_slice()
+                ] = stage
+        else:
+            local = segment_aggregate(tile, tile_watershed)
         if local.max() == 0:
             continue
 
@@ -311,7 +343,10 @@ def segment_tiled(
         labels_full[window.local_slice()] = np.where(remapped > 0, remapped, region)
 
     if labels_full.max() == 0:
-        return labels_full.astype(np.int32)
+        labels = labels_full.astype(np.int32)
+        if capture_stages:
+            stage_full["candidate_labels"] = labels
+        return labels, stage_full
 
     # Relabel to a compact 1..N range through the union-find roots.
     roots = {fragment: unions.find(fragment) for fragment in np.unique(labels_full) if fragment > 0}
@@ -320,7 +355,10 @@ def segment_tiled(
     for fragment, root in roots.items():
         lookup[fragment] = order[root]
     stitched = lookup[labels_full]
-    return stitched.astype(np.int32)
+    labels = stitched.astype(np.int32)
+    if capture_stages:
+        stage_full["candidate_labels"] = labels
+    return labels, stage_full
 
 
 def _overlap_counts(

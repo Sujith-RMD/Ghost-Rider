@@ -28,6 +28,7 @@ from backend.aggregate.segmentation import (
     instance_properties,
     renumber_labels,
     segment_aggregate,
+    segment_aggregate_with_stages,
 )
 
 __all__ = [
@@ -47,6 +48,7 @@ __all__ = [
     "particle_size_stats",
     "renumber_labels",
     "segment_aggregate",
+    "segment_aggregate_with_stages",
     "skeletonize_2d",
     "texture_statistics",
 ]

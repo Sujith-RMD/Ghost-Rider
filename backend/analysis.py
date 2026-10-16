@@ -54,7 +54,7 @@ try:  # pragma: no cover - import guard, exercised implicitly by the test suite
     import cv2
 
     from .aggregate.measurement import MeasurementConfig, measure_surface
-    from .aggregate.tiling import TilingConfig, measure_tiled
+    from .aggregate.tiling import TilingConfig, measure_tiled, segment_tiled_with_stages
     from .distress.features import DISTRESS_METHOD_VERSION, distress_metrics
     from .geometry.scale import PlanarScale
     from .quality.validity import classify_quality
@@ -64,6 +64,7 @@ except Exception as _exc:  # pragma: no cover - missing CV stack
     cv2 = None  # type: ignore[assignment]
     measure_surface = None  # type: ignore[assignment]
     measure_tiled = None  # type: ignore[assignment]
+    segment_tiled_with_stages = None  # type: ignore[assignment]
     distress_metrics = None  # type: ignore[assignment]
     PlanarScale = None  # type: ignore[assignment]
     classify_quality = None  # type: ignore[assignment]
@@ -181,7 +182,8 @@ def _distress_metrics_result(measured_distress: Any) -> Dict[str, Optional[float
 def measure_frame(image: np.ndarray,
                   metadata: Optional[FrameMetadata] = None,
                   crack_mask: Optional[np.ndarray] = None,
-                  distress_mask: Optional[np.ndarray] = None) -> Dict[str, Any]:
+                  distress_mask: Optional[np.ndarray] = None,
+                  include_processing_stages: bool = False) -> Dict[str, Any]:
     """Run the real pipeline on a decoded image. Never raises.
 
     Returns a dict with ``quality``, ``observed_area``, ``metrics``,
@@ -218,13 +220,28 @@ def measure_frame(image: np.ndarray,
             return outcome
 
         valid_surface = np.ones(image.shape[:2], dtype=bool)
-        measurements, _labels = measure_tiled(
-            image,
-            valid_surface,
-            scale,
-            tiling=DEFAULT_TILING,
-            distress_mask=distress_mask,
-        )
+        if include_processing_stages:
+            measurement_config = MeasurementConfig()
+            labels, stages = segment_tiled_with_stages(
+                image, DEFAULT_TILING, measurement_config.watershed
+            )
+            measurements = measure_surface(
+                image=labels,
+                valid_surface_mask=valid_surface,
+                scale=scale,
+                config=measurement_config,
+                distress_mask=distress_mask,
+                labels=labels,
+            )
+            outcome["processing_stages"] = stages
+        else:
+            measurements, _labels = measure_tiled(
+                image,
+                valid_surface,
+                scale,
+                tiling=DEFAULT_TILING,
+                distress_mask=distress_mask,
+            )
         outcome["observed_area"] = _area_result(measurements, scale)
         metrics = _metrics_result(measurements)
         outcome["metrics"] = metrics
