@@ -2,6 +2,8 @@
 
 Use original phone files and keep them local. Do not invent GPS, distance, physical scale, or road-quality scores. The current analyzer produces exploratory pixel-space candidates; a manual ROI limits the reported region but does not validate chip counts.
 
+Before starting, install `models/india_rdd2022_yolov8n/best.pt` locally and verify its SHA-256 is `ff477bb3aaeb3559bf8f3c040acf55ab3b468b520c21fb8d6bc1fa9d03204881` with `Get-FileHash models/india_rdd2022_yolov8n/best.pt -Algorithm SHA256`. Keep the weight out of Git. Confirm the app reports `distress_detection.status: success`; an upload alone does not prove the detector ran.
+
 ## Start the local app
 
 From the repository root, in two PowerShell windows:
@@ -23,6 +25,7 @@ npm run preview -- --host 127.0.0.1 --port 4173
 ```
 
 Open `http://127.0.0.1:4173`. The production build uses the real API; do not use the development fixture app as integration evidence.
+If preview uses a different port, set `CORS_ORIGINS` to that exact browser origin before starting the API, then rebuild the frontend with the matching `VITE_API_BASE_URL`.
 
 ## Copy and inspect captures
 
@@ -75,3 +78,9 @@ $job = Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/v1/uploads/$($
 ```
 
 For video frames, repeat the same upload for a small reviewed selection. Do not report frame count as distance. GPS-backed route location is available only from real device metadata and valid fixes.
+
+## Review and record campus transfer
+
+For each original JPEG or selected MP4 frame, record the source file and video timestamp (if applicable), image dimensions, camera angle, lighting/wetness, upload/job/sample IDs, detector status and inference time, each predicted class/confidence/box, and whether a human reviewer agrees that each box lies on the relevant road defect. Record visible defects the model misses, wrong-class boxes, boxes on vehicles/sky/shadows, and unusable images. Keep a small reviewed set of positive and visibly clear images; do not infer accuracy from a single successful prediction. The RDD India model was trained on forward-looking road scenes, so downward-facing phone imagery has unmeasured domain shift until this review is done.
+
+Keep watershed candidate counts separate from YOLO distress boxes. Full-frame candidates on oblique scenes can include sky, vegetation and vehicles; use a reviewed road ROI or mark the result unsuitable. Crack width, pothole depth, chip density, road grade and quality score remain unavailable without separately validated measurements and calibration.

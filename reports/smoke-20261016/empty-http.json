@@ -1,0 +1,50 @@
+{
+  "job": {
+    "status_code": 200,
+    "response_ms": 28.6,
+    "id": "5709d1bd-bad6-486a-822f-2b6f7db63807",
+    "state": "partial",
+    "result_sample_id": "e2b0aa23-864d-4837-a520-33d787808eb5"
+  },
+  "sample": {
+    "status_code": 200,
+    "response_ms": 2046.2,
+    "reload_status_code": 200,
+    "reload_response_ms": 2034.2,
+    "id": "e2b0aa23-864d-4837-a520-33d787808eb5",
+    "score": null,
+    "distress_detection": {
+      "status": "success",
+      "reason": null,
+      "model_version": "rdd2022-india-yolov8n",
+      "model_sha256": "ff477bb3aaeb3559bf8f3c040acf55ab3b468b520c21fb8d6bc1fa9d03204881",
+      "class_names": {
+        "0": "alligator crack",
+        "1": "block crack",
+        "2": "longitudinal crack",
+        "3": "other corruption",
+        "4": "pothole",
+        "5": "repair",
+        "6": "transverse crack"
+      },
+      "image_width": 720,
+      "image_height": 720,
+      "inference_ms": 81.88039998640306,
+      "confidence_threshold": 0.25,
+      "detections": []
+    }
+  },
+  "stored_image": {
+    "status_code": 200,
+    "sha256_matches_source": true,
+    "bytes": 76597
+  },
+  "report": {
+    "create_status_code": 200,
+    "response_ms": 2048.4,
+    "fetch_status_code": 200,
+    "fetch_response_ms": 7.0,
+    "id": "234fbff6-5a7a-4292-98b4-ffad69b82c91",
+    "narrative_status": "not_requested"
+  }
+}

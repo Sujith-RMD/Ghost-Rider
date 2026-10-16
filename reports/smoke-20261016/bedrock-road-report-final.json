@@ -1,0 +1,25 @@
+{
+  "http_status": 200,
+  "elapsed_ms": 1958.4,
+  "report_id": "78f5acfa-6535-4ca2-b6c8-3ae355627b77",
+  "narrative_status": "fallback",
+  "model_id": "apac.amazon.nova-micro-v1:0",
+  "content": {
+    "summary": "Frame assessed with limited confidence (scale_missing). Condition rating status: unknown (numerical SQI withheld).",
+    "evidence_references": [
+      "sample:1e7d1cbb-6fa1-458a-9d60-1a1b8a392876"
+    ],
+    "limitations": [
+      "Optical or geometric limitation prevents full metric validation.",
+      "Input lacks physical metric calibration; physical dimensions (mm, m², count/m²) unavailable.",
+      "Distress measurements are unavailable; absence of detected damage has not been established.",
+      "Analysis based solely on visible RGB surface appearance; structural load capacity, sub-base condition, and water permeability are not measured.",
+      "No automatic structural reconstruction or repair cost claims are made."
+    ],
+    "inspection_actions": [
+      "Review the source image and unavailable measurements before making a maintenance decision."
+    ],
+    "narrative_status": "fallback",
+    "factual_template_used": true
+  }
+}

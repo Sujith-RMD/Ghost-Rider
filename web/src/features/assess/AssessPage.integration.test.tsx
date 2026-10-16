@@ -20,7 +20,7 @@ test("a resumed partial job shows real zero separately from unavailable score an
   sessionStorage.setItem("roadsight.activeJob", "job-1");
   render(<MemoryRouter><AssessPage mock={false} /></MemoryRouter>);
   expect(await screen.findByText(/Road score: Unavailable/)).toBeInTheDocument();
-  expect(screen.getByText("Exploratory visible instance count (not validated): 0")).toBeInTheDocument();
+  expect(screen.getByText("Watershed candidate regions (unverified): 0. May include non-road pixels.")).toBeInTheDocument();
   expect(screen.getByText("Count per m²: Unavailable without calibrated area")).toBeInTheDocument();
   expect(screen.getByAltText("Original uploaded road image")).toHaveAttribute("src", "http://127.0.0.1:8000/uploads/road.jpg");
 });

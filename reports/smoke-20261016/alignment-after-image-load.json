@@ -1,0 +1,18 @@
+{
+  "natural_width": 720,
+  "natural_height": 720,
+  "image_rect": {
+    "x": 149,
+    "y": 328.5625,
+    "width": 720,
+    "height": 720
+  },
+  "svg_rect": {
+    "x": 149,
+    "y": 328.5625,
+    "width": 720,
+    "height": 720
+  },
+  "view_box": "0 0 720 720",
+  "equal_pixel_extent": true
+}

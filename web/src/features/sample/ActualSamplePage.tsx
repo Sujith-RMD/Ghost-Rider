@@ -29,7 +29,7 @@ export default function ActualSamplePage({ id }: { id: string }) {
             {!!sample.quality?.reasons?.length && <p>Quality reasons: {sample.quality.reasons.join(", ")}</p>}
             <p>Road score: {sample.score?.value == null ? "Unavailable — scoring has not been validated" : `${sample.score.value} / 100 (${sample.score.status})`}</p>
             <p>Physical scale: {sample.geometry_valid ? "Validated" : "Uncalibrated; physical units unavailable"}</p>
-            <p>Exploratory visible instance count: {sample.metrics?.chip_count ?? "Unavailable"}</p>
+            <p>Watershed candidate regions (unverified): {sample.metrics?.chip_count ?? "Unavailable"}. May include non-road pixels.</p>
             <p>Count per m²: {sample.metrics?.chip_density_per_m2 ?? "Unavailable without calibrated area"}</p>
             {sample.error && <p>Analysis limitation: {sample.error}</p>}
             <p>Model: {sample.model_version ?? "Unavailable"}</p>
