@@ -49,7 +49,7 @@ def _boundaries(labels: np.ndarray) -> np.ndarray:
     return boundary
 
 
-def build_bundle(image_path: str | Path, output_dir: str | Path) -> dict:
+def build_bundle(image_path: str | Path, output_dir: str | Path, roi_mask_path: str | Path | None = None) -> dict:
     source = Path(image_path)
     target = Path(output_dir)
     if not source.is_file():
@@ -61,7 +61,15 @@ def build_bundle(image_path: str | Path, output_dir: str | Path) -> dict:
     original_name = f"original{source.suffix.lower()}"
     shutil.copyfile(source, target / original_name)
 
-    outcome = analysis.measure_frame(image, include_processing_stages=True)
+    roi_mask = None
+    if roi_mask_path is not None:
+        roi_mask = cv2.imread(str(roi_mask_path), cv2.IMREAD_GRAYSCALE)
+        if roi_mask is None or roi_mask.shape != image.shape[:2]:
+            raise ValueError("ROI mask must decode and match the source image dimensions")
+        roi_mask = roi_mask > 0
+    outcome = analysis.measure_frame(
+        image, include_processing_stages=True, valid_surface_mask=roi_mask
+    )
     arrays = outcome.get("processing_stages")
     stages_available = bool(arrays and "candidate_labels" in arrays)
     labels = arrays["candidate_labels"] if stages_available else None
@@ -152,9 +160,9 @@ def build_bundle(image_path: str | Path, output_dir: str | Path) -> dict:
         "contrast_dynamic_range_p99_minus_p1": quality["metrics"].get("dynamic_range"),
         "sharpness_laplacian_variance": quality["metrics"].get("laplacian_variance"),
         "quality_thresholds_calibrated": quality["thresholds_calibrated"],
-        "roi": {"available": False, "reason": "The current analyzer uses a full-frame surface mask; no road-plane/ROI detector is implemented."},
+        "roi": {"available": roi_mask is not None, "source_name": Path(roi_mask_path).name if roi_mask_path else None, "source_sha256": hashlib.sha256(Path(roi_mask_path).read_bytes()).hexdigest() if roi_mask_path else None, "reason": "Human-drawn binary road mask; used for downstream measurements. No automatic road-plane detector is implemented." if roi_mask is not None else "The current analyzer uses a full-frame surface mask; no road-plane/ROI detector is implemented."},
         "calibration": {"status": "uncalibrated", "physical_validation": False, "physical_units_available": False},
-        "candidate_count": {"count": int(labels.max()) if labels is not None else None, "verified": False, "meaning": "Exploratory watershed candidate regions; not ground-truth aggregate count." if labels is not None else "Unavailable because the quality gate rejected this image."},
+        "candidate_count": {"count": metrics.chip_count if metrics else None, "verified": False, "meaning": "Unverified watershed candidates whose reported count is restricted to the supplied ROI." if roi_mask is not None else "Exploratory watershed candidate regions; not ground-truth aggregate count." if labels is not None else "Unavailable because the quality gate rejected this image."},
         "reported_pixel_metrics": metrics.model_dump(mode="json") if metrics else None,
         "limitations": list(outcome.get("limitations", [])) + ["No road ROI detector.", "No physical scale or human aggregate labels.", "No road-quality score.", "Candidate instances require human verification."],
         "processing_configuration": {"watershed": watershed.__dict__, "tiling": tiling.__dict__ if tiling else None},
@@ -171,8 +179,9 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Run the real analyzer and export its image-processing evidence.")
     parser.add_argument("--image", required=True, type=Path)
     parser.add_argument("--output-dir", required=True, type=Path)
+    parser.add_argument("--roi-mask", type=Path, help="Optional human-drawn binary mask (nonzero pixels are road); dimensions must match --image")
     args = parser.parse_args()
-    manifest = build_bundle(args.image, args.output_dir)
+    manifest = build_bundle(args.image, args.output_dir, args.roi_mask)
     print(json.dumps({"output_dir": str(args.output_dir), "candidate_count": manifest["candidate_count"], "quality": manifest["quality"]["status"], "physical_units_available": False}, indent=2))
 
 

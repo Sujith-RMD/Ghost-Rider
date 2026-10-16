@@ -183,7 +183,8 @@ def measure_frame(image: np.ndarray,
                   metadata: Optional[FrameMetadata] = None,
                   crack_mask: Optional[np.ndarray] = None,
                   distress_mask: Optional[np.ndarray] = None,
-                  include_processing_stages: bool = False) -> Dict[str, Any]:
+                  include_processing_stages: bool = False,
+                  valid_surface_mask: Optional[np.ndarray] = None) -> Dict[str, Any]:
     """Run the real pipeline on a decoded image. Never raises.
 
     Returns a dict with ``quality``, ``observed_area``, ``metrics``,
@@ -219,7 +220,14 @@ def measure_frame(image: np.ndarray,
             outcome["limitations"].append("quality_rejected")
             return outcome
 
-        valid_surface = np.ones(image.shape[:2], dtype=bool)
+        if valid_surface_mask is None:
+            valid_surface = np.ones(image.shape[:2], dtype=bool)
+        else:
+            valid_surface = np.asarray(valid_surface_mask)
+            if valid_surface.ndim != 2 or valid_surface.shape != image.shape[:2]:
+                outcome["limitations"].append("invalid_surface_roi_shape")
+                return outcome
+            valid_surface = valid_surface.astype(bool)
         if include_processing_stages:
             measurement_config = MeasurementConfig()
             labels, stages = segment_tiled_with_stages(
@@ -248,7 +256,8 @@ def measure_frame(image: np.ndarray,
         outcome["geometry_valid"] = bool(scale.is_scaled)
         outcome["limitations"].extend(measurements.limitations or [])
         outcome["limitations"].append(
-            "valid_surface_mask_is_full_frame:no_plane_detector_yet"
+            "manual_surface_roi_applied" if valid_surface_mask is not None
+            else "valid_surface_mask_is_full_frame:no_plane_detector_yet"
         )
 
         if crack_mask is not None:

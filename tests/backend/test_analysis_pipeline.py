@@ -91,6 +91,29 @@ def test_measure_frame_records_scale_limitation(synthetic_case):
     assert any("unscaled" in item for item in outcome["limitations"])
 
 
+def test_manual_surface_roi_excludes_outside_instances_from_metrics(monkeypatch):
+    from backend.aggregate.measurement import measure_surface
+
+    labels = np.zeros((320, 320), dtype=np.int32)
+    labels[45:75, 35:65] = 1
+    labels[45:75, 245:275] = 2
+    image = np.random.default_rng(4).integers(30, 220, (320, 320, 3), dtype=np.uint8)
+    roi = np.zeros((320, 320), dtype=bool)
+    roi[:, :160] = True
+
+    def measure_with_roi(_image, valid_surface_mask, scale, tiling=None, distress_mask=None):
+        result = measure_surface(
+            labels, valid_surface_mask, scale, labels=labels, distress_mask=distress_mask
+        )
+        return result, labels
+
+    monkeypatch.setattr(analysis, "measure_tiled", measure_with_roi)
+    outcome = analysis.measure_frame(image, valid_surface_mask=roi)
+
+    assert outcome["metrics"].chip_count == 1
+    assert "manual_surface_roi_applied" in outcome["limitations"]
+
+
 # --------------------------------------------------------------------------- #
 # Quality gate: rejected frames carry no measurements
 # --------------------------------------------------------------------------- #
