@@ -241,6 +241,12 @@ def is_s3_enabled() -> bool:
     requires IAM instance roles in the deployed environment, where no static keys
     exist, so this must not require ``AWS_ACCESS_KEY_ID`` to be set.
     """
+    settings = get_settings_safely()
+    if (
+        (settings is not None and settings.GHOST_RIDER_LOCAL_ONLY)
+        or os.getenv("GHOST_RIDER_LOCAL_ONLY", "").strip().lower() in {"1", "true", "yes", "on"}
+    ):
+        return False
     if not BOTO3_AVAILABLE:
         return False
     settings = get_s3_settings()

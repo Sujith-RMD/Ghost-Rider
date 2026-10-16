@@ -22,6 +22,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from ..schemas import NarrativeStatus, ReportContent
 from ..bedrock_models import promote_nova_model_id
+from ..app.config import get_settings_safely
 from .template import build_factual_template
 
 logger = logging.getLogger("ghost_rider.reports.bedrock")
@@ -38,8 +39,18 @@ FALLBACK_BEDROCK_MODEL_ID = os.getenv("BEDROCK_FALLBACK_MODEL_ID", "anthropic.cl
 _NARRATIVE_CACHE: Dict[str, Tuple[ReportContent, str]] = {}
 
 
+def _local_only_enabled() -> bool:
+    settings = get_settings_safely()
+    return bool(
+        (settings is not None and settings.GHOST_RIDER_LOCAL_ONLY)
+        or os.getenv("GHOST_RIDER_LOCAL_ONLY", "").strip().lower() in {"1", "true", "yes", "on"}
+    )
+
+
 def is_bedrock_configured() -> bool:
     """Check if Bedrock client can be initialized with credentials or IAM role."""
+    if _local_only_enabled():
+        return False
     try:
         import boto3
         session = boto3.Session()
@@ -51,6 +62,8 @@ def is_bedrock_configured() -> bool:
 
 def get_bedrock_client(region: Optional[str] = None) -> Optional[Any]:
     """Obtain boto3 bedrock-runtime client."""
+    if _local_only_enabled():
+        return None
     try:
         import boto3
         target_region = region or DEFAULT_BEDROCK_REGION
@@ -111,6 +124,9 @@ def generate_bedrock_narrative(
     Returns:
         (ReportContent, bedrock_model_id_used)
     """
+    if _local_only_enabled():
+        return build_factual_template(assessment_id, stored_facts), None
+
     # 1. Check cache first
     cache_key = f"{assessment_id}:{factual_input_hash}"
     if cache_key in _NARRATIVE_CACHE:

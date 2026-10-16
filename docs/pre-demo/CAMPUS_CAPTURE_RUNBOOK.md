@@ -10,12 +10,14 @@ From the repository root, in two PowerShell windows:
 
 ```powershell
 $env:GHOST_RIDER_DISABLE_DOTENV = '1'
+$env:GHOST_RIDER_LOCAL_ONLY = 'true'
 $env:GHOST_RIDER_DB_PATH = '.runtime/demo/road_quality.db'
 $env:UPLOADS_DIR = '.runtime/demo/uploads'
 $env:LOCAL_UPLOADS_PUBLIC = 'true'
-$env:AWS_S3_BUCKET_NAME = ''
 .venv\Scripts\python.exe -m uvicorn backend.api.server:app --host 127.0.0.1 --port 8000
 ```
+
+`GHOST_RIDER_LOCAL_ONLY=true` is the explicit safety switch: uploads and images stay on local disk, and S3 and Bedrock calls are disabled even if AWS keys, a shared profile, or an instance role are available. Reports use the deterministic local template. Do not rely on an empty bucket variable to disable cloud storage; configuration supplies the default bucket when it is empty.
 
 ```powershell
 cd web

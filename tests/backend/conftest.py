@@ -27,6 +27,7 @@ for _key in (
     "AWS_SESSION_TOKEN",
     "AWS_PROFILE",
     "AWS_DEFAULT_PROFILE",
+    "GHOST_RIDER_LOCAL_ONLY",
     "BEDROCK_MODEL_ID",
     "AWS_S3_BUCKET_NAME",
 ):
