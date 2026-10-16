@@ -45,6 +45,26 @@ installation is recorded below, not retroactively applied to this baseline.
 
 ## History
 
+### 2026-10-16 — Reproducible inference and latency reporting
+
+- **Verified — inference tooling:** `training/evaluate_crosssource.py` now maps manifest sample IDs explicitly (rather than assuming image stems), records actual local-weight/manifest SHA-256, confidence and library versions, and optionally saves binary raster predictions to a new exclusive directory. Unsafe/case-colliding IDs, duplicate legacy stems, nonfinite confidence, missing local weights and changed-during-run weights fail explicitly. No weights are downloaded.
+- Reports model-load time, per-sample predict-plus-materialization wall time, p50/p95, and separately available model-only timing, with explicit scope and first-call caveats. These are not capture-to-result service latency or accepted-samples/s.
+- 46 focused inference/metric/regression tests passed using a mocked model; no actual-model latency or accuracy was measured. Existing `training/COLAB_E8.md` edits remain untouched. E13/E14/I9 gain reproducibility tooling only, not trained-model completion.
+- Generated `reports/ml/measurement_metric_checks.json` contains a deterministic synthetic gap-error fixture: 2 px MAE on scored cases and 1/3 suppression, with too few groups for intervals. This is an arithmetic check, not a road measurement.
+
+### 2026-10-16 — Dimensional errors and reference-version enforcement
+
+- **Verified — C15 reporting software:** `eval/measurement_eval.py` emits count/gap/length MAE, signed bias, median/p95 absolute and relative errors, zero-truth counts, suppression reasons/coverage, per-parent/site summaries and guarded group-bootstrap intervals. Evidence must explicitly be source-scale annotation agreement, physical live validation or synthetic; pixel units cannot claim physical live validation. Suppressed predictions remain null, not zero. 17 focused tests passed. Real-data C15/I15 evidence remains unavailable.
+- **Verified — D10 standalone reference gate:** `backend/reference/compatibility.py` provides immutable definition metadata, explicit physical scale domains, finite positive limits, canonical JSON SHA-256 fingerprints and mismatch enforcement. Changed diameter/gap/method/domain definitions require a different reference version through the revision helper. Reference and measurement-core validation: 283 tests passed. No fitted known-good reference or reference calibration is claimed; F1/F2 remain open.
+
+### 2026-10-16 — Metric reporting, grouping and calibration safeguards
+
+- **Verified — distress reporting:** added pooled TP/FP/FN/TN and micro metrics, GT-positive-only Dice, frame false-alarm/miss rates with explicit denominators, and explicit-group summaries. Group bootstrap intervals require complete grouping metadata and at least 10 supporting groups per metric; unsupported intervals remain null with reasons. Empty manifests/zero-size masks fail. `reports/ml/distress_metric_checks.json` is deterministic **software_validation**, not road accuracy. 54 focused/regression tests passed.
+- **Verified — grouping tooling:** `training/group_splits.py` connects explicit lineage/site/session/duplicate metadata before splits; preserves frozen assignments, detects leakage, records checksums/statistics and refuses accidental overwrite. 35 tests passed. No actual real-data split is frozen by this change; B1/B2/B4/I6 data requirements remain open.
+- **Verified — C12 standalone gate:** `backend/geometry/profile.py` binds calibration provenance and scale to an immutable device/resolution/focus/zoom/crop/stabilization/mount signature. Changed, unknown or unvalidated captures cannot access metric scale. Profile and measurement-core validation: 231 tests passed. Requires per-capture use by the eventual inference adapter; unreported physical changes cannot be detected by software.
+- Data discovery: repository `data/` is empty in this checkout. No weights, dataset download, real-image inference, training, paid compute or physical calibration was performed. Existing edits in `training/COLAB_E8.md` were preserved. The combined ML test run reported 476 passing tests and 8 provisional-annotation warnings; broader validation follows below.
+
+
 Dates are chronological; same-day entries follow the original recorded milestone
 sequence, not independently established timestamps.
 
@@ -512,6 +532,43 @@ otherwise easy-to-lose decisions and outstanding items at the recorded milestone
   was for crack cross-source evaluation, not scale/aggregate admission. No distress
   training, Indian fine-tuning, score/reference validation or wet-surface validation
   result is claimed by this history.
+
+### 2026-10-16 - Colab runbook defects found and fixed from a live failure
+Type: documentation defect fix
+
+A live run of `training/COLAB_E8.md` failed. Two defects in that runbook, either
+of which would have blocked the E8 run on its own.
+
+**Defect 1 - the reported error.** Step 2 ran `unzip -q ... -d
+/content/data/external` without creating the directory first. `unzip -d` creates
+only the **final** directory in the path, not intermediate parents, so with
+`/content/data` absent it fails with the message the user reported:
+
+```
+Drive already mounted at /content/drive; ...
+checkdir:  cannot create extraction directory: /content/data/external
+           No such file or directory
+ls: cannot access '/content/data/external'
+```
+
+Fixed by adding an explicit `mkdir -p` before every unzip, plus a `grep -i
+roadsight` pre-check so a wrong Drive path fails loudly instead of producing an
+empty directory. The same missing `mkdir` was present in Option B.
+
+**Defect 2 - the failure that would have come next.** The runbook said to "zip
+the repo itself, or clone it fresh. Simplest: upload a zip too" with no command.
+That is not actionable, and `python -m training.train_distress_yoloseg` would
+have raised `ModuleNotFoundError` because `/content/training` does not exist.
+Step 0 is now split into explicit **0a (the repo)** and **0b (the data)** with
+the `Compress-Archive` paths listed, and a note that `data\manifests` must be in
+the code zip because `crkhw100_test.json` is read at Step 4.
+
+Also clarified that the `drive.mount` "already mounted" message is a warning, not
+an error, so it is not treated as a fault.
+
+Recorded as a defect, not a note, because a runbook is an interface: instructing
+someone to run a command that cannot succeed is a defect in the artifact, and the
+live error text is preserved verbatim so the failure mode stays searchable.
 
 ### Reproducibility pointers
 

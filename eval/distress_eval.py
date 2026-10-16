@@ -19,6 +19,8 @@ from __future__ import annotations
 import argparse
 import json
 from dataclasses import dataclass, asdict
+
+from eval.group_metrics import mask_row, reporting_metrics
 from pathlib import Path
 
 import cv2
@@ -55,6 +57,8 @@ class DistressReport:
     dice_mean: float | None = None
     instance_best_match_iou_mean: float | None = None
     unlabelled_gt_images: list[str] | None = None
+
+    metric_reporting: dict | None = None
 
     def describe(self) -> dict:
         return asdict(self)
@@ -134,6 +138,7 @@ def evaluate(
     dices: list[float] = []
     instance_ious: list[float] = []
     unlabelled: list[str] = []
+    scored_rows: list[dict] = []
 
     for path in files:
         shape = _image_shape(images_dir, path)
@@ -150,6 +155,7 @@ def evaluate(
             continue
         gt_masks = rasterize_label_file(shape, gt_path, class_filter={0})
         gt = gt_masks.get(0, np.zeros(shape, dtype=bool))
+        scored_rows.append(mask_row(path.stem, prediction, gt))
         if not gt.any() and prediction.any():
             # Prediction claims distress where none is labelled. That is a real
             # false positive, not a missing file.
@@ -200,6 +206,7 @@ def evaluate(
         dice_mean=_safe_mean(dices),
         instance_best_match_iou_mean=_safe_mean(instance_ious),
         unlabelled_gt_images=unlabelled,
+        metric_reporting=reporting_metrics(scored_rows) if gt_dir is not None else None,
     )
 
 
@@ -243,6 +250,8 @@ def score_raster_manifest(data: dict, predictions: dict[str, np.ndarray],
                           manifest_name: str | None = None) -> dict:
     """Score complete raster predictions; missing inference is not background."""
     samples = data.get("samples", [])
+    if not samples:
+        raise ValueError("manifest must contain at least one sample")
     ids = [s["sample_id"] for s in samples]
     if len(ids) != len(set(ids)):
         raise ValueError("duplicate sample_id in manifest")
@@ -272,7 +281,8 @@ def score_raster_manifest(data: dict, predictions: dict[str, np.ndarray],
                 f"prediction {sample_id} shape {pred.shape} != GT shape {gt.shape}"
             )
 
-        inter = int(np.count_nonzero(pred & gt))
+        counts = mask_row(sample_id, pred, gt, sample.get("group_id"))
+        inter = counts["tp"]
         union = int(np.count_nonzero(pred | gt))
         pixel_ious.append(inter / union if union else 1.0)
         pred_px = int(np.count_nonzero(pred))
@@ -286,13 +296,14 @@ def score_raster_manifest(data: dict, predictions: dict[str, np.ndarray],
         extents_pred.append(pred_px / pred.size)
         n_negatives += int(gt_px == 0)
         rows.append({
-            "sample_id": sample_id, "gt_pixels": gt_px, "pred_pixels": pred_px,
+            **counts, "gt_pixels": gt_px, "pred_pixels": pred_px,
             "gt_fraction": gt_px / gt.size, "pred_fraction": pred_px / pred.size,
             "pixel_iou": pixel_ious[-1], "precision": precisions[-1],
             "recall": recalls[-1], "dice": dices[-1],
         })
 
     return {
+        **reporting_metrics(rows),
         "manifest": manifest_name,
         "role": data.get("role"),
         "n_scored": len(pixel_ious),
@@ -327,6 +338,8 @@ def _read_raster_mask(path: str | Path) -> np.ndarray:
         raise ValueError(f"could not decode mask {path}")
     if mask.ndim == 3:
         mask = mask[..., 0]
+    if mask.ndim != 2 or mask.size == 0:
+        raise ValueError(f"mask {path} must be a non-empty 2D array")
     return mask > 127
 
 

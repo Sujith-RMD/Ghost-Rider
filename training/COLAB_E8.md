@@ -7,19 +7,56 @@ Verify dataset reuse and redistribution rights before uploading data; public dow
 
 ## Step 0 — get the code and data into Colab
 
-**Option A — from Google Drive (recommended)**
+You need **both** the repo (for `training/`, `eval/`, `backend/`) **and** the data.
+Missing the repo is the next failure you will hit: `python -m training...` raises
+`ModuleNotFoundError` because `/content/training` does not exist.
 
-1. On your laptop, zip the repo's `data/external` folder (Crack-Seg + CRKWH100):
-   ```powershell
-   Compress-Archive -Path data\external\crack-seg,data\external\CRKWH100_gt,data\external\deepcrack `
-                    -DestinationPath $env:USERPROFILE\Desktop\roadsight_data.zip
-   ```
-2. Upload `roadsight_data.zip` to Google Drive (any folder; note the path).
-3. Also zip the repo itself, or clone it fresh. Simplest: upload a zip too.
+### 0a — the repo
+
+**Simplest: upload a zip of the repo to Drive, unzip it to `/content`.**
+
+On your laptop, from the repo root (this zips only what Colab needs, ~a few MB,
+no datasets, no `.git`):
+
+```powershell
+Compress-Archive -Path training,eval,backend,configs,data\manifests,pyproject.toml `
+                 -DestinationPath $env:USERPROFILE\Desktop\roadsight_code.zip
+```
+
+> Note: `data\manifests` must be included — `crkhw100_test.json` lives there and
+> Step 4 reads it.
+
+In Colab:
+
+```python
+!mkdir -p /content
+!unzip -q "/content/drive/MyDrive/roadsight_code.zip" -d /content
+!ls /content
+```
+
+You should see `training  eval  backend  configs  data  pyproject.toml`.
+
+Or, if the repo is on GitHub, replace the unzip with:
+```python
+!git clone https://github.com/<you>/<repo>.git /content/repo
+%cd /content/repo
+```
+but you must then also place `data/manifests/crkhw100_test.json` somewhere and
+point `--manifest` at it.
+
+### 0b — the data (Crack-Seg + CRKWH100)
+
+On your laptop:
+```powershell
+Compress-Archive -Path data\external\crack-seg,data\external\CRKWH100_gt,data\external\deepcrack `
+                 -DestinationPath $env:USERPROFILE\Desktop\roadsight_data.zip
+```
+Upload `roadsight_data.zip` to Google Drive.
 
 **Option B — re-download Crack-Seg in Colab** (91.6 MB; subject to verified reuse rights)
 
 ```python
+!mkdir -p /content/data/external          # unzip -d will not create this for you
 !wget -q https://github.com/ultralytics/assets/releases/download/v0.0.0/crack-seg.zip
 !unzip -q crack-seg.zip -d /content/data/external
 ```
@@ -54,7 +91,18 @@ print("ready")
 from google.colab import drive
 drive.mount("/content/drive")
 
+# 1. Is your zip actually there? If this prints nothing, the path is wrong -
+#    check for a subfolder or "Shared with me".
+!ls -la "/content/drive/MyDrive/" | grep -i roadsight
+
+# 2. Create the directory yourself. unzip -d creates only the FINAL directory,
+#    not intermediate parents, so without this the unzip fails with
+#    "checkdir: cannot create extraction directory".
+!mkdir -p /content/data/external
+
+# 3. Unzip
 !unzip -q "/content/drive/MyDrive/roadsight_data.zip" -d /content/data/external
+
 # verify:
 !ls /content/data/external
 !ls /content/data/external/crack-seg/images | head
