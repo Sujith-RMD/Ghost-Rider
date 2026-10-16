@@ -131,6 +131,8 @@ def test_upload_job_sample_slice(client):
     assert sample["metrics"] is None or sample["metrics"]["chip_density_per_m2"] is None
     assert sample["score"] is None
     assert sample["quality"] is not None
+    assert sample["distress_detection"]["status"] == "unavailable"
+    assert sample["distress_detection"]["reason"] == "weights_not_found"
     # Capture time and GPS are preserved from the finalize telemetry.
     assert sample["captured_at"] == "2026-10-16T09:15:00+00:00"
     assert sample["gps"]["lat"] == 12.9716

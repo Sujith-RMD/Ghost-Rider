@@ -105,6 +105,7 @@ class Settings(BaseSettings):
     YOLO_CONF: float = 0.25
     YOLO_IOU: float = 0.45
     YOLO_IMGSZ: int = 640
+    DISTRESS_MODEL_PATH: str = "models/india_rdd2022_yolov8n/best.pt"
     CAMERA_MOUNT_PITCH_DEG: float = 25.0
     CAMERA_HEIGHT_M: float = 1.3
     CAMERA_HFOV_DEG: float = 70.0
@@ -218,6 +219,12 @@ class Settings(BaseSettings):
         raw = (self.YOLO_WEIGHTS_PATH or "yolov8n-seg.pt").strip()
         path = Path(raw).expanduser()
         return path.resolve() if path.is_absolute() else (BACKEND_DIR / path).resolve()
+
+    @property
+    def distress_model_path(self) -> Path:
+        """Resolved optional India distress detector checkpoint."""
+        path = Path(self.DISTRESS_MODEL_PATH).expanduser()
+        return path.resolve() if path.is_absolute() else (PROJECT_DIR / path).resolve()
 
     @property
     def bedrock_region(self) -> str:

@@ -17,6 +17,7 @@ import os
 # --- must be set before backend modules import ---------------------------------
 os.environ["GHOST_RIDER_DISABLE_DOTENV"] = "1"
 os.environ.setdefault("GHOST_RIDER_INLINE_WORKER", "false")
+os.environ["DISTRESS_MODEL_PATH"] = "tests/fixtures/uninstalled-india-detector.pt"
 
 # Neutralise any credentials inherited from the shell so `.env` (already disabled)
 # and the ambient environment cannot make the suite talk to live AWS.

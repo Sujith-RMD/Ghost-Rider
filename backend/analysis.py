@@ -47,6 +47,7 @@ from .schemas import (
     QualityStatus,
     SegmentResult,
 )
+from .distress.inference import detect_distress
 
 logger = logging.getLogger("ghost_rider.analysis")
 
@@ -192,9 +193,9 @@ def measure_frame(image: np.ndarray,
     spread into a :class:`SegmentResult` / canonical record alongside the
     worker's identifiers/provenance.
 
-    ``crack_mask`` / ``distress_mask`` are booleans masks of the same H×W as
-    the image. A runtime crack/pothole detector (the ML training track) will
-    supply them; until then they are ``None`` and distress fields stay ``null``.
+    ``crack_mask`` / ``distress_mask`` are measurement masks matching the image.
+    The current detector returns separate box localization evidence; boxes do
+    not supply these masks or produce physical distress measurements.
     """
     outcome: Dict[str, Any] = {
         "quality": None,
@@ -204,6 +205,7 @@ def measure_frame(image: np.ndarray,
         "limitations": [],
         "image_shape": tuple(int(v) for v in image.shape[:2]),
         "distress": None,
+        "distress_detection": detect_distress(image),
     }
 
     if not ML_AVAILABLE:
@@ -310,6 +312,7 @@ def build_segment_result(*, segment_id: int,
         quality=measured.get("quality"),
         metrics=measured.get("metrics"),
         evidence=None,
+        distress_detection=measured.get("distress_detection"),
         score=None,
         reference=None,
         model_version=model_version,

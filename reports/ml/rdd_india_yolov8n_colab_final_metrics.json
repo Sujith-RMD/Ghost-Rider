@@ -1,0 +1,53 @@
+{
+  "project": "RoadSight AI",
+  "dataset": "RDD2022 India split",
+  "train_images": 6165,
+  "dev_images": 1541,
+  "dev_labeled_images": 758,
+  "dev_empty_label_images": 783,
+  "dev_boxes": 1640,
+  "corrupt_images": 0,
+  "invalid_label_rows": 0,
+  "model": "Ultralytics YOLOv8n detection, COCO pretrained",
+  "training": {
+    "epochs": 60,
+    "configured_imgsz": 720,
+    "effective_imgsz": 736,
+    "batch": 8,
+    "seed": 0,
+    "device": "Google Colab Tesla T4",
+    "mosaic": false,
+    "horizontal_flip": 0.5
+  },
+  "validation": {
+    "precision": 0.395,
+    "recall": 0.349,
+    "mAP50": 0.337,
+    "mAP50_95": 0.152
+  },
+  "per_class": {
+    "alligator crack": {"images": 340, "boxes": 387, "precision": 0.51, "recall": 0.563, "mAP50": 0.546, "mAP50_95": 0.262},
+    "longitudinal crack": {"images": 255, "boxes": 365, "precision": 0.390, "recall": 0.271, "mAP50": 0.261, "mAP50_95": 0.115},
+    "other corruption": {"images": 179, "boxes": 223, "precision": 0.446, "recall": 0.493, "mAP50": 0.415, "mAP50_95": 0.205},
+    "pothole": {"images": 300, "boxes": 642, "precision": 0.530, "recall": 0.376, "mAP50": 0.387, "mAP50_95": 0.151},
+    "transverse crack": {"images": 18, "boxes": 23, "precision": 0.099, "recall": 0.0435, "mAP50": 0.0748, "mAP50_95": 0.0281}
+  },
+  "checkpoint": {
+    "filename": "best.pt",
+    "size_bytes": 6527786,
+    "sha256": "ff477bb3aaeb3559bf8f3c040acf55ab3b468b520c21fb8d6bc1fa9d03204881"
+  },
+  "bundle": {
+    "filename": "roadsight_india_model_bundle.zip",
+    "size_bytes": 6623293,
+    "sha256": "335c88959c85df631a0f67d18b7a64247c72066043d3ff553cab523d9cf39a9a",
+    "contents": ["weights/best.pt", "evaluation/final_metrics.json", "evaluation/training_results.csv", "evaluation/confusion_matrix.png", "evaluation/confusion_matrix_normalized.png", "evaluation/results.png", "README.md"]
+  },
+  "limitations": [
+    "Block crack and repair have no examples in the India split and were not learned or evaluated.",
+    "Transverse crack has only 23 development boxes; its estimate is unstable.",
+    "The random-held-out development split is not an independent road/session-held-out India field test.",
+    "The 783 empty-label development images were included in standard validation. A separate false-positive count audit on them was skipped after GPU memory exhaustion.",
+    "Detection boxes support localization only; they do not support chip area, physical defect dimensions, roughness, or a calibrated road-quality score."
+  ]
+}

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { UploadCloud, FileImage } from "lucide-react";
 import { AbstractBackdrop } from "../../components/AbstractBackdrop";
+import { DistressDetectionOverlay } from "../../components/DistressDetectionOverlay";
 import { DevFixturePanel } from "virtual:roadsight-data";
 import { Link } from "react-router-dom";
 import type { JobState, Session } from "../../api/display";
@@ -271,7 +272,7 @@ export default function AssessPage({
             {!mock && sample && (
               <div className="actual-result" aria-live="polite">
                 <h3>Assessment evidence</h3>
-                {sample.image_url && <img src={new URL(sample.image_url, apiBase).toString()} alt="Original uploaded road image" />}
+                {sample.image_url && <DistressDetectionOverlay imageUrl={new URL(sample.image_url, apiBase).toString()} evidence={sample.distress_detection} />}
                 <p>Image quality: {sample.quality?.status ?? "Unavailable"}</p>
                 {!!sample.quality?.reasons?.length && <p>Quality reasons: {sample.quality.reasons.join(", ")}</p>}
                 <p>Road score: {sample.score?.value == null ? "Unavailable — scoring is not implemented for this image" : `${sample.score.value} / 100 (${sample.score.status})`}</p>

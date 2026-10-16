@@ -17,7 +17,8 @@ This branch adds a manually supplied pavement region-of-interest (ROI) to the im
 - Primary India localization dataset: RDD2022 India-only YOLO repackaging, 7,706 images (6,165 train / 1,541 development), bounding boxes only, CC BY-SA 4.0 with third-party repackaging recorded. The split is random-held-out; road/session independence is not established. Its shipped test split is unlabelled and excluded.
 - Crack-Seg remains a conditional, internal-only crack mask dataset because provenance/license terms are not clear enough for redistribution or India-performance claims. Other crack datasets are not admitted for training until provenance and rights are resolved.
 - A one-epoch CPU smoke run on 123 training images completed and inference ran. Its development metrics were effectively zero (mAP50 0.000024), so the checkpoint is rejected for product integration and must not be presented as a capable RoadSight model.
-- The local RTX 3050 currently has a CPU-only PyTorch installation. The signed-in Colab T4 runtime is now connected, and approval to transfer the public RDD subset was received. A 442 MB archive containing the India train/dev images, labels, and YAML is prepared locally; the browser upload control requires the user to select it, so no dataset files have been sent yet. Do not upload private campus imagery.
+- The local RTX 3050 currently has a CPU-only PyTorch installation. The signed-in Colab T4 runtime is connected; the approved 442 MB public India RDD archive has been uploaded, passed ZIP integrity checks, and extracted. All 7,706 images decode; YOLO reports zero corrupt images and zero invalid label rows. The declared seven-class mapping has no labeled examples for block crack or repair, so those classes cannot be learned from this subset.
+- **Completed 2026-10-16:** a pretrained YOLOv8n detector trained for 60 epochs on the frozen 6,165-image train / 1,541-image dev split, effective image size 736, batch 8, seed 0. Final dev: precision 0.395, recall 0.349, mAP50 0.337, mAP50-95 0.152. The checkpoint was locally hash-verified, run on sample images, and integrated as optional localization evidence in API v1.2.0 with a desktop bounding-box overlay. The 783 empty-label dev images were separately audited locally on CPU: 95 (12.13%) received at least one detection at confidence 0.25. Empty labels are not confirmed defect-free imagery. Full findings and caveats are in [INDIA_RDD2022_YOLOV8N_RUN.md](../ml/INDIA_RDD2022_YOLOV8N_RUN.md). The split remains random-held-out, not road/session independent. Do not use the checkpoint for physical measurements or a validated Good/Bad score. Do not upload private campus imagery.
 
 ## Claims and limits for the demo
 
@@ -25,6 +26,6 @@ Show processing and evidence artifacts, not validated physical measurements. The
 
 ## Not completed
 
-- GPU training and a usable Indian detector checkpoint: waiting for the approved dataset archive to be selected in Colab; current smoke checkpoint fails the quality bar.
+- Independent road/session-held-out evaluation, human review of alerts, and physical-scale validation remain incomplete. Do not present localization as validated road-quality output.
 - Live camera capture: requires an actual camera device and operator-run capture; no camera was available to this automated session.
 - Independent road/session-held-out evaluation and physical scale validation: the available labels and metadata do not support these claims.

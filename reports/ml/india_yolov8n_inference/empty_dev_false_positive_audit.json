@@ -1,0 +1,2081 @@
+{
+  "model_version": "rdd2022-india-yolov8n",
+  "model_sha256": "ff477bb3aaeb3559bf8f3c040acf55ab3b468b520c21fb8d6bc1fa9d03204881",
+  "dataset_split": "RDD2022 India development, empty-label images only",
+  "images_reviewed": 783,
+  "confidence_threshold": 0.25,
+  "device": "cpu",
+  "batch_size": 2,
+  "images_with_predictions": 95,
+  "predicted_boxes": 107,
+  "boxes_by_class": {
+    "other corruption": 46,
+    "alligator crack": 18,
+    "longitudinal crack": 24,
+    "pothole": 19
+  },
+  "elapsed_seconds": 196.0689671,
+  "predictions_by_image": {
+    "India_000022.jpg": [],
+    "India_000059.jpg": [],
+    "India_000066.jpg": [],
+    "India_000069.jpg": [],
+    "India_000072.jpg": [],
+    "India_000085.jpg": [],
+    "India_000095.jpg": [],
+    "India_000116.jpg": [],
+    "India_000132.jpg": [
+      {
+        "class_id": 3,
+        "class_name": "other corruption",
+        "confidence": 0.26036685705184937,
+        "bbox_xyxy": [
+          302.1718444824219,
+          521.703369140625,
+          349.4948425292969,
+          575.5178833007812
+        ]
+      }
+    ],
+    "India_000134.jpg": [],
+    "India_000140.jpg": [],
+    "India_000166.jpg": [],
+    "India_000187.jpg": [],
+    "India_000190.jpg": [],
+    "India_000196.jpg": [],
+    "India_000207.jpg": [],
+    "India_000218.jpg": [],
+    "India_000225.jpg": [],
+    "India_000226.jpg": [
+      {
+        "class_id": 0,
+        "class_name": "alligator crack",
+        "confidence": 0.3695320188999176,
+        "bbox_xyxy": [
+          158.42111206054688,
+          557.6364135742188,
+          537.7122192382812,
+          720.0
+        ]
+      },
+      {
+        "class_id": 2,
+        "class_name": "longitudinal crack",
+        "confidence": 0.299203485250473,
+        "bbox_xyxy": [
+          353.5554504394531,
+          560.7478637695312,
+          398.2504577636719,
+          719.3639526367188
+        ]
+      }
+    ],
+    "India_000228.jpg": [],
+    "India_000263.jpg": [],
+    "India_000286.jpg": [
+      {
+        "class_id": 4,
+        "class_name": "pothole",
+        "confidence": 0.26206427812576294,
+        "bbox_xyxy": [
+          228.820556640625,
+          431.85125732421875,
+          316.9479675292969,
+          477.23541259765625
+        ]
+      }
+    ],
+    "India_000308.jpg": [],
+    "India_000311.jpg": [],
+    "India_000315.jpg": [],
+    "India_000332.jpg": [
+      {
+        "class_id": 4,
+        "class_name": "pothole",
+        "confidence": 0.26818495988845825,
+        "bbox_xyxy": [
+          6.366084098815918,
+          598.4154663085938,
+          227.92506408691406,
+          720.0
+        ]
+      }
+    ],
+    "India_000336.jpg": [
+      {
+        "class_id": 3,
+        "class_name": "other corruption",
+        "confidence": 0.6773243546485901,
+        "bbox_xyxy": [
+          557.4533081054688,
+          586.421630859375,
+          656.3863525390625,
+          678.1689453125
+        ]
+      }
+    ],
+    "India_000337.jpg": [],
+    "India_000341.jpg": [
+      {
+        "class_id": 3,
+        "class_name": "other corruption",
+        "confidence": 0.3621443510055542,
+        "bbox_xyxy": [
+          449.09857177734375,
+          511.7482604980469,
+          560.1617431640625,
+          607.235107421875
+        ]
+      }
+    ],
+    "India_000365.jpg": [],
+    "India_000385.jpg": [],
+    "India_000394.jpg": [],
+    "India_000400.jpg": [
+      {
+        "class_id": 3,
+        "class_name": "other corruption",
+        "confidence": 0.7985243797302246,
+        "bbox_xyxy": [
+          428.8362731933594,
+          552.1498413085938,
+          592.7297973632812,
+          704.98828125
+        ]
+      },
+      {
+        "class_id": 0,
+        "class_name": "alligator crack",
+        "confidence": 0.29102808237075806,
+        "bbox_xyxy": [
+          536.818115234375,
+          605.3658447265625,
+          720.0,
+          720.0
+        ]
+      }
+    ],
+    "India_000406.jpg": [],
+    "India_000415.jpg": [],
+    "India_000420.jpg": [],
+    "India_000429.jpg": [],
+    "India_000430.jpg": [],
+    "India_000442.jpg": [],
+    "India_000457.jpg": [],
+    "India_000518.jpg": [],
+    "India_000526.jpg": [
+      {
+        "class_id": 2,
+        "class_name": "longitudinal crack",
+        "confidence": 0.6196702122688293,
+        "bbox_xyxy": [
+          319.3290710449219,
+          423.2371520996094,
+          382.4536437988281,
+          546.74072265625
+        ]
+      }
+    ],
+    "India_000529.jpg": [],
+    "India_000585.jpg": [],
+    "India_000594.jpg": [],
+    "India_000598.jpg": [
+      {
+        "class_id": 2,
+        "class_name": "longitudinal crack",
+        "confidence": 0.6207714080810547,
+        "bbox_xyxy": [
+          451.4867858886719,
+          514.6188354492188,
+          593.5784912109375,
+          707.4486694335938
+        ]
+      }
+    ],
+    "India_000606.jpg": [],
+    "India_000637.jpg": [],
+    "India_000653.jpg": [],
+    "India_000670.jpg": [],
+    "India_000677.jpg": [],
+    "India_000696.jpg": [],
+    "India_000722.jpg": [],
+    "India_000737.jpg": [
+      {
+        "class_id": 3,
+        "class_name": "other corruption",
+        "confidence": 0.38387244939804077,
+        "bbox_xyxy": [
+          491.3823547363281,
+          571.7723388671875,
+          573.1141967773438,
+          630.5006103515625
+        ]
+      }
+    ],
+    "India_000749.jpg": [
+      {
+        "class_id": 0,
+        "class_name": "alligator crack",
+        "confidence": 0.26211076974868774,
+        "bbox_xyxy": [
+          340.8683776855469,
+          535.2267456054688,
+          535.2981567382812,
+          714.5016479492188
+        ]
+      }
+    ],
+    "India_000751.jpg": [
+      {
+        "class_id": 2,
+        "class_name": "longitudinal crack",
+        "confidence": 0.7180942893028259,
+        "bbox_xyxy": [
+          14.682659149169922,
+          328.4017028808594,
+          213.47076416015625,
+          710.5794677734375
+        ]
+      }
+    ],
+    "India_000757.jpg": [],
+    "India_000762.jpg": [],
+    "India_000766.jpg": [
+      {
+        "class_id": 2,
+        "class_name": "longitudinal crack",
+        "confidence": 0.44787272810935974,
+        "bbox_xyxy": [
+          10.253826141357422,
+          404.1923522949219,
+          210.3733367919922,
+          549.770263671875
+        ]
+      }
+    ],
+    "India_000769.jpg": [],
+    "India_000786.jpg": [],
+    "India_000819.jpg": [],
+    "India_000863.jpg": [
+      {
+        "class_id": 4,
+        "class_name": "pothole",
+        "confidence": 0.37914544343948364,
+        "bbox_xyxy": [
+          524.2662353515625,
+          602.8761596679688,
+          699.30419921875,
+          720.0
+        ]
+      }
+    ],
+    "India_000890.jpg": [],
+    "India_000901.jpg": [],
+    "India_000911.jpg": [],
+    "India_000927.jpg": [],
+    "India_000941.jpg": [],
+    "India_000956.jpg": [],
+    "India_000957.jpg": [],
+    "India_000992.jpg": [],
+    "India_000995.jpg": [],
+    "India_000999.jpg": [],
+    "India_001009.jpg": [],
+    "India_001020.jpg": [],
+    "India_001026.jpg": [
+      {
+        "class_id": 3,
+        "class_name": "other corruption",
+        "confidence": 0.25316745042800903,
+        "bbox_xyxy": [
+          37.73222732543945,
+          561.3841552734375,
+          171.25328063964844,
+          645.54443359375
+        ]
+      }
+    ],
+    "India_001035.jpg": [],
+    "India_001057.jpg": [],
+    "India_001061.jpg": [],
+    "India_001067.jpg": [],
+    "India_001071.jpg": [],
+    "India_001075.jpg": [],
+    "India_001079.jpg": [],
+    "India_001107.jpg": [
+      {
+        "class_id": 0,
+        "class_name": "alligator crack",
+        "confidence": 0.3661479651927948,
+        "bbox_xyxy": [
+          79.26629638671875,
+          441.2192687988281,
+          690.69921875,
+          711.5887451171875
+        ]
+      }
+    ],
+    "India_001110.jpg": [],
+    "India_001129.jpg": [],
+    "India_001131.jpg": [],
+    "India_001140.jpg": [],
+    "India_001144.jpg": [],
+    "India_001153.jpg": [],
+    "India_001163.jpg": [],
+    "India_001179.jpg": [
+      {
+        "class_id": 3,
+        "class_name": "other corruption",
+        "confidence": 0.567645251750946,
+        "bbox_xyxy": [
+          273.2659912109375,
+          524.4766235351562,
+          335.31378173828125,
+          621.4107055664062
+        ]
+      }
+    ],
+    "India_001182.jpg": [],
+    "India_001193.jpg": [],
+    "India_001235.jpg": [],
+    "India_001240.jpg": [],
+    "India_001252.jpg": [],
+    "India_001259.jpg": [],
+    "India_001268.jpg": [],
+    "India_001299.jpg": [],
+    "India_001324.jpg": [],
+    "India_001330.jpg": [],
+    "India_001346.jpg": [],
+    "India_001352.jpg": [],
+    "India_001373.jpg": [
+      {
+        "class_id": 4,
+        "class_name": "pothole",
+        "confidence": 0.2728540301322937,
+        "bbox_xyxy": [
+          499.0739440917969,
+          574.4531860351562,
+          567.737548828125,
+          618.9351806640625
+        ]
+      }
+    ],
+    "India_001387.jpg": [],
+    "India_001396.jpg": [],
+    "India_001437.jpg": [],
+    "India_001455.jpg": [],
+    "India_001459.jpg": [],
+    "India_001486.jpg": [],
+    "India_001499.jpg": [],
+    "India_001511.jpg": [],
+    "India_001518.jpg": [],
+    "India_001572.jpg": [
+      {
+        "class_id": 3,
+        "class_name": "other corruption",
+        "confidence": 0.5947861671447754,
+        "bbox_xyxy": [
+          207.9810333251953,
+          615.9915161132812,
+          271.6708679199219,
+          675.70361328125
+        ]
+      }
+    ],
+    "India_001576.jpg": [],
+    "India_001582.jpg": [
+      {
+        "class_id": 3,
+        "class_name": "other corruption",
+        "confidence": 0.2513708770275116,
+        "bbox_xyxy": [
+          239.28811645507812,
+          534.305419921875,
+          318.3211975097656,
+          603.5379028320312
+        ]
+      }
+    ],
+    "India_001583.jpg": [],
+    "India_001607.jpg": [],
+    "India_001619.jpg": [],
+    "India_001656.jpg": [],
+    "India_001670.jpg": [],
+    "India_001681.jpg": [
+      {
+        "class_id": 4,
+        "class_name": "pothole",
+        "confidence": 0.27438193559646606,
+        "bbox_xyxy": [
+          295.14422607421875,
+          483.53509521484375,
+          373.412841796875,
+          538.3905029296875
+        ]
+      }
+    ],
+    "India_001706.jpg": [],
+    "India_001732.jpg": [],
+    "India_001753.jpg": [
+      {
+        "class_id": 3,
+        "class_name": "other corruption",
+        "confidence": 0.35488423705101013,
+        "bbox_xyxy": [
+          393.68585205078125,
+          473.8165588378906,
+          441.6499938964844,
+          531.0010986328125
+        ]
+      }
+    ],
+    "India_001764.jpg": [],
+    "India_001780.jpg": [],
+    "India_001802.jpg": [],
+    "India_001804.jpg": [],
+    "India_001810.jpg": [
+      {
+        "class_id": 3,
+        "class_name": "other corruption",
+        "confidence": 0.3450688123703003,
+        "bbox_xyxy": [
+          421.6087951660156,
+          487.1712341308594,
+          457.4682922363281,
+          545.512451171875
+        ]
+      }
+    ],
+    "India_001811.jpg": [],
+    "India_001816.jpg": [],
+    "India_001826.jpg": [],
+    "India_001838.jpg": [],
+    "India_001848.jpg": [],
+    "India_001849.jpg": [],
+    "India_001851.jpg": [],
+    "India_001858.jpg": [],
+    "India_001859.jpg": [],
+    "India_001916.jpg": [],
+    "India_001917.jpg": [],
+    "India_001927.jpg": [],
+    "India_001928.jpg": [],
+    "India_001929.jpg": [],
+    "India_001945.jpg": [
+      {
+        "class_id": 2,
+        "class_name": "longitudinal crack",
+        "confidence": 0.2724137604236603,
+        "bbox_xyxy": [
+          388.63519287109375,
+          474.00714111328125,
+          469.4123840332031,
+          591.5991821289062
+        ]
+      }
+    ],
+    "India_001956.jpg": [],
+    "India_001964.jpg": [],
+    "India_001995.jpg": [],
+    "India_001998.jpg": [],
+    "India_002002.jpg": [],
+    "India_002008.jpg": [
+      {
+        "class_id": 0,
+        "class_name": "alligator crack",
+        "confidence": 0.6468416452407837,
+        "bbox_xyxy": [
+          1.6296783685684204,
+          552.989013671875,
+          573.0506591796875,
+          693.3359985351562
+        ]
+      }
+    ],
+    "India_002015.jpg": [],
+    "India_002028.jpg": [],
+    "India_002033.jpg": [],
+    "India_002039.jpg": [],
+    "India_002093.jpg": [],
+    "India_002094.jpg": [],
+    "India_002110.jpg": [],
+    "India_002130.jpg": [],
+    "India_002136.jpg": [],
+    "India_002141.jpg": [],
+    "India_002145.jpg": [],
+    "India_002155.jpg": [],
+    "India_002168.jpg": [
+      {
+        "class_id": 3,
+        "class_name": "other corruption",
+        "confidence": 0.3243449926376343,
+        "bbox_xyxy": [
+          456.6521911621094,
+          588.9342651367188,
+          531.8683471679688,
+          671.5302124023438
+        ]
+      }
+    ],
+    "India_002171.jpg": [],
+    "India_002203.jpg": [],
+    "India_002204.jpg": [],
+    "India_002212.jpg": [],
+    "India_002218.jpg": [],
+    "India_002245.jpg": [
+      {
+        "class_id": 2,
+        "class_name": "longitudinal crack",
+        "confidence": 0.7470310926437378,
+        "bbox_xyxy": [
+          67.50101470947266,
+          251.25534057617188,
+          292.7921142578125,
+          633.8970336914062
+        ]
+      }
+    ],
+    "India_002246.jpg": [
+      {
+        "class_id": 4,
+        "class_name": "pothole",
+        "confidence": 0.35837674140930176,
+        "bbox_xyxy": [
+          86.97755432128906,
+          544.3587036132812,
+          187.79383850097656,
+          584.8630981445312
+        ]
+      }
+    ],
+    "India_002251.jpg": [],
+    "India_002254.jpg": [],
+    "India_002255.jpg": [],
+    "India_002264.jpg": [],
+    "India_002272.jpg": [],
+    "India_002283.jpg": [],
+    "India_002292.jpg": [
+      {
+        "class_id": 2,
+        "class_name": "longitudinal crack",
+        "confidence": 0.2840966582298279,
+        "bbox_xyxy": [
+          537.5865478515625,
+          626.2302856445312,
+          600.0697631835938,
+          700.522216796875
+        ]
+      }
+    ],
+    "India_002315.jpg": [],
+    "India_002326.jpg": [],
+    "India_002354.jpg": [
+      {
+        "class_id": 3,
+        "class_name": "other corruption",
+        "confidence": 0.2738530933856964,
+        "bbox_xyxy": [
+          101.96681213378906,
+          576.9231567382812,
+          230.8130340576172,
+          673.93994140625
+        ]
+      }
+    ],
+    "India_002356.jpg": [],
+    "India_002358.jpg": [],
+    "India_002393.jpg": [],
+    "India_002402.jpg": [],
+    "India_002407.jpg": [],
+    "India_002412.jpg": [],
+    "India_002432.jpg": [],
+    "India_002433.jpg": [],
+    "India_002465.jpg": [],
+    "India_002473.jpg": [
+      {
+        "class_id": 0,
+        "class_name": "alligator crack",
+        "confidence": 0.4809521734714508,
+        "bbox_xyxy": [
+          401.2795104980469,
+          462.35052490234375,
+          453.6219787597656,
+          530.0940551757812
+        ]
+      }
+    ],
+    "India_002483.jpg": [],
+    "India_002484.jpg": [],
+    "India_002488.jpg": [],
+    "India_002490.jpg": [],
+    "India_002530.jpg": [],
+    "India_002533.jpg": [],
+    "India_002538.jpg": [],
+    "India_002547.jpg": [
+      {
+        "class_id": 3,
+        "class_name": "other corruption",
+        "confidence": 0.35187917947769165,
+        "bbox_xyxy": [
+          289.6549377441406,
+          445.3528747558594,
+          372.5283203125,
+          567.2033081054688
+        ]
+      }
+    ],
+    "India_002548.jpg": [],
+    "India_002574.jpg": [],
+    "India_002603.jpg": [],
+    "India_002609.jpg": [],
+    "India_002623.jpg": [],
+    "India_002636.jpg": [],
+    "India_002645.jpg": [],
+    "India_002654.jpg": [],
+    "India_002657.jpg": [],
+    "India_002672.jpg": [],
+    "India_002676.jpg": [],
+    "India_002690.jpg": [],
+    "India_002692.jpg": [
+      {
+        "class_id": 3,
+        "class_name": "other corruption",
+        "confidence": 0.7496589422225952,
+        "bbox_xyxy": [
+          0.0,
+          413.2566223144531,
+          253.16976928710938,
+          684.6886596679688
+        ]
+      }
+    ],
+    "India_002718.jpg": [],
+    "India_002727.jpg": [],
+    "India_002734.jpg": [],
+    "India_002747.jpg": [],
+    "India_002750.jpg": [],
+    "India_002755.jpg": [],
+    "India_002774.jpg": [],
+    "India_002776.jpg": [
+      {
+        "class_id": 3,
+        "class_name": "other corruption",
+        "confidence": 0.32494816184043884,
+        "bbox_xyxy": [
+          439.4858093261719,
+          454.5538635253906,
+          474.14971923828125,
+          508.7469787597656
+        ]
+      }
+    ],
+    "India_002798.jpg": [],
+    "India_002813.jpg": [],
+    "India_002816.jpg": [],
+    "India_002822.jpg": [
+      {
+        "class_id": 4,
+        "class_name": "pothole",
+        "confidence": 0.5041018724441528,
+        "bbox_xyxy": [
+          0.0,
+          459.0882263183594,
+          208.2805938720703,
+          518.2476806640625
+        ]
+      }
+    ],
+    "India_002834.jpg": [],
+    "India_002841.jpg": [],
+    "India_002855.jpg": [
+      {
+        "class_id": 0,
+        "class_name": "alligator crack",
+        "confidence": 0.43778347969055176,
+        "bbox_xyxy": [
+          128.56558227539062,
+          507.5741271972656,
+          365.17352294921875,
+          709.9930419921875
+        ]
+      }
+    ],
+    "India_002868.jpg": [],
+    "India_002869.jpg": [],
+    "India_002891.jpg": [],
+    "India_002907.jpg": [],
+    "India_002910.jpg": [],
+    "India_002931.jpg": [],
+    "India_002950.jpg": [],
+    "India_002953.jpg": [],
+    "India_002979.jpg": [],
+    "India_002987.jpg": [],
+    "India_002997.jpg": [],
+    "India_003000.jpg": [],
+    "India_003021.jpg": [],
+    "India_003047.jpg": [],
+    "India_003064.jpg": [],
+    "India_003068.jpg": [],
+    "India_003069.jpg": [],
+    "India_003070.jpg": [],
+    "India_003080.jpg": [],
+    "India_003097.jpg": [],
+    "India_003098.jpg": [],
+    "India_003112.jpg": [],
+    "India_003114.jpg": [],
+    "India_003141.jpg": [
+      {
+        "class_id": 2,
+        "class_name": "longitudinal crack",
+        "confidence": 0.30293846130371094,
+        "bbox_xyxy": [
+          625.1287231445312,
+          575.49609375,
+          719.8115234375,
+          660.32177734375
+        ]
+      }
+    ],
+    "India_003158.jpg": [],
+    "India_003162.jpg": [],
+    "India_003165.jpg": [],
+    "India_003174.jpg": [],
+    "India_003176.jpg": [],
+    "India_003183.jpg": [],
+    "India_003184.jpg": [],
+    "India_003196.jpg": [
+      {
+        "class_id": 2,
+        "class_name": "longitudinal crack",
+        "confidence": 0.2947491407394409,
+        "bbox_xyxy": [
+          140.08627319335938,
+          483.89776611328125,
+          355.02783203125,
+          697.178955078125
+        ]
+      }
+    ],
+    "India_003199.jpg": [],
+    "India_003211.jpg": [
+      {
+        "class_id": 3,
+        "class_name": "other corruption",
+        "confidence": 0.6065990328788757,
+        "bbox_xyxy": [
+          17.777565002441406,
+          580.3923950195312,
+          224.97549438476562,
+          720.0
+        ]
+      }
+    ],
+    "India_003216.jpg": [],
+    "India_003234.jpg": [],
+    "India_003250.jpg": [],
+    "India_003260.jpg": [],
+    "India_003287.jpg": [],
+    "India_003291.jpg": [],
+    "India_003296.jpg": [],
+    "India_003303.jpg": [],
+    "India_003343.jpg": [],
+    "India_003346.jpg": [],
+    "India_003348.jpg": [],
+    "India_003389.jpg": [
+      {
+        "class_id": 2,
+        "class_name": "longitudinal crack",
+        "confidence": 0.38616305589675903,
+        "bbox_xyxy": [
+          354.79931640625,
+          501.8009948730469,
+          393.6465148925781,
+          653.8302612304688
+        ]
+      }
+    ],
+    "India_003403.jpg": [],
+    "India_003405.jpg": [],
+    "India_003407.jpg": [],
+    "India_003421.jpg": [],
+    "India_003429.jpg": [],
+    "India_003437.jpg": [],
+    "India_003451.jpg": [],
+    "India_003463.jpg": [],
+    "India_003478.jpg": [],
+    "India_003479.jpg": [
+      {
+        "class_id": 0,
+        "class_name": "alligator crack",
+        "confidence": 0.25060781836509705,
+        "bbox_xyxy": [
+          284.2612609863281,
+          544.5313720703125,
+          347.0416564941406,
+          617.0057373046875
+        ]
+      }
+    ],
+    "India_003481.jpg": [],
+    "India_003488.jpg": [],
+    "India_003489.jpg": [],
+    "India_003493.jpg": [],
+    "India_003500.jpg": [],
+    "India_003509.jpg": [],
+    "India_003514.jpg": [],
+    "India_003520.jpg": [],
+    "India_003537.jpg": [],
+    "India_003540.jpg": [],
+    "India_003585.jpg": [
+      {
+        "class_id": 3,
+        "class_name": "other corruption",
+        "confidence": 0.32208937406539917,
+        "bbox_xyxy": [
+          16.973546981811523,
+          647.48291015625,
+          167.00949096679688,
+          720.0
+        ]
+      }
+    ],
+    "India_003591.jpg": [],
+    "India_003608.jpg": [
+      {
+        "class_id": 3,
+        "class_name": "other corruption",
+        "confidence": 0.4047142267227173,
+        "bbox_xyxy": [
+          240.15029907226562,
+          550.013671875,
+          311.3007507324219,
+          623.48974609375
+        ]
+      }
+    ],
+    "India_003641.jpg": [
+      {
+        "class_id": 2,
+        "class_name": "longitudinal crack",
+        "confidence": 0.27084431052207947,
+        "bbox_xyxy": [
+          433.72772216796875,
+          542.453369140625,
+          475.4312438964844,
+          653.3527221679688
+        ]
+      }
+    ],
+    "India_003656.jpg": [],
+    "India_003669.jpg": [],
+    "India_003676.jpg": [],
+    "India_003688.jpg": [],
+    "India_003711.jpg": [],
+    "India_003715.jpg": [],
+    "India_003720.jpg": [],
+    "India_003740.jpg": [
+      {
+        "class_id": 2,
+        "class_name": "longitudinal crack",
+        "confidence": 0.5637553930282593,
+        "bbox_xyxy": [
+          17.02815055847168,
+          475.118408203125,
+          303.744384765625,
+          715.7931518554688
+        ]
+      }
+    ],
+    "India_003802.jpg": [],
+    "India_003816.jpg": [],
+    "India_003826.jpg": [],
+    "India_003845.jpg": [],
+    "India_003846.jpg": [],
+    "India_003847.jpg": [],
+    "India_003861.jpg": [],
+    "India_003888.jpg": [],
+    "India_003889.jpg": [
+      {
+        "class_id": 3,
+        "class_name": "other corruption",
+        "confidence": 0.2634013593196869,
+        "bbox_xyxy": [
+          363.98199462890625,
+          538.1063842773438,
+          411.9104309082031,
+          599.4447021484375
+        ]
+      }
+    ],
+    "India_003918.jpg": [],
+    "India_003952.jpg": [],
+    "India_003962.jpg": [],
+    "India_003963.jpg": [],
+    "India_003964.jpg": [],
+    "India_003970.jpg": [],
+    "India_003979.jpg": [],
+    "India_003986.jpg": [],
+    "India_003989.jpg": [],
+    "India_003997.jpg": [],
+    "India_003998.jpg": [],
+    "India_004025.jpg": [],
+    "India_004030.jpg": [],
+    "India_004063.jpg": [],
+    "India_004067.jpg": [],
+    "India_004069.jpg": [],
+    "India_004093.jpg": [],
+    "India_004113.jpg": [],
+    "India_004146.jpg": [],
+    "India_004168.jpg": [],
+    "India_004188.jpg": [],
+    "India_004202.jpg": [],
+    "India_004211.jpg": [],
+    "India_004234.jpg": [
+      {
+        "class_id": 3,
+        "class_name": "other corruption",
+        "confidence": 0.3801669776439667,
+        "bbox_xyxy": [
+          379.0091247558594,
+          563.9677124023438,
+          473.6371154785156,
+          634.4009399414062
+        ]
+      }
+    ],
+    "India_004239.jpg": [],
+    "India_004247.jpg": [],
+    "India_004260.jpg": [],
+    "India_004269.jpg": [],
+    "India_004295.jpg": [],
+    "India_004304.jpg": [],
+    "India_004307.jpg": [],
+    "India_004334.jpg": [],
+    "India_004361.jpg": [],
+    "India_004367.jpg": [],
+    "India_004373.jpg": [],
+    "India_004399.jpg": [],
+    "India_004446.jpg": [],
+    "India_004463.jpg": [],
+    "India_004486.jpg": [],
+    "India_004492.jpg": [
+      {
+        "class_id": 4,
+        "class_name": "pothole",
+        "confidence": 0.6947733163833618,
+        "bbox_xyxy": [
+          415.0252990722656,
+          444.376953125,
+          516.7526245117188,
+          482.9072570800781
+        ]
+      },
+      {
+        "class_id": 4,
+        "class_name": "pothole",
+        "confidence": 0.2782277762889862,
+        "bbox_xyxy": [
+          3.2542366981506348,
+          539.9540405273438,
+          208.06166076660156,
+          714.2096557617188
+        ]
+      }
+    ],
+    "India_004498.jpg": [],
+    "India_004505.jpg": [],
+    "India_004510.jpg": [],
+    "India_004515.jpg": [],
+    "India_004517.jpg": [],
+    "India_004519.jpg": [],
+    "India_004521.jpg": [
+      {
+        "class_id": 0,
+        "class_name": "alligator crack",
+        "confidence": 0.41398292779922485,
+        "bbox_xyxy": [
+          198.6951141357422,
+          515.4156494140625,
+          460.919677734375,
+          719.4501953125
+        ]
+      }
+    ],
+    "India_004535.jpg": [],
+    "India_004540.jpg": [],
+    "India_004541.jpg": [],
+    "India_004544.jpg": [],
+    "India_004578.jpg": [],
+    "India_004583.jpg": [],
+    "India_004589.jpg": [],
+    "India_004611.jpg": [],
+    "India_004619.jpg": [],
+    "India_004640.jpg": [],
+    "India_004676.jpg": [],
+    "India_004731.jpg": [],
+    "India_004733.jpg": [],
+    "India_004741.jpg": [],
+    "India_004742.jpg": [],
+    "India_004745.jpg": [],
+    "India_004751.jpg": [],
+    "India_004765.jpg": [],
+    "India_004777.jpg": [],
+    "India_004793.jpg": [
+      {
+        "class_id": 2,
+        "class_name": "longitudinal crack",
+        "confidence": 0.30937325954437256,
+        "bbox_xyxy": [
+          631.251953125,
+          516.9158935546875,
+          719.8165283203125,
+          628.970703125
+        ]
+      }
+    ],
+    "India_004802.jpg": [],
+    "India_004810.jpg": [
+      {
+        "class_id": 2,
+        "class_name": "longitudinal crack",
+        "confidence": 0.2917632758617401,
+        "bbox_xyxy": [
+          248.6873779296875,
+          511.6085510253906,
+          342.7357177734375,
+          663.017822265625
+        ]
+      }
+    ],
+    "India_004829.jpg": [],
+    "India_004833.jpg": [],
+    "India_004844.jpg": [],
+    "India_004857.jpg": [],
+    "India_004879.jpg": [],
+    "India_004890.jpg": [],
+    "India_004900.jpg": [],
+    "India_004921.jpg": [],
+    "India_004929.jpg": [],
+    "India_004943.jpg": [
+      {
+        "class_id": 0,
+        "class_name": "alligator crack",
+        "confidence": 0.377666175365448,
+        "bbox_xyxy": [
+          317.0213317871094,
+          549.233154296875,
+          597.5489501953125,
+          720.0
+        ]
+      }
+    ],
+    "India_004952.jpg": [],
+    "India_004983.jpg": [],
+    "India_005001.jpg": [],
+    "India_005012.jpg": [],
+    "India_005015.jpg": [
+      {
+        "class_id": 3,
+        "class_name": "other corruption",
+        "confidence": 0.2753579020500183,
+        "bbox_xyxy": [
+          316.97943115234375,
+          532.12060546875,
+          716.0997924804688,
+          719.2710571289062
+        ]
+      }
+    ],
+    "India_005019.jpg": [
+      {
+        "class_id": 2,
+        "class_name": "longitudinal crack",
+        "confidence": 0.7298234701156616,
+        "bbox_xyxy": [
+          6.957211494445801,
+          297.4635314941406,
+          196.45492553710938,
+          702.1223754882812
+        ]
+      },
+      {
+        "class_id": 2,
+        "class_name": "longitudinal crack",
+        "confidence": 0.6855340003967285,
+        "bbox_xyxy": [
+          8.643523216247559,
+          268.05780029296875,
+          269.22900390625,
+          716.0170288085938
+        ]
+      }
+    ],
+    "India_005023.jpg": [],
+    "India_005031.jpg": [],
+    "India_005033.jpg": [],
+    "India_005037.jpg": [],
+    "India_005065.jpg": [],
+    "India_005079.jpg": [],
+    "India_005089.jpg": [],
+    "India_005091.jpg": [],
+    "India_005095.jpg": [],
+    "India_005107.jpg": [],
+    "India_005125.jpg": [],
+    "India_005128.jpg": [],
+    "India_005139.jpg": [],
+    "India_005144.jpg": [],
+    "India_005161.jpg": [
+      {
+        "class_id": 4,
+        "class_name": "pothole",
+        "confidence": 0.46632102131843567,
+        "bbox_xyxy": [
+          294.9807434082031,
+          475.1677551269531,
+          509.7815856933594,
+          617.9730224609375
+        ]
+      }
+    ],
+    "India_005162.jpg": [],
+    "India_005167.jpg": [],
+    "India_005169.jpg": [],
+    "India_005180.jpg": [
+      {
+        "class_id": 4,
+        "class_name": "pothole",
+        "confidence": 0.3868860602378845,
+        "bbox_xyxy": [
+          317.5627746582031,
+          379.82769775390625,
+          430.8011169433594,
+          418.8054504394531
+        ]
+      }
+    ],
+    "India_005181.jpg": [],
+    "India_005185.jpg": [],
+    "India_005189.jpg": [],
+    "India_005193.jpg": [],
+    "India_005216.jpg": [],
+    "India_005235.jpg": [
+      {
+        "class_id": 3,
+        "class_name": "other corruption",
+        "confidence": 0.2664068639278412,
+        "bbox_xyxy": [
+          425.832763671875,
+          457.9051208496094,
+          454.7120056152344,
+          512.8535766601562
+        ]
+      }
+    ],
+    "India_005252.jpg": [],
+    "India_005253.jpg": [],
+    "India_005259.jpg": [],
+    "India_005267.jpg": [],
+    "India_005276.jpg": [],
+    "India_005283.jpg": [],
+    "India_005293.jpg": [],
+    "India_005308.jpg": [],
+    "India_005311.jpg": [],
+    "India_005329.jpg": [],
+    "India_005335.jpg": [],
+    "India_005336.jpg": [],
+    "India_005357.jpg": [
+      {
+        "class_id": 2,
+        "class_name": "longitudinal crack",
+        "confidence": 0.3603396713733673,
+        "bbox_xyxy": [
+          394.0263671875,
+          517.3115844726562,
+          457.5765380859375,
+          685.7648315429688
+        ]
+      }
+    ],
+    "India_005366.jpg": [],
+    "India_005370.jpg": [],
+    "India_005375.jpg": [],
+    "India_005391.jpg": [],
+    "India_005413.jpg": [],
+    "India_005434.jpg": [],
+    "India_005437.jpg": [],
+    "India_005448.jpg": [],
+    "India_005471.jpg": [],
+    "India_005478.jpg": [],
+    "India_005479.jpg": [],
+    "India_005487.jpg": [],
+    "India_005488.jpg": [],
+    "India_005499.jpg": [],
+    "India_005500.jpg": [],
+    "India_005521.jpg": [],
+    "India_005527.jpg": [],
+    "India_005537.jpg": [],
+    "India_005552.jpg": [],
+    "India_005555.jpg": [],
+    "India_005556.jpg": [
+      {
+        "class_id": 3,
+        "class_name": "other corruption",
+        "confidence": 0.7537556290626526,
+        "bbox_xyxy": [
+          546.9503784179688,
+          526.0697631835938,
+          720.0,
+          709.4134521484375
+        ]
+      }
+    ],
+    "India_005558.jpg": [],
+    "India_005610.jpg": [],
+    "India_005618.jpg": [],
+    "India_005647.jpg": [],
+    "India_005659.jpg": [
+      {
+        "class_id": 4,
+        "class_name": "pothole",
+        "confidence": 0.39903587102890015,
+        "bbox_xyxy": [
+          83.70980834960938,
+          548.5181884765625,
+          181.22445678710938,
+          584.93896484375
+        ]
+      }
+    ],
+    "India_005663.jpg": [],
+    "India_005666.jpg": [],
+    "India_005668.jpg": [],
+    "India_005671.jpg": [
+      {
+        "class_id": 3,
+        "class_name": "other corruption",
+        "confidence": 0.3814777433872223,
+        "bbox_xyxy": [
+          434.872802734375,
+          528.6337890625,
+          485.4102783203125,
+          624.6404418945312
+        ]
+      }
+    ],
+    "India_005695.jpg": [],
+    "India_005712.jpg": [],
+    "India_005716.jpg": [],
+    "India_005730.jpg": [],
+    "India_005733.jpg": [],
+    "India_005752.jpg": [],
+    "India_005756.jpg": [],
+    "India_005768.jpg": [],
+    "India_005770.jpg": [],
+    "India_005773.jpg": [],
+    "India_005780.jpg": [
+      {
+        "class_id": 3,
+        "class_name": "other corruption",
+        "confidence": 0.3552444875240326,
+        "bbox_xyxy": [
+          507.5101623535156,
+          463.16259765625,
+          615.9024658203125,
+          596.0519409179688
+        ]
+      }
+    ],
+    "India_005787.jpg": [],
+    "India_005796.jpg": [],
+    "India_005814.jpg": [],
+    "India_005823.jpg": [],
+    "India_005826.jpg": [],
+    "India_005860.jpg": [],
+    "India_005874.jpg": [],
+    "India_005893.jpg": [],
+    "India_005898.jpg": [
+      {
+        "class_id": 3,
+        "class_name": "other corruption",
+        "confidence": 0.555173933506012,
+        "bbox_xyxy": [
+          393.48687744140625,
+          573.5095825195312,
+          485.36444091796875,
+          660.4943237304688
+        ]
+      }
+    ],
+    "India_005902.jpg": [
+      {
+        "class_id": 4,
+        "class_name": "pothole",
+        "confidence": 0.3137069642543793,
+        "bbox_xyxy": [
+          367.4825134277344,
+          412.9242248535156,
+          430.55072021484375,
+          443.73870849609375
+        ]
+      }
+    ],
+    "India_005931.jpg": [],
+    "India_005940.jpg": [],
+    "India_005953.jpg": [
+      {
+        "class_id": 4,
+        "class_name": "pothole",
+        "confidence": 0.3676298260688782,
+        "bbox_xyxy": [
+          332.32879638671875,
+          395.270263671875,
+          418.4853210449219,
+          428.00103759765625
+        ]
+      },
+      {
+        "class_id": 4,
+        "class_name": "pothole",
+        "confidence": 0.25810250639915466,
+        "bbox_xyxy": [
+          335.4463806152344,
+          384.572265625,
+          423.606689453125,
+          428.3914794921875
+        ]
+      }
+    ],
+    "India_005978.jpg": [],
+    "India_005979.jpg": [],
+    "India_005987.jpg": [],
+    "India_006034.jpg": [],
+    "India_006037.jpg": [],
+    "India_006044.jpg": [],
+    "India_006052.jpg": [],
+    "India_006064.jpg": [
+      {
+        "class_id": 3,
+        "class_name": "other corruption",
+        "confidence": 0.5889660120010376,
+        "bbox_xyxy": [
+          220.93310546875,
+          542.8197631835938,
+          316.6173400878906,
+          638.3384399414062
+        ]
+      }
+    ],
+    "India_006066.jpg": [],
+    "India_006072.jpg": [],
+    "India_006075.jpg": [],
+    "India_006089.jpg": [],
+    "India_006092.jpg": [],
+    "India_006099.jpg": [],
+    "India_006105.jpg": [],
+    "India_006110.jpg": [],
+    "India_006113.jpg": [],
+    "India_006122.jpg": [],
+    "India_006130.jpg": [],
+    "India_006144.jpg": [],
+    "India_006166.jpg": [],
+    "India_006176.jpg": [],
+    "India_006200.jpg": [],
+    "India_006206.jpg": [],
+    "India_006230.jpg": [],
+    "India_006231.jpg": [],
+    "India_006278.jpg": [],
+    "India_006284.jpg": [],
+    "India_006301.jpg": [],
+    "India_006347.jpg": [],
+    "India_006349.jpg": [],
+    "India_006359.jpg": [],
+    "India_006379.jpg": [],
+    "India_006385.jpg": [],
+    "India_006412.jpg": [],
+    "India_006427.jpg": [],
+    "India_006432.jpg": [],
+    "India_006437.jpg": [],
+    "India_006449.jpg": [],
+    "India_006455.jpg": [
+      {
+        "class_id": 0,
+        "class_name": "alligator crack",
+        "confidence": 0.3283698856830597,
+        "bbox_xyxy": [
+          303.56005859375,
+          448.90850830078125,
+          502.5892028808594,
+          659.9834594726562
+        ]
+      }
+    ],
+    "India_006470.jpg": [],
+    "India_006481.jpg": [],
+    "India_006485.jpg": [],
+    "India_006486.jpg": [],
+    "India_006496.jpg": [],
+    "India_006501.jpg": [
+      {
+        "class_id": 0,
+        "class_name": "alligator crack",
+        "confidence": 0.557767927646637,
+        "bbox_xyxy": [
+          520.2073974609375,
+          534.0032348632812,
+          597.4536743164062,
+          574.8424072265625
+        ]
+      },
+      {
+        "class_id": 2,
+        "class_name": "longitudinal crack",
+        "confidence": 0.34883856773376465,
+        "bbox_xyxy": [
+          216.2865753173828,
+          534.092529296875,
+          277.2921142578125,
+          667.3067626953125
+        ]
+      }
+    ],
+    "India_006505.jpg": [],
+    "India_006506.jpg": [],
+    "India_006534.jpg": [
+      {
+        "class_id": 0,
+        "class_name": "alligator crack",
+        "confidence": 0.6626883745193481,
+        "bbox_xyxy": [
+          0.0,
+          581.7344970703125,
+          171.37831115722656,
+          719.5676879882812
+        ]
+      }
+    ],
+    "India_006539.jpg": [],
+    "India_006547.jpg": [],
+    "India_006556.jpg": [],
+    "India_006560.jpg": [],
+    "India_006563.jpg": [],
+    "India_006570.jpg": [
+      {
+        "class_id": 3,
+        "class_name": "other corruption",
+        "confidence": 0.37485459446907043,
+        "bbox_xyxy": [
+          93.5220947265625,
+          651.4049072265625,
+          181.45782470703125,
+          719.4351196289062
+        ]
+      },
+      {
+        "class_id": 3,
+        "class_name": "other corruption",
+        "confidence": 0.32678505778312683,
+        "bbox_xyxy": [
+          52.83772659301758,
+          653.804443359375,
+          181.84432983398438,
+          720.0
+        ]
+      }
+    ],
+    "India_006621.jpg": [],
+    "India_006624.jpg": [],
+    "India_006636.jpg": [],
+    "India_006639.jpg": [],
+    "India_006703.jpg": [],
+    "India_006729.jpg": [
+      {
+        "class_id": 3,
+        "class_name": "other corruption",
+        "confidence": 0.6856294870376587,
+        "bbox_xyxy": [
+          575.0509033203125,
+          510.01910400390625,
+          718.2223510742188,
+          650.0358276367188
+        ]
+      },
+      {
+        "class_id": 3,
+        "class_name": "other corruption",
+        "confidence": 0.36213037371635437,
+        "bbox_xyxy": [
+          576.3038330078125,
+          512.3394775390625,
+          668.993896484375,
+          588.8743286132812
+        ]
+      },
+      {
+        "class_id": 3,
+        "class_name": "other corruption",
+        "confidence": 0.2864340841770172,
+        "bbox_xyxy": [
+          573.5961303710938,
+          510.5514831542969,
+          643.0468139648438,
+          574.6915893554688
+        ]
+      }
+    ],
+    "India_006737.jpg": [
+      {
+        "class_id": 2,
+        "class_name": "longitudinal crack",
+        "confidence": 0.31876859068870544,
+        "bbox_xyxy": [
+          237.9735870361328,
+          374.3574523925781,
+          360.083984375,
+          657.9482421875
+        ]
+      }
+    ],
+    "India_006740.jpg": [],
+    "India_006746.jpg": [],
+    "India_006753.jpg": [],
+    "India_006761.jpg": [],
+    "India_006766.jpg": [],
+    "India_006776.jpg": [],
+    "India_006786.jpg": [],
+    "India_006796.jpg": [],
+    "India_006803.jpg": [],
+    "India_006814.jpg": [],
+    "India_006816.jpg": [],
+    "India_006818.jpg": [],
+    "India_006827.jpg": [],
+    "India_006838.jpg": [],
+    "India_006860.jpg": [],
+    "India_006865.jpg": [
+      {
+        "class_id": 3,
+        "class_name": "other corruption",
+        "confidence": 0.2794676125049591,
+        "bbox_xyxy": [
+          311.6637878417969,
+          492.9582214355469,
+          438.62213134765625,
+          586.3866577148438
+        ]
+      }
+    ],
+    "India_006869.jpg": [],
+    "India_006877.jpg": [],
+    "India_006895.jpg": [],
+    "India_006919.jpg": [],
+    "India_006935.jpg": [],
+    "India_006961.jpg": [],
+    "India_006994.jpg": [],
+    "India_007018.jpg": [],
+    "India_007022.jpg": [],
+    "India_007025.jpg": [],
+    "India_007039.jpg": [],
+    "India_007085.jpg": [],
+    "India_007100.jpg": [],
+    "India_007104.jpg": [
+      {
+        "class_id": 3,
+        "class_name": "other corruption",
+        "confidence": 0.25661998987197876,
+        "bbox_xyxy": [
+          107.06758880615234,
+          544.9901733398438,
+          277.66070556640625,
+          644.2129516601562
+        ]
+      }
+    ],
+    "India_007112.jpg": [],
+    "India_007135.jpg": [],
+    "India_007142.jpg": [
+      {
+        "class_id": 3,
+        "class_name": "other corruption",
+        "confidence": 0.5658708214759827,
+        "bbox_xyxy": [
+          217.7903289794922,
+          572.9180908203125,
+          291.6851501464844,
+          668.39599609375
+        ]
+      }
+    ],
+    "India_007149.jpg": [],
+    "India_007151.jpg": [],
+    "India_007157.jpg": [],
+    "India_007169.jpg": [],
+    "India_007173.jpg": [],
+    "India_007174.jpg": [],
+    "India_007181.jpg": [
+      {
+        "class_id": 0,
+        "class_name": "alligator crack",
+        "confidence": 0.3726872205734253,
+        "bbox_xyxy": [
+          8.91158390045166,
+          546.170166015625,
+          520.4465942382812,
+          720.0
+        ]
+      }
+    ],
+    "India_007207.jpg": [],
+    "India_007215.jpg": [],
+    "India_007216.jpg": [],
+    "India_007230.jpg": [],
+    "India_007241.jpg": [],
+    "India_007251.jpg": [
+      {
+        "class_id": 3,
+        "class_name": "other corruption",
+        "confidence": 0.2605532109737396,
+        "bbox_xyxy": [
+          20.6663875579834,
+          601.7474365234375,
+          215.4593505859375,
+          720.0
+        ]
+      }
+    ],
+    "India_007252.jpg": [],
+    "India_007269.jpg": [],
+    "India_007286.jpg": [],
+    "India_007289.jpg": [],
+    "India_007292.jpg": [],
+    "India_007350.jpg": [],
+    "India_007356.jpg": [],
+    "India_007375.jpg": [],
+    "India_007386.jpg": [],
+    "India_007405.jpg": [],
+    "India_007411.jpg": [],
+    "India_007421.jpg": [],
+    "India_007423.jpg": [],
+    "India_007440.jpg": [],
+    "India_007455.jpg": [],
+    "India_007488.jpg": [],
+    "India_007504.jpg": [],
+    "India_007517.jpg": [],
+    "India_007545.jpg": [],
+    "India_007567.jpg": [],
+    "India_007570.jpg": [
+      {
+        "class_id": 2,
+        "class_name": "longitudinal crack",
+        "confidence": 0.27132701873779297,
+        "bbox_xyxy": [
+          346.69073486328125,
+          496.45843505859375,
+          412.465576171875,
+          609.9744262695312
+        ]
+      },
+      {
+        "class_id": 4,
+        "class_name": "pothole",
+        "confidence": 0.25812533497810364,
+        "bbox_xyxy": [
+          346.5713806152344,
+          497.2344970703125,
+          414.8370056152344,
+          610.2236328125
+        ]
+      }
+    ],
+    "India_007586.jpg": [],
+    "India_007589.jpg": [],
+    "India_007612.jpg": [
+      {
+        "class_id": 3,
+        "class_name": "other corruption",
+        "confidence": 0.8294426202774048,
+        "bbox_xyxy": [
+          456.1083679199219,
+          500.0859680175781,
+          558.8193359375,
+          654.9974365234375
+        ]
+      }
+    ],
+    "India_007619.jpg": [],
+    "India_007656.jpg": [],
+    "India_007657.jpg": [],
+    "India_007680.jpg": [],
+    "India_007687.jpg": [],
+    "India_007764.jpg": [
+      {
+        "class_id": 3,
+        "class_name": "other corruption",
+        "confidence": 0.40122103691101074,
+        "bbox_xyxy": [
+          98.14327239990234,
+          615.8617553710938,
+          250.6204376220703,
+          720.0
+        ]
+      }
+    ],
+    "India_007795.jpg": [],
+    "India_007799.jpg": [],
+    "India_007842.jpg": [],
+    "India_007845.jpg": [
+      {
+        "class_id": 4,
+        "class_name": "pothole",
+        "confidence": 0.3960946500301361,
+        "bbox_xyxy": [
+          353.7181396484375,
+          373.0051574707031,
+          454.9662170410156,
+          413.6728515625
+        ]
+      }
+    ],
+    "India_007853.jpg": [],
+    "India_007865.jpg": [],
+    "India_007871.jpg": [],
+    "India_007879.jpg": [
+      {
+        "class_id": 3,
+        "class_name": "other corruption",
+        "confidence": 0.5432007312774658,
+        "bbox_xyxy": [
+          384.27362060546875,
+          522.986328125,
+          435.8441467285156,
+          581.4454345703125
+        ]
+      }
+    ],
+    "India_007898.jpg": [],
+    "India_007899.jpg": [],
+    "India_007905.jpg": [],
+    "India_007929.jpg": [],
+    "India_007940.jpg": [],
+    "India_007947.jpg": [],
+    "India_007949.jpg": [],
+    "India_007950.jpg": [],
+    "India_007953.jpg": [],
+    "India_007959.jpg": [],
+    "India_007975.jpg": [],
+    "India_007982.jpg": [],
+    "India_007986.jpg": [],
+    "India_007987.jpg": [
+      {
+        "class_id": 4,
+        "class_name": "pothole",
+        "confidence": 0.28496837615966797,
+        "bbox_xyxy": [
+          263.9696960449219,
+          429.69647216796875,
+          343.8227233886719,
+          481.0318603515625
+        ]
+      }
+    ],
+    "India_007993.jpg": [],
+    "India_008000.jpg": [],
+    "India_008028.jpg": [],
+    "India_008030.jpg": [],
+    "India_008049.jpg": [
+      {
+        "class_id": 3,
+        "class_name": "other corruption",
+        "confidence": 0.3312970995903015,
+        "bbox_xyxy": [
+          502.41107177734375,
+          618.8543090820312,
+          663.457763671875,
+          720.0
+        ]
+      }
+    ],
+    "India_008053.jpg": [],
+    "India_008065.jpg": [],
+    "India_008080.jpg": [
+      {
+        "class_id": 4,
+        "class_name": "pothole",
+        "confidence": 0.4794136881828308,
+        "bbox_xyxy": [
+          563.420654296875,
+          343.5588684082031,
+          602.13623046875,
+          368.1520080566406
+        ]
+      },
+      {
+        "class_id": 0,
+        "class_name": "alligator crack",
+        "confidence": 0.31738555431365967,
+        "bbox_xyxy": [
+          208.48521423339844,
+          385.0242004394531,
+          712.8831787109375,
+          712.9421997070312
+        ]
+      }
+    ],
+    "India_008088.jpg": [],
+    "India_008121.jpg": [],
+    "India_008149.jpg": [],
+    "India_008156.jpg": [],
+    "India_008158.jpg": [],
+    "India_008173.jpg": [
+      {
+        "class_id": 3,
+        "class_name": "other corruption",
+        "confidence": 0.7163110971450806,
+        "bbox_xyxy": [
+          25.93785285949707,
+          380.88714599609375,
+          383.62652587890625,
+          682.0491333007812
+        ]
+      }
+    ],
+    "India_008178.jpg": [],
+    "India_008185.jpg": [],
+    "India_008208.jpg": [],
+    "India_008232.jpg": [],
+    "India_008235.jpg": [],
+    "India_008242.jpg": [],
+    "India_008278.jpg": [
+      {
+        "class_id": 2,
+        "class_name": "longitudinal crack",
+        "confidence": 0.34248894453048706,
+        "bbox_xyxy": [
+          203.6832275390625,
+          412.0287780761719,
+          254.57876586914062,
+          538.9889526367188
+        ]
+      }
+    ],
+    "India_008290.jpg": [],
+    "India_008294.jpg": [],
+    "India_008295.jpg": [],
+    "India_008319.jpg": [],
+    "India_008332.jpg": [],
+    "India_008351.jpg": [],
+    "India_008388.jpg": [],
+    "India_008402.jpg": [],
+    "India_008408.jpg": [],
+    "India_008431.jpg": [],
+    "India_008434.jpg": [],
+    "India_008459.jpg": [],
+    "India_008462.jpg": [],
+    "India_008489.jpg": [],
+    "India_008517.jpg": [],
+    "India_008538.jpg": [
+      {
+        "class_id": 3,
+        "class_name": "other corruption",
+        "confidence": 0.5782281756401062,
+        "bbox_xyxy": [
+          321.3843994140625,
+          520.3056030273438,
+          374.2660217285156,
+          582.9547729492188
+        ]
+      }
+    ],
+    "India_008542.jpg": [],
+    "India_008545.jpg": [],
+    "India_008549.jpg": [],
+    "India_008589.jpg": [],
+    "India_008604.jpg": [],
+    "India_008624.jpg": [],
+    "India_008656.jpg": [],
+    "India_008689.jpg": [],
+    "India_008727.jpg": [],
+    "India_008751.jpg": [],
+    "India_008786.jpg": [],
+    "India_008806.jpg": [],
+    "India_008815.jpg": [],
+    "India_008823.jpg": [
+      {
+        "class_id": 3,
+        "class_name": "other corruption",
+        "confidence": 0.4442325234413147,
+        "bbox_xyxy": [
+          434.13958740234375,
+          547.3350219726562,
+          511.5293884277344,
+          653.059814453125
+        ]
+      }
+    ],
+    "India_008830.jpg": [],
+    "India_008835.jpg": [],
+    "India_008862.jpg": [],
+    "India_008868.jpg": [],
+    "India_008871.jpg": [
+      {
+        "class_id": 2,
+        "class_name": "longitudinal crack",
+        "confidence": 0.2703970670700073,
+        "bbox_xyxy": [
+          299.72735595703125,
+          611.2111206054688,
+          356.5611572265625,
+          720.0
+        ]
+      }
+    ],
+    "India_008900.jpg": [],
+    "India_008908.jpg": [],
+    "India_008912.jpg": [],
+    "India_008920.jpg": [],
+    "India_008923.jpg": [],
+    "India_008961.jpg": [],
+    "India_008962.jpg": [],
+    "India_009034.jpg": [],
+    "India_009037.jpg": [],
+    "India_009049.jpg": [],
+    "India_009076.jpg": [
+      {
+        "class_id": 2,
+        "class_name": "longitudinal crack",
+        "confidence": 0.3818504512310028,
+        "bbox_xyxy": [
+          468.0148010253906,
+          505.8000183105469,
+          510.6473083496094,
+          636.3615112304688
+        ]
+      }
+    ],
+    "India_009088.jpg": [],
+    "India_009089.jpg": [],
+    "India_009101.jpg": [],
+    "India_009124.jpg": [],
+    "India_009141.jpg": [],
+    "India_009192.jpg": [],
+    "India_009199.jpg": [],
+    "India_009201.jpg": [],
+    "India_009216.jpg": [],
+    "India_009230.jpg": [],
+    "India_009237.jpg": [],
+    "India_009242.jpg": [],
+    "India_009243.jpg": [],
+    "India_009258.jpg": [],
+    "India_009277.jpg": [],
+    "India_009296.jpg": [],
+    "India_009321.jpg": [],
+    "India_009322.jpg": [],
+    "India_009334.jpg": [],
+    "India_009384.jpg": [],
+    "India_009387.jpg": [],
+    "India_009388.jpg": [],
+    "India_009396.jpg": [],
+    "India_009400.jpg": [],
+    "India_009401.jpg": [],
+    "India_009474.jpg": [],
+    "India_009495.jpg": [],
+    "India_009511.jpg": [],
+    "India_009512.jpg": [],
+    "India_009521.jpg": [],
+    "India_009538.jpg": [],
+    "India_009549.jpg": [
+      {
+        "class_id": 3,
+        "class_name": "other corruption",
+        "confidence": 0.38651126623153687,
+        "bbox_xyxy": [
+          454.1449890136719,
+          542.8311157226562,
+          547.3423461914062,
+          648.9088745117188
+        ]
+      }
+    ],
+    "India_009551.jpg": [],
+    "India_009570.jpg": [],
+    "India_009571.jpg": [],
+    "India_009577.jpg": [],
+    "India_009580.jpg": [],
+    "India_009590.jpg": [],
+    "India_009591.jpg": [],
+    "India_009598.jpg": [],
+    "India_009606.jpg": [
+      {
+        "class_id": 0,
+        "class_name": "alligator crack",
+        "confidence": 0.7141298055648804,
+        "bbox_xyxy": [
+          385.17132568359375,
+          292.3141174316406,
+          720.0,
+          645.5802612304688
+        ]
+      },
+      {
+        "class_id": 0,
+        "class_name": "alligator crack",
+        "confidence": 0.3876509368419647,
+        "bbox_xyxy": [
+          377.1932678222656,
+          299.4085388183594,
+          720.0,
+          525.5156860351562
+        ]
+      }
+    ],
+    "India_009621.jpg": [],
+    "India_009659.jpg": [],
+    "India_009672.jpg": [],
+    "India_009686.jpg": [],
+    "India_009693.jpg": [],
+    "India_009700.jpg": [
+      {
+        "class_id": 0,
+        "class_name": "alligator crack",
+        "confidence": 0.3241143226623535,
+        "bbox_xyxy": [
+          520.3798828125,
+          543.0824584960938,
+          718.1473999023438,
+          692.4017333984375
+        ]
+      }
+    ],
+    "India_009733.jpg": [],
+    "India_009739.jpg": [],
+    "India_009747.jpg": [],
+    "India_009771.jpg": [],
+    "India_009787.jpg": [],
+    "India_009790.jpg": [],
+    "India_009791.jpg": [],
+    "India_009799.jpg": [],
+    "India_009805.jpg": [],
+    "India_009819.jpg": [],
+    "India_009822.jpg": [],
+    "India_009828.jpg": [],
+    "India_009837.jpg": [],
+    "India_009859.jpg": [],
+    "India_009868.jpg": [],
+    "India_009872.jpg": [],
+    "India_009876.jpg": [
+      {
+        "class_id": 3,
+        "class_name": "other corruption",
+        "confidence": 0.43930569291114807,
+        "bbox_xyxy": [
+          360.28900146484375,
+          491.2984924316406,
+          405.8530578613281,
+          549.0748901367188
+        ]
+      }
+    ]
+  },
+  "limitations": [
+    "All reviewed images have empty annotations in this split; unannotated real defects could be counted as false positives.",
+    "This is a thresholded background audit, not a replacement for held-out field validation.",
+    "Empty annotation files are not confirmed defect-free; this alert rate is not a verified false-positive rate."
+  ],
+  "empty_label_image_alert_rate": 0.12132822477650064
+}

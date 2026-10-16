@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiBase, readSample, type ActualSample } from "../../api/real-assessment";
 import { Card } from "../../components/primitives";
+import { DistressDetectionOverlay } from "../../components/DistressDetectionOverlay";
 
 export default function ActualSamplePage({ id }: { id: string }) {
   const [sample, setSample] = useState<ActualSample | null>(null);
@@ -23,7 +24,7 @@ export default function ActualSamplePage({ id }: { id: string }) {
       <Card title="Assessment result">
         {error ? <p role="alert">{error}</p> : !sample ? <p>Loading stored sample…</p> : (
           <div className="actual-result">
-            {sample.image_url && <img src={new URL(sample.image_url, apiBase).toString()} alt="Original uploaded road image" />}
+            {sample.image_url && <DistressDetectionOverlay imageUrl={new URL(sample.image_url, apiBase).toString()} evidence={sample.distress_detection} />}
             <p>Image quality: {sample.quality?.status ?? "Unavailable"}</p>
             {!!sample.quality?.reasons?.length && <p>Quality reasons: {sample.quality.reasons.join(", ")}</p>}
             <p>Road score: {sample.score?.value == null ? "Unavailable — scoring has not been validated" : `${sample.score.value} / 100 (${sample.score.status})`}</p>

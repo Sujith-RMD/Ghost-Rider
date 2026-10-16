@@ -3,7 +3,7 @@
   "info": {
     "title": "Ghost-Rider Road Quality API",
     "description": "Automated visible road condition assessment for Indian roads. Exposes durable uploads, live camera capture, route aggregation, and Amazon Bedrock factual narration.",
-    "version": "1.0.0"
+    "version": "1.2.0"
   },
   "paths": {
     "/v1/uploads": {
@@ -1019,6 +1019,155 @@
         ],
         "title": "CanonicalSampleRecord",
         "description": "The canonical assessment record defined in Final Plan Section 11.5."
+      },
+      "DistressDetection": {
+        "properties": {
+          "class_id": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Class Id"
+          },
+          "class_name": {
+            "type": "string",
+            "title": "Class Name"
+          },
+          "confidence": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence"
+          },
+          "bbox_xyxy": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "maxItems": 4,
+            "minItems": 4,
+            "title": "Bbox Xyxy",
+            "description": "[x1, y1, x2, y2] in original image pixels"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "class_id",
+          "class_name",
+          "confidence",
+          "bbox_xyxy"
+        ],
+        "title": "DistressDetection",
+        "description": "One YOLO distress box in native image pixel coordinates."
+      },
+      "DistressDetectionEvidence": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "success",
+              "unavailable",
+              "error"
+            ],
+            "title": "Status"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "model_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Version"
+          },
+          "model_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Sha256"
+          },
+          "class_names": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Class Names"
+          },
+          "image_width": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Width"
+          },
+          "image_height": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Height"
+          },
+          "inference_ms": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inference Ms"
+          },
+          "confidence_threshold": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence Threshold",
+            "default": 0.25
+          },
+          "detections": {
+            "items": {
+              "$ref": "#/components/schemas/DistressDetection"
+            },
+            "type": "array",
+            "title": "Detections"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "DistressDetectionEvidence",
+        "description": "Versioned detector output; boxes are localization evidence only."
       },
       "DistressEvidence": {
         "properties": {
@@ -2681,11 +2830,17 @@
             "description": "Reporting bin summaries"
           },
           "total_distance_m": {
-            "type": "number",
-            "minimum": 0.0,
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Total Distance M",
-            "description": "Total route distance in meters",
-            "default": 0.0
+            "description": "Total route distance in meters (null when unknown)"
           },
           "coverage_percentage": {
             "anyOf": [
@@ -2883,6 +3038,17 @@
               }
             ],
             "description": "Visual evidence references"
+          },
+          "distress_detection": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DistressDetectionEvidence"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Versioned distress boxes in original image coordinates"
           },
           "score": {
             "anyOf": [

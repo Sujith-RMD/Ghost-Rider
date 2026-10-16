@@ -99,3 +99,16 @@ Additive, non-breaking changes that complete the upload → job → sample slice
 
 No existing field changed meaning. ML units and the null-vs-zero policy are
 unchanged.
+
+### v1.2.0 (2026-10-16)
+Additive, non-breaking India distress localization evidence on stored samples:
+
+- `SegmentResult.distress_detection` reports detector status, checkpoint SHA-256,
+  model version, image dimensions, inference time, confidence threshold, class
+  names, and bounding boxes in original-image pixel coordinates.
+- Detection evidence is persisted with each sample. Missing weights and inference
+  failures are explicit; no generic pretrained model is substituted.
+- The field is optional. Existing quality metrics and scores are unchanged; boxes
+  do not establish physical size, area, roughness, or Good/Bad road quality.
+
+The v1.1.0 upload/job lifecycle additions remain unchanged.

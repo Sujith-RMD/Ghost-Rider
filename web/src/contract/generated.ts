@@ -453,6 +453,57 @@ export interface components {
             narrative: components["schemas"]["SampleNarrative"];
         };
         /**
+         * DistressDetection
+         * @description One YOLO distress box in native image pixel coordinates.
+         */
+        DistressDetection: {
+            /** Class Id */
+            class_id: number;
+            /** Class Name */
+            class_name: string;
+            /** Confidence */
+            confidence: number;
+            /**
+             * Bbox Xyxy
+             * @description [x1, y1, x2, y2] in original image pixels
+             */
+            bbox_xyxy: number[];
+        };
+        /**
+         * DistressDetectionEvidence
+         * @description Versioned detector output; boxes are localization evidence only.
+         */
+        DistressDetectionEvidence: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "success" | "unavailable" | "error";
+            /** Reason */
+            reason?: string | null;
+            /** Model Version */
+            model_version?: string | null;
+            /** Model Sha256 */
+            model_sha256?: string | null;
+            /** Class Names */
+            class_names?: {
+                [key: string]: string;
+            };
+            /** Image Width */
+            image_width?: number | null;
+            /** Image Height */
+            image_height?: number | null;
+            /** Inference Ms */
+            inference_ms?: number | null;
+            /**
+             * Confidence Threshold
+             * @default 0.25
+             */
+            confidence_threshold: number;
+            /** Detections */
+            detections?: components["schemas"]["DistressDetection"][];
+        };
+        /**
          * DistressEvidence
          * @description Distress segmentation evidence.
          */
@@ -1290,10 +1341,9 @@ export interface components {
             segments?: components["schemas"]["SegmentSummary"][];
             /**
              * Total Distance M
-             * @description Total route distance in meters
-             * @default 0
+             * @description Total route distance in meters (null when unknown)
              */
-            total_distance_m: number;
+            total_distance_m?: number | null;
             /**
              * Coverage Percentage
              * @description Percentage of route covered (null if unknown)
@@ -1370,6 +1420,8 @@ export interface components {
             metrics?: components["schemas"]["AggregatedMetrics"] | null;
             /** @description Visual evidence references */
             evidence?: components["schemas"]["DistressEvidence"] | null;
+            /** @description Versioned distress boxes in original image coordinates */
+            distress_detection?: components["schemas"]["DistressDetectionEvidence"] | null;
             /** @description Surface condition score */
             score?: components["schemas"]["ScoreResult"] | null;
             /** @description Known-good comparison */
