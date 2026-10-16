@@ -189,8 +189,21 @@ scale or visibility blocks a source. Track actions/review in [TASKS.md](TASKS.md
 | Source | Disposition and consumer | Evidence, links and constraints |
 |---|---|---|
 | CRKWH100 crack GT | Former first download; now obtained. E8/E10, I12/I15, A1.12-era negative-search motivation, distress evaluation | Links and delivered-mask facts above. **Zero intact negatives**, so the original false-alarm motivation is unmet. |
-| RDD2022 India subset | **Required, not obtained:** primary Indian distress source; E8/E9/I12, `distress_india_test`, India claim | https://github.com/sekilab/RoadDamageDetector · https://arxiv.org/abs/2209.08538. **47,420 total images across six countries**, not India-only. Boxes require manually drawn masks for precise segmentation. Freeze Indian test groups before annotation-driven training. Blocks every Indian distress claim. |
+| RDD2022 India subset | **Obtained and integrity-audited; admission pending:** primary Indian distress source; E8/E9/I12, `distress_india_test`, India claim | https://github.com/sekilab/RoadDamageDetector · https://arxiv.org/abs/2209.08538. **47,420 total images across six countries**, not India-only. Boxes require manually drawn masks for precise segmentation. Freeze Indian test groups before annotation-driven training. Blocks every Indian distress claim. |
 | Pavementscapes | Download priority for optional preferred distress-mask pretraining; E8 and exploratory E4/E5 chip pilot | https://github.com/tongzheng1992/Pavementscapes · https://arxiv.org/pdf/2208.00775. **4,000 top-down grayscale images, 6 damage categories**. Top-down geometry motivates a pilot, not admission for chips. Claimed **1–2 mm GSD unverified**; inspect delivered files and group sibling crops. |
+
+### RDD India local archive audit — 2026-10-16
+
+`eval/rdd_archive_audit.py` streamed the 14,163,599,360-byte DatasetNinja tar without extraction. All 142,272 members were inspected; all **9,665 Indian images** decoded at **720×720**, with no decode failures, invalid boxes, image/annotation dimension mismatches or exact Indian image duplicates. Individual image hashes are recorded; full archive SHA-256 was not computed. Report: `reports/ml/rdd_india_archive_audit.json`.
+
+| Split | Images and paired JSONs | Boxes | Empty annotations |
+|---|---:|---:|---:|
+| Train | 7,706 | 8,175 | 3,934 |
+| Test | 1,959 | 0 | 1,959 |
+
+Train class counts: pothole 3,187; alligator crack 2,021; longitudinal crack 1,735; other corruption 1,119; transverse crack 113. **These are bounding boxes, not defect areas or masks.** `other corruption` is not automatically a supported class. Empty test JSONs mean labels are unpublished, not an intact-negative test set. Empty train annotations require human completeness review before negative supervision. All metadata sidecars are empty, so road/site/session independence is unverified; absence of exact duplicates does not resolve near-duplicate leakage.
+
+The mirror licence declares CC BY-SA 4.0 and links the originating competition rules; the exact text and hashes are preserved in the report. Original-source rights verification, reviewed overlays, grouped splits and actual-width masks remain admission gates. This audit permits inventory/feasibility conclusions, not training approval, Indian model accuracy, verified GSD or live acceptance.
 
 ### Priority 2 — request scale sources and obtain Indian robustness data
 
@@ -236,20 +249,20 @@ siblings **before** crops/splits. Freeze Indian test data before annotation-driv
 training; fit normalizers, reference statistics, thresholds and model choices on
 development groups only.
 
-Current coverage is a foreign crack backup plus a small scale-unverified pilot,
+Current coverage is a foreign crack backup, a scale-unverified pilot and a locally audited Indian bounding-box archive,
 not Indian acceptance or validated aggregate measurement:
 
 - Chip count/size and gaps: ISTD-PDS7 first candidate, GAPs backup; Pavementscapes
   exploratory geometry only. CRKWH100 and Crack-Seg supply no verified metric scale.
 - Texture proxies: CRKWH100 development; prospective ISTD-PDS7 and seasonal wet
   challenges. Height-map geometry does not validate an RGB mapping.
-- Distress: Crack-Seg pixel masks; prospective RDD India boxes/manual masks,
+- Distress: Crack-Seg pixel masks; obtained RDD India boxes (manual masks remain required),
   Pavementscapes masks and GAPs masks. CRKWH100 GT supports restricted evaluation.
 - Negatives/false alarms: Crack-Seg has one possible negative and none in test;
   CRKWH100 GT has none. Reviewed intact negatives must still be obtained;
   RDD, Pavementscapes and seasonal data are candidates, not established coverage.
 - India claims require RDD2022 India and appropriate masks; wet/unsupported-surface
-  robustness requires the seasonal challenge set. Neither is in hand.
+  robustness requires the seasonal challenge set. RDD India is in hand but not admitted; seasonal data remains unavailable.
 - Route replay has no immediate acquisition need; comma2k19 remains optional.
 
 ## Chip visibility evidence

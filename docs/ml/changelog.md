@@ -45,6 +45,21 @@ installation is recorded below, not retroactively applied to this baseline.
 
 ## History
 
+### 2026-10-16 — Tracker, usage and portable validation updated
+
+- Marked A1.8 acquisition, C12 profile gate, C15 evidence-type reporting and D10 reference-version enforcement complete at their documented software/acquisition scope. Added completed I16a/I16b metric/baseline subtasks; B1/B2/B4, E13/E14 and I6/I15 remain partial where actual data/run/review evidence is missing. A1.8a explicitly retains Indian rights/overlay/grouping/mask gates. Updated `DATA_ADMISSION.md` with the actual archive inventory and class counts; no mask/negative/independence inference from boxes or empty JSON.
+- Added runnable schemas, commands, metric definitions and integration caveats to `FEATURE_SPEC.md` §9 rather than creating more Markdown files. Corrected the summary to reflect available Indian images. Added the zero-overlap positive-frame rate separately from the no-foreground miss rate; inference provenance/timing tested with mocks only.
+- Fixed a fresh-checkout test portability flaw: synthetic report checks now generate the deterministic fixture in memory rather than requiring an ignored `reports/ml/*.json` file. Generated reports remain local outputs, not hidden prerequisites for tests.
+- **Final validation:** `python -B -m pytest -q -p no:cacheprovider` — **754 passed**, 9 warnings (44.34 s). `git diff --check` passed; all local Markdown file links under `docs/ml/` resolve. No actual-model/Indian accuracy improvement is asserted from these tests. Concurrently added `training/prepare_india_distress.py` is outside this work's write set and was not modified.
+
+
+### 2026-10-16 — Available Indian archive audited; real-mask baseline floor measured
+
+- **Verified — acquisition update:** data became available after the earlier empty-checkout observation. Streaming `eval/rdd_archive_audit.py` inspected all 142,272 members of `data/external/rdd2022-DatasetNinja.tar` without extracting raw data (81.1 s). Indian train: 7,706 images/annotations and 8,175 boxes; Indian test: 1,959 images/annotations, zero boxes. All 9,665 Indian images decoded at 720×720 with no failures, invalid boxes/dimension mismatches or exact Indian image duplicates. All metadata sidecars are empty. Full-archive SHA-256 omitted explicitly; individual Indian image hashes recorded. `reports/ml/rdd_india_archive_audit.json` preserves mirror licence text; original rights and grouping remain unverified. Empty test annotations are **unannotated, not intact negatives**; 3,934 empty train annotations also need human review. Acquisition is complete; mask/rights/ancestry admission is not.
+- **Verified — fixed baseline diagnostics:** `eval/distress_baselines.py` ran on all 100 CRKWH100 raster masks, verifying stored GT hashes. Measured foreground prevalence **0.357479%**. Always-background pooled Dice/recall **0/0**; always-foreground pooled Dice **0.007124**, recall **1**. Both false-alarm rates are null because the set contains no intact negative frames. These are trivial comparison floors, not trained-model performance; no test threshold was tuned. Missing group metadata suppresses intervals. Report: `reports/ml/crkhw100_trivial_baselines.json`.
+- **Validation:** 11 focused baseline/archive tests passed. No weights found; Ultralytics absent. No model download, training, real-model inference or physical measurement performed. Existing Colab edits remain untouched.
+
+
 ### 2026-10-16 — Reproducible inference and latency reporting
 
 - **Verified — inference tooling:** `training/evaluate_crosssource.py` now maps manifest sample IDs explicitly (rather than assuming image stems), records actual local-weight/manifest SHA-256, confidence and library versions, and optionally saves binary raster predictions to a new exclusive directory. Unsafe/case-colliding IDs, duplicate legacy stems, nonfinite confidence, missing local weights and changed-during-run weights fail explicitly. No weights are downloaded.

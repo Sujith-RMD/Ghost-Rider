@@ -143,3 +143,66 @@ null_reason?, limitation?}`. `null_reason` is a short code
 (`unscaled`/`unmeasured`/`no_valid_samples`/`quality_rejected`/`not_implemented`)
 so neither service nor UI can blur "measured zero" with "unknown". ML supplies
 this; backend owns the Pydantic/OpenAPI schema (`docs/contracts/`).
+
+## 9. Runnable evaluation and provenance tools
+
+### Fixed comparison floors on available masks
+
+```sh
+python -m eval.distress_baselines --manifest data/manifests/crkhw100_test.json --out reports/ml/crkhw100_trivial_baselines.json
+```
+
+This verifies stored GT hashes and reports always-background/always-foreground predictions. It does **not** train or tune anything. On the current 100 CRKWH100 masks, pooled foreground prevalence is 0.357479%, all-background Dice is 0 and all-foreground Dice is 0.007124. False-alarm behavior is unknown because there are no intact negative frames. These results do not establish model quality.
+
+### Actual-weight inference (when weights are available)
+
+`python -m training.evaluate_crosssource --weights <local-checkpoint.pt> --manifest <manifest.json> --out <report.json> --save-predictions <new-directory>`
+
+Paths in a manifest retain the existing process-working-directory convention. Each sample requires a unique portable `sample_id`, `image` and `gt_mask`; optional `group_id` must identify an independently reviewed parent/site, not a filename. Reports include local-weight/manifest SHA-256, confidence, library versions and saved binary PNG paths. No automatic model download occurs. The prediction directory must not already exist. Prediction-call wall-time p50/p95 includes loading/pre/postprocessing/materialization; model load and any model-only timing are separately labeled. This is **not** capture-to-result service latency. No real-model latency/accuracy was measured in this implementation session.
+
+Read pooled TP/FP/FN/TN and micro IoU/precision/recall/Dice alongside legacy macro means and **GT-positive-only Dice**. Macro empty-denominator scores can be misleading; undefined micro ratios are null. Reports distinguish:
+
+- negative-frame false-alarm rate: any predicted foreground on a GT-negative frame;
+- no-foreground miss rate: GT-positive frames with no predicted foreground;
+- zero-overlap positive-frame rate: GT-positive frames with TP=0, including spatially disjoint predictions.
+
+Counts/denominators accompany every rate. These are frame/pixel metrics, not object-level detection AP. Group-bootstrap 95% intervals require complete explicit grouping and at least 10 supporting groups for that metric; otherwise null plus reason. Ten is a reporting safeguard, not proof of adequate sample size or independence.
+
+### Count, gap and scale errors
+
+`python -m eval.measurement_eval <measurements.json> --out <report.json>`
+
+Input schema (the values below are **synthetic arithmetic only**):
+
+```json
+{
+  "evidence_type": "synthetic",
+  "metric": "gap",
+  "unit": "px",
+  "samples": [
+    {"sample_id": "patch-a", "group_id": "synthetic-parent-a", "truth": 10, "prediction": 12},
+    {"sample_id": "patch-b", "group_id": "synthetic-parent-b", "truth": 5, "prediction": null, "null_reason": "unresolvable"}
+  ]
+}
+```
+
+Use `annotation_source_scale` for public-label agreement and `physical_live` only for independent physical checks. `physical_live` rejects pixel units. `metric` is `count`, `gap` or `length`; units are `count` for count, otherwise `px`/`mm`/`m`. Each input is one inspected observation; do not omit rejected observations. Null predictions require reasons. Reports retain suppressed coverage and zero-truth absolute errors, exclude zero truth only from relative errors, and report signed bias, MAE, median/p95 errors, per-group results and guarded group intervals. Count/gap endpoints and ground truth still require independent annotation; the software does not create it.
+
+### Group before cropping, and freeze before tuning
+
+`python -m training.group_splits <input.json> <new-split-manifest.json> --seed 42`
+
+Each sample needs `sample_id`, `source_id` and explicit grouping evidence (`parent_id`, `site_id`, `road_id`, `session_id`, `sequence_id`, `duplicate_group_id`, or reviewed links). Shared identifiers connect within a source; top-level `near_duplicate_links` connects explicit sample-ID pairs, including cross-source ancestry. Connected components cannot cross splits. At least three groups are required. Allocation targets 60/20/20 by groups, not by crops, and does not guarantee class balance. `--frozen-manifest` preserves existing assignments; conflicting new evidence fails rather than silently moving test samples. `--overwrite` is required to replace output. Separate evaluation roles remain explicit; obtaining a metadata split is not road-held-out proof or data admission.
+
+### Calibration/reference guards
+
+- `backend.geometry.profile.CameraProfile.require_scale(current_signature)` must be called before a live capture supplies physical scale. Unknown/changed device, resolution, focus, zoom, capture crop, stabilization or mount, or absent/failed/mismatched validation, raises rather than silently reusing calibration. Rechecking creates explicit signature-and-scale-bound evidence. Software cannot discover unreported rig movement or authenticate the supplied physical report. Actual rig calibration remains outstanding.
+- `backend.reference.compatibility.ReferenceArtifact.require_compatible(definition)` rejects changed feature definitions. `revise_reference()` requires a new reference version when diameter/gap limits, method versions or physical scale domain change. This is an artifact identity gate, not a fitted known-good comparator or condition score.
+
+### Indian archive audit
+
+```sh
+python -m eval.rdd_archive_audit --archive data/external/rdd2022-DatasetNinja.tar --output reports/ml/rdd_india_archive_audit.json --decode-budget-seconds 75
+```
+
+Streams without extraction; decode budget counts decoder time, not total wall time. The current run decoded all Indian images. See [data admission](DATA_ADMISSION.md#rdd-india-local-archive-audit--2026-10-16) for exact inventory, mirror-rights caveats, grouping/mask gates and why empty test annotations are not negatives. Generated JSON reports stay under ignored `reports/ml/`; tests must not depend on locally generated reports being present.

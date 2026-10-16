@@ -1,6 +1,6 @@
 """Hand-computable software checks, not evidence of road/model accuracy."""
 import json
-from pathlib import Path
+
 from unittest.mock import patch
 
 import numpy as np
@@ -130,16 +130,13 @@ def test_yolo_additive_reporting_and_no_invented_groups(tmp_path):
     assert metrics["missing_group_ids"] == ["miss"]
 
 
-def test_checked_in_synthetic_artifact_matches_fixture():
-    path = Path(__file__).resolve().parents[2] / "reports/ml/distress_metric_checks.json"
-    # This artifact freezes the original software-validation schema; later additive
-    # metrics are tested separately without rewriting the historical artifact.
-    def existing_fields(expected, current):
-        if isinstance(expected, dict):
-            return {k: existing_fields(v, current[k]) for k, v in expected.items()}
-        return current
-    frozen = json.loads(path.read_text(encoding="utf-8"))
-    assert frozen == existing_fields(frozen, fixture_report())
+def test_synthetic_fixture_is_deterministic_and_strict_json():
+    # Reports are ignored generated artifacts, not a fresh-checkout test fixture.
+    report = fixture_report()
+    assert report == fixture_report()
+    assert json.loads(json.dumps(report, allow_nan=False)) == report
+    assert report["purpose"] == "software_validation"
+    assert report["real_accuracy_claim"] is False
 
 
 def test_zero_overlap_is_distinct_from_no_foreground_miss():
