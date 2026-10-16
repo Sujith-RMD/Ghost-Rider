@@ -23,37 +23,30 @@
 |----------|----------|-------|
 | v1 sessions/frames (live) | `backend/api/v1.py` | Endpoints implemented; real camera transport pending hardware |
 | v1 segments (50 m bins) | `backend/api/v1.py`, `backend/routes/` | Binning + coverage-truth implemented; real GPS data pending |
-| Bedrock reports | `backend/reports/` | Live Bedrock **verified** (`apac.amazon.nova-micro-v1:0`) |
+| Bedrock reports | `backend/reports/` | Historical live smoke test in `ap-southeast-2` passed (`apac.amazon.nova-micro-v1:0`); current cloud state not re-queried |
 | Distress / scoring / reference | `backend/distress/`, `scoring/`, `reference/` | Empty ML packages — `score`/`reference`/`evidence` stay **null** (not fabricated) |
 
 ### 📋 Planned / pending external
 
 | Item | Priority | Dependency |
 |------|----------|------------|
-| S3 private upload smoke test | High | ✅ **PASS** — bucket created in `ap-southeast-2` (SCP is region-scoped); full round-trip verified (`docs/backend/AWS_SMOKE_TEST.md` Run 2) |
-| Bedrock Converse smoke test | High | ✅ Verified live in `ap-southeast-2` (`apac.amazon.nova-micro-v1:0`) |
+| S3 private upload smoke test | High | Historical **PASS** in `ap-southeast-2`; see `docs/backend/AWS_SMOKE_TEST.md` Run 2. Current bucket state not re-queried. |
+| Bedrock Converse smoke test | High | Historical pass in `ap-southeast-2` (`apac.amazon.nova-micro-v1:0`); current access not re-queried. |
 | Google Maps data contract render | Medium | Frontend |
 | Real ML artifact wired into worker | High | 🔄 Aggregate + quality **wired live** (`backend/analysis.py`); distress path wired (crack-mask metrics + canonical features); runtime distress **detection** and scoring modules still empty (ML AI) |
-<<<<<<< Updated upstream
-| S3 lifecycle policy (raw-frame expiry) | Low | ✅ **Live** — rule `ghost-rider-expire-raw-uploads` applied (expire `uploads/` after 7 d + abort incomplete multiparts); IAM permission granted by the account owner |
-=======
-| S3 lifecycle policy (raw-frame expiry) | Low | `s3:PutLifecycleConfiguration` denied by IAM policy — admin-applied, optional |
->>>>>>> Stashed changes
+| S3 lifecycle policy (raw-frame expiry) | Low | Historical smoke test reports applied/read back on 16 Oct 2026; current AWS state has not been re-queried. Rule JSON: `infra/s3-lifecycle.json`. |
 | Canonical record persistence | Medium | ✅ **Done** — `canonical_json` column + additive migration; `GET /v1/samples/{id}` returns the §11.5 record (real sha256, geometry, feature list; absent when nothing was measured) |
 | Live camera transport test | High | Camera-access track (hardware) |
 
 ## Version History
 
 ### v1.3.0 (2026-10-16)
-<<<<<<< Updated upstream
 - **Merged with the frontend team's integration** (`14f196f`, `9ec7999`): S3
   uploads are fetched via presigned download into a private temp dir during
   analysis, and jobs complete as **`partial`** (not `succeeded`) whenever no
   SQI score exists yet — truthful while the scoring module is undelivered;
   canonical provenance (sha256) is captured before the temp dir is removed and
   `original_uri` is the S3 object key.
-=======
->>>>>>> Stashed changes
 - **Tiled measurement**: `measure_frame` now uses the ML team's
   `measure_tiled` (native-resolution tiles, boundary-safe instance merge) —
   verified: 120 instances on a 1024×768 synthetic frame counted exactly once;
@@ -68,8 +61,9 @@
   (density, extent); unscaled frames stay `null`. Runtime crack detection
   still awaits the ML model artifact.
 - 66/66 backend tests pass.
-- Lifecycle rule artifact: `infra/s3-lifecycle.json` (apply command in the
-  runbook) — still IAM-blocked for this user.
+- Lifecycle rule artifact: `infra/s3-lifecycle.json`; the 16 Oct smoke test
+  reports it applied and read back. Current cloud state is not independently
+  checked by this document.
 
 ### v1.2.0 (2026-10-16)
 - **Real ML pipeline wired into the worker** (replaces the typed stub):

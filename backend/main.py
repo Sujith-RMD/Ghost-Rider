@@ -196,10 +196,10 @@ app.add_middleware(
 # Deep dependency diagnostics: GET /health (liveness) and GET /health/deep.
 app.include_router(health_router)
 
-# Local media (raw frames + mask overlays) served straight from disk so the
-# /uploads/... fallback URLs returned by s3_service always resolve.
+# Local media is served only in development; deployments use private S3 URLs.
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
-app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
+if SETTINGS.LOCAL_UPLOADS_PUBLIC:
+    app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
 
 
 # --------------------------------------------------------------------------- #

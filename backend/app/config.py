@@ -129,7 +129,11 @@ class Settings(BaseSettings):
     HOST: str = "0.0.0.0"
     PORT: int = 8000
     LOG_LEVEL: str = "INFO"
-    CORS_ORIGINS: str = "*"  # comma separated, or "*"
+    CORS_ORIGINS: str = (
+        "http://localhost:5173,http://127.0.0.1:5173,"
+        "http://localhost:4173,http://127.0.0.1:4173"
+    )  # comma-separated; production deployments set their actual frontend origin
+    LOCAL_UPLOADS_PUBLIC: bool = True  # development fallback only; deployment disables it
     WARMUP_MODEL: bool = True
     HEALTH_PROBE_TTL: float = 30.0  # seconds a cached AWS probe result stays valid
 
@@ -222,8 +226,8 @@ class Settings(BaseSettings):
     @property
     def cors_origin_list(self) -> List[str]:
         """``CORS_ORIGINS`` split into a list (``*`` stays a single wildcard)."""
-        raw = (self.CORS_ORIGINS or "*").strip()
-        if not raw or raw == "*":
+        raw = (self.CORS_ORIGINS or "").strip()
+        if raw == "*":
             return ["*"]
         return [origin.strip() for origin in raw.split(",") if origin.strip()]
 

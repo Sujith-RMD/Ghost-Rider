@@ -96,6 +96,28 @@ your own consistency improving, which is the training effect you are looking for
 
 ## The label set
 
+## Two-person pilot (distress only)
+
+1. Select 20 native-resolution India RDD images from distinct source/road groups;
+   include visible distress and apparently intact road. Record source, parent/group,
+   image hash and split role before annotation. Keep all 20 outside model training.
+2. Two annotators independently paint `crack`, `pothole`, `repair_or_patch`,
+   `valid_surface` and `ignore` from the original pixels. Do not show either
+   annotator the other's work or RDD boxes during the first pass. Save separate
+   manifests with annotator IDs; never overwrite the first pass.
+3. Compare class masks on their common native-resolution canvas. A third teammate
+   reviews disagreements, retains both original masks and writes an adjudicated
+   mask only with a reason. If the visible boundary remains ambiguous, mark it
+   `ignore`; do not force agreement.
+4. Report per-image/per-class pixel agreement and the number/area of ignored
+   regions. Label this a small pilot, not accuracy evidence or an independent test.
+   `human_condition` still needs its agreed rubric; chip/gap annotation still
+   needs verified scale and visibility evidence.
+
+Do not use the RDD development split as a final test. These annotations are a
+human-reviewed pilot, not a replacement for source provenance, group separation
+or a frozen held-out evaluation set.
+
 | Label | What it marks | Notes |
 |---|---|---|
 | `visible_aggregate_instance` | One exposed-aggregate particle (chip) that is individually distinguishable | Only when it genuinely is. If chips are not separable here, mark the area `ignore` and record that in the pilot sheet — do not invent instances. Instance-level: each particle is its own id. |
