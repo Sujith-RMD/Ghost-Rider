@@ -1,49 +1,70 @@
-# Python
+# Python dependencies, environments and compiled/cache files
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-pip-wheel-metadata/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-PIPFILE.lock
-
-# Virtual Environment
+.venv/
 venv/
 env/
 ENV/
 env.bak/
 venv.bak/
-.venv/
+.eggs/
+*.egg-info/
+*.egg
+.installed.cfg
+pip-wheel-metadata/
+share/python-wheels/
+/develop-eggs/
+/eggs/
+/lib/
+/lib64/
+/wheels/
 
-# Environment variables
+# Dependency/build caches and generated binaries
+node_modules/
+.npm/
+.yarn/
+.pnp.*
+build/
+dist/
+.next/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.cache/
+
+# Environment secrets (safe example templates may be shared)
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
+!.env.sample
+!.env.template
 
-# Database
+# Private credentials, cloud state and sensitive runtime data
+*.key
+*.pem
+credentials/
+secrets/
+**/gps_data/
+**/private/
+*.tfstate
+*.tfstate.*
+.terraform/
+.runtime/
+uploads/
+temp_uploads/
 *.db
 *.db-wal
 *.db-shm
 *.sqlite
 *.sqlite3
 
-# Model weights and training artifacts
+# Raw datasets and large model artifacts
+/data/
+datasets/
+raw_images/
 *.pt
 *.pth
 *.ckpt
@@ -53,73 +74,16 @@ venv.bak/
 checkpoints/
 weights/
 
-# Datasets and raw data
-data/
-datasets/
-raw_images/
-*.zip
-*.tar
-*.tar.gz
-*.tgz
+# These reports embed CRKWH100 pixels: permission prohibits redistribution.
+# Annotation tools/templates, other reports and metrics remain shareable by Git.
+/reports/ml/crkhw100_contact_sheet.png
+/reports/ml/crkhw100_annotation_patches.png
 
-# Uploaded files
-uploads/
-temp_uploads/
-
-# Private/sensitive data
-**/gps_data/
-**/private/
-*.key
-*.pem
-*.crt
-credentials/
-secrets/
-
-# AWS/Cloud
-*.tfstate
-*.tfstate.*
-.terraform/
-
-# IDE
-.vscode/
-.idea/
+# Operating-system and editor scratch files
+.DS_Store
+Thumbs.db
 *.swp
 *.swo
 *~
-.DS_Store
-
-# Node/Frontend
-node_modules/
-.npm/
-.yarn/
-yarn-error.log
-.pnp.*
-.next/
-out/
-dist/
-build/
-
-# Logs
-*.log
-logs/
-
-# OS
-Thumbs.db
-.DS_Store
-
-# Temporary files
-.runtime/
 *.tmp
 *.temp
-.cache/
-
-# Generated reports (keep structure)
-reports/**/*.csv
-reports/**/*.json
-reports/**/*.png
-reports/**/*.jpg
-reports/**/*.jpeg
-!reports/**/.gitkeep
-
-# Keep structure files
-!**/.gitkeep

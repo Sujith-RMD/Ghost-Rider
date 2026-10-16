@@ -1,0 +1,135 @@
+{
+  "contact_sheet": {
+    "out_path": "reports\\ml\\crkhw100_contact_sheet.png",
+    "tiles": 20,
+    "tile_px": 256,
+    "columns": 5,
+    "sheet_shape_hwc": [
+      1054,
+      1280,
+      3
+    ],
+    "claimed_mm_per_px": 1.0,
+    "scale_verified": false,
+    "scale_note": "The bar is drawn in pixels only; mm_per_px is the publisher's claim and is NOT verified for these files.",
+    "caption": "DeepCrack CRKWH100 - native crops, NOT resized | scale UNVERIFIED: 1 mm/px is the publisher claim only",
+    "tiles_are_native_crops_not_resized": true,
+    "sampled_files": [
+      "images\\1000.png",
+      "images\\1005.png",
+      "images\\1010.png",
+      "images\\1015.png",
+      "images\\1020.png",
+      "images\\1026.png",
+      "images\\1031.png",
+      "images\\1036.png",
+      "images\\1041.png",
+      "images\\1046.png",
+      "images\\1052.png",
+      "images\\1057.png",
+      "images\\1062.png",
+      "images\\1067.png",
+      "images\\1072.png",
+      "images\\1078.png",
+      "images\\1083.png",
+      "images\\1088.png",
+      "images\\1093.png",
+      "images\\1099.png"
+    ]
+  },
+  "annotation_patches": {
+    "out_path": "reports\\ml\\crkhw100_annotation_patches.png",
+    "sheet_shape_hwc": [
+      1306,
+      512,
+      3
+    ],
+    "tiles": 10,
+    "crop_px": 256,
+    "resized": false,
+    "model_overlay": false,
+    "patches": [
+      {
+        "patch_id": "P01",
+        "image_index": 0,
+        "top": 218,
+        "left": 163,
+        "crop_px": 256,
+        "source_image": "1000.png"
+      },
+      {
+        "patch_id": "P02",
+        "image_index": 11,
+        "top": 131,
+        "left": 69,
+        "crop_px": 256,
+        "source_image": "1011.png"
+      },
+      {
+        "patch_id": "P03",
+        "image_index": 22,
+        "top": 79,
+        "left": 10,
+        "crop_px": 256,
+        "source_image": "1022.png"
+      },
+      {
+        "patch_id": "P04",
+        "image_index": 33,
+        "top": 19,
+        "left": 4,
+        "crop_px": 256,
+        "source_image": "1033.png"
+      },
+      {
+        "patch_id": "P05",
+        "image_index": 44,
+        "top": 45,
+        "left": 209,
+        "crop_px": 256,
+        "source_image": "1044.png"
+      },
+      {
+        "patch_id": "P06",
+        "image_index": 55,
+        "top": 166,
+        "left": 234,
+        "crop_px": 256,
+        "source_image": "1055.png"
+      },
+      {
+        "patch_id": "P07",
+        "image_index": 66,
+        "top": 129,
+        "left": 155,
+        "crop_px": 256,
+        "source_image": "1066.png"
+      },
+      {
+        "patch_id": "P08",
+        "image_index": 77,
+        "top": 249,
+        "left": 187,
+        "crop_px": 256,
+        "source_image": "1077.png"
+      },
+      {
+        "patch_id": "P09",
+        "image_index": 88,
+        "top": 162,
+        "left": 139,
+        "crop_px": 256,
+        "source_image": "1088.png"
+      },
+      {
+        "patch_id": "P10",
+        "image_index": 99,
+        "top": 143,
+        "left": 240,
+        "crop_px": 256,
+        "source_image": "1099.png"
+      }
+    ],
+    "caption": "DeepCrack CRKWH100 - native crops, NOT resized | scale UNVERIFIED: 1 mm/px is the publisher claim only"
+  }
+}

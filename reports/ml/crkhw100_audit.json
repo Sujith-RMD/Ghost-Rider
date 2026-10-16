@@ -1,0 +1,148 @@
+{
+    "dataset":  "DeepCrack CRKWH100 (OneDrive zip, extracted 2026-10-15)",
+    "root":  "data\\external\\deepcrack\\CRKWH100",
+    "image_count":  100,
+    "split_counts":  {
+                         "unknown":  100
+                     },
+    "extension_counts":  {
+                             ".png":  100
+                         },
+    "total_bytes":  26520625,
+    "total_mib":  25.29,
+    "decode":  {
+                   "decoded_ok":  100,
+                   "failures":  0,
+                   "failure_examples":  [
+
+                                        ],
+                   "channel_counts":  {
+                                          "3":  100
+                                      },
+                   "resolutions":  {
+                                       "512x512":  100
+                                   },
+                   "distinct_resolutions":  1
+               },
+    "labels":  {
+                   "images_without_label":  100,
+                   "images_without_label_examples":  [
+                                                         "images\\1000.png",
+                                                         "images\\1001.png",
+                                                         "images\\1002.png",
+                                                         "images\\1003.png",
+                                                         "images\\1004.png",
+                                                         "images\\1005.png",
+                                                         "images\\1006.png",
+                                                         "images\\1007.png",
+                                                         "images\\1008.png",
+                                                         "images\\1009.png",
+                                                         "images\\1010.png",
+                                                         "images\\1011.png",
+                                                         "images\\1012.png",
+                                                         "images\\1013.png",
+                                                         "images\\1014.png",
+                                                         "images\\1015.png",
+                                                         "images\\1016.png",
+                                                         "images\\1017.png",
+                                                         "images\\1018.png",
+                                                         "images\\1019.png"
+                                                     ],
+                   "orphan_label_files":  0,
+                   "orphan_label_examples":  [
+
+                                             ],
+                   "empty_label_files":  0,
+                   "total_polygons":  0,
+                   "total_polygon_points":  0,
+                   "mean_points_per_polygon":  null,
+                   "class_counts":  {
+
+                                    },
+                   "problems":  {
+
+                                }
+               },
+    "label_geometry":  {
+                           "stroke_width_sampled_images":  0,
+                           "median_stroke_width_px":  null,
+                           "p10_stroke_width_px":  null,
+                           "p90_stroke_width_px":  null,
+                           "interpretation":  "median \u003e= ~2 px is consistent with real-width outlines; near 1 px indicates centerline-only labels"
+                       },
+    "leakage":  {
+                    "roboflow_parent_prefixes":  0,
+                    "parents_spanning_multiple_splits":  0,
+                    "parent_examples":  {
+
+                                        },
+                    "exact_duplicate_pairs":  0,
+                    "exact_duplicate_examples":  [
+
+                                                 ],
+                    "cross_split_near_duplicate_candidates":  0,
+                    "near_duplicate_max_hamming":  6,
+                    "candidate_verdicts":  {
+
+                                           },
+                    "confirmed_pairs":  [
+
+                                        ],
+                    "probable_pairs":  [
+
+                                       ],
+                    "rejected_candidates":  [
+
+                                            ]
+                },
+    "contact_sheet":  {
+                          "out_path":  "reports\\ml\\crkhw100_contact_sheet.png",
+                          "tiles":  20,
+                          "tile_px":  256,
+                          "columns":  5,
+                          "sheet_shape":  [
+                                              1280,
+                                              1054
+                                          ],
+                          "claimed_mm_per_px":  1.0,
+                          "scale_verified":  false,
+                          "scale_note":  "The bar is drawn in pixels only; mm_per_px is the publisher\u0027s claim and is NOT verified for these files.",
+                          "caption":  "DeepCrack CRKWH100 - 100 imgs, all 512x512 native crops, NOT resized | scale UNVERIFIED: 1 mm/px is the publisher claim only",
+                          "tiles_are_native_crops_not_resized":  true,
+                          "sampled_files":  [
+                                                "images\\1000.png",
+                                                "images\\1005.png",
+                                                "images\\1010.png",
+                                                "images\\1015.png",
+                                                "images\\1020.png",
+                                                "images\\1026.png",
+                                                "images\\1031.png",
+                                                "images\\1036.png",
+                                                "images\\1041.png",
+                                                "images\\1046.png",
+                                                "images\\1052.png",
+                                                "images\\1057.png",
+                                                "images\\1062.png",
+                                                "images\\1067.png",
+                                                "images\\1072.png",
+                                                "images\\1078.png",
+                                                "images\\1083.png",
+                                                "images\\1088.png",
+                                                "images\\1093.png",
+                                                "images\\1099.png"
+                                            ]
+                      },
+    "rights":  {
+                   "rights_status":  "granted_by_author",
+                   "basis":  "Direct permission from the dataset author / supervising professor (Dr. Qin Zou, Wuhan University), who is the DeepCrack CRKWH100 originating author.",
+                   "granted_by":  "Zou, Qin (author of DeepCrack, IEEE TIP 2019)",
+                   "granted_scope":  "Solo academic project use: manual annotation of exposed aggregate, texture-measurement development and validation, non-commercial.",
+                   "redistribution":  "not_granted_unless_stated_otherwise",
+                   "attribution_required":  true,
+                   "attribution_text":  "M. Zou, Q. Zou, Z. Zhang, Q. Li, X. Qi, Q. Wang, S. Wang, \"DeepCrack: Learning Hierarchical Convolutional Features for Crack Detection,\" IEEE Trans. Image Processing, vol. 28, no. 3, pp. 1498-1512, 2019. Dataset CRKWH100.",
+                   "permission_artifact":  "AUTHOR_GRANT_PENDING_FILE",
+                   "decided":  "2026-10-15",
+                   "supersedes":  "Prior state: unresolved (repo LICENSE field null; README states only \"collected for academic research\"; a third-party mirror claimed CC BY 4.0). Mirror claim is irrelevant - permission now comes from the author directly.",
+                   "scale_note_independent":  "Author permission resolves RIGHTS only. It does NOT resolve A1.6 (crop-vs-resize of the 512x512 delivery). scale_source stays unverified until that is settled."
+               }
+}

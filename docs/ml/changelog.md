@@ -58,6 +58,13 @@ installation is recorded below, not retroactively applied to this baseline.
 
 ## History
 
+### 2026-10-16 — Share project evidence without exposing raw data or secrets
+
+Simplified root/frontend ignore rules at the user's request. Removed blanket report/image/CSV/JSON, log, IDE-setting and frontend test-result/coverage exclusions; safe environment example templates are visible. Annotation tools/templates were already tracked. Scoped Python library exclusions to root directories so nested source `lib/` folders are not accidentally hidden. Datasets, dependencies/build caches, environments, weights, secrets, local databases/uploads and cloud state remain excluded. CRKWH100 contact/annotation sheets remain specifically excluded because they embed non-redistributable source pixels. Ordinary report images are not blanket-ignored. Earlier log entries describing all reports as ignored are historical.
+
+Validated 23 representative Git ignore cases and `git diff --check`. Fourteen report/log files (10,053,327 bytes total; none above 50 MB) became visible; nothing was staged, committed or pushed by this change. Visibility does not establish redistribution clearance: review evidence for sensitive content before committing. Updated `FEATURE_SPEC.md` to describe the new report-sharing policy.
+
+
 ### 2026-10-16 — India-only dataset packaged for handoff
 
 Created `Ghost-Rider-RDD2022-India-only.zip` on the Desktop, outside Git: **442,498,774 bytes**, 15,416 entries, all CRC checks passed. Contains 6,165 training and 1,541 development Indian images with YOLO bounding-box labels, source provenance manifest, source mirror licence text and usage/sharing caveats. Excludes the 14 GB multinational tar, Crack-Seg and CRKWH100. The ZIP-only YAML uses portable `path: .` and omits the misleading development-as-test alias; original dataset files are unchanged. Training must run from the extracted `rdd2022_india_yolo` directory. Development is not independent final-test evidence; rights/attribution/share-alike and grouping caveats remain. Removed only our interrupted full-dataset backup; pre-existing ZIPs were preserved.

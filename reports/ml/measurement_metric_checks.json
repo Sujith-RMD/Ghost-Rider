@@ -1,0 +1,147 @@
+{
+  "purpose": "software_validation",
+  "synthetic": true,
+  "real_accuracy_claim": false,
+  "fixture": {
+    "evidence_type": "synthetic",
+    "metric": "gap",
+    "unit": "px",
+    "samples": [
+      {
+        "sample_id": "a",
+        "group_id": "synthetic-parent-a",
+        "truth": 10,
+        "prediction": 12
+      },
+      {
+        "sample_id": "b",
+        "group_id": "synthetic-parent-a",
+        "truth": 10,
+        "prediction": 8
+      },
+      {
+        "sample_id": "c",
+        "group_id": "synthetic-parent-b",
+        "truth": 5,
+        "prediction": null,
+        "null_reason": "unresolvable"
+      }
+    ]
+  },
+  "report": {
+    "report_version": "measurement-error-v1",
+    "evidence_type": "synthetic",
+    "metric": "gap",
+    "unit": "px",
+    "summary": {
+      "n_total": 3,
+      "n_scored": 2,
+      "n_suppressed": 1,
+      "scored_fraction": 0.6666666666666666,
+      "suppressed_fraction": 0.33333333333333337,
+      "bias": 0.0,
+      "mae": 2.0,
+      "median_absolute_error": 2.0,
+      "p95_absolute_error": 2.0,
+      "median_absolute_relative_error": 0.2,
+      "p95_absolute_relative_error": 0.2,
+      "n_relative_scored": 2,
+      "n_zero_truth_scored": 0
+    },
+    "n_groups": 2,
+    "groups": {
+      "synthetic-parent-a": {
+        "n_total": 2,
+        "n_scored": 2,
+        "n_suppressed": 0,
+        "scored_fraction": 1.0,
+        "suppressed_fraction": 0.0,
+        "bias": 0.0,
+        "mae": 2.0,
+        "median_absolute_error": 2.0,
+        "p95_absolute_error": 2.0,
+        "median_absolute_relative_error": 0.2,
+        "p95_absolute_relative_error": 0.2,
+        "n_relative_scored": 2,
+        "n_zero_truth_scored": 0
+      },
+      "synthetic-parent-b": {
+        "n_total": 1,
+        "n_scored": 0,
+        "n_suppressed": 1,
+        "scored_fraction": 0.0,
+        "suppressed_fraction": 1.0,
+        "bias": null,
+        "mae": null,
+        "median_absolute_error": null,
+        "p95_absolute_error": null,
+        "median_absolute_relative_error": null,
+        "p95_absolute_relative_error": null,
+        "n_relative_scored": 0,
+        "n_zero_truth_scored": 0
+      }
+    },
+    "suppression_reasons": {
+      "unresolvable": 1
+    },
+    "group_bootstrap": {
+      "confidence_level": 0.95,
+      "seed": 0,
+      "replicates": 1000,
+      "minimum_supporting_groups": 10,
+      "intervals": {
+        "mae": {
+          "low": null,
+          "high": null,
+          "supporting_groups": 1,
+          "reason": "insufficient_supporting_groups"
+        },
+        "bias": {
+          "low": null,
+          "high": null,
+          "supporting_groups": 1,
+          "reason": "insufficient_supporting_groups"
+        },
+        "median_absolute_relative_error": {
+          "low": null,
+          "high": null,
+          "supporting_groups": 1,
+          "reason": "insufficient_supporting_groups"
+        },
+        "suppressed_fraction": {
+          "low": null,
+          "high": null,
+          "supporting_groups": 2,
+          "reason": "insufficient_supporting_groups"
+        }
+      }
+    },
+    "samples": [
+      {
+        "sample_id": "a",
+        "group_id": "synthetic-parent-a",
+        "truth": 10.0,
+        "prediction": 12.0
+      },
+      {
+        "sample_id": "b",
+        "group_id": "synthetic-parent-a",
+        "truth": 10.0,
+        "prediction": 8.0
+      },
+      {
+        "sample_id": "c",
+        "group_id": "synthetic-parent-b",
+        "truth": 5.0,
+        "prediction": null
+      }
+    ],
+    "limitations": [
+      "Errors describe scored observations; suppression remains visible and is not imputed as zero.",
+      "Relative errors exclude zero truth; absolute errors retain those cases.",
+      "Bootstrap resamples explicit groups with all members, not individual crops. Group independence is caller-supplied, not verified.",
+      "Ten supporting groups is a reporting guard, not proof of sufficient sample size.",
+      "Source-scale annotation agreement and synthetic checks do not establish physical live-camera accuracy."
+    ]
+  }
+}

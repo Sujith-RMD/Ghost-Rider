@@ -1,9 +1,13 @@
+# Dependencies and compiled frontend bundles
 node_modules/
 dist/
 dist-demo/
-.env*
-playwright-report/
-test-results/
-coverage/
-!src/lib/
-!src/lib/**
+
+# Environment secrets; keep distributable templates visible
+.env
+.env.*
+!.env.example
+!.env.sample
+!.env.template
+
+# Test reports, coverage and project source are intentionally not ignored.

@@ -1,0 +1,1229 @@
+{
+  "directory": "data\\external\\deepcrack\\CRKWH100\\images",
+  "policy_version": "quality-v1",
+  "thresholds_calibrated": false,
+  "has_scale": false,
+  "note": "provisional policy - thresholds are engineering defaults, not a validated per-rig rejection policy (final plan section 7.2); accepted and rejected counts are reported together on purpose",
+  "images": 100,
+  "status_counts": {
+    "limited": 100
+  },
+  "reason_counts": {
+    "scale_missing": 100,
+    "low_dynamic_range": 10
+  },
+  "rejected_or_limited_examples": [
+    {
+      "file": "1000.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 2067.443881008716,
+      "dynamic_range": 122.0,
+      "clipped_high_fraction": 0.000247955322265625
+    },
+    {
+      "file": "1001.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 2148.8909821650013,
+      "dynamic_range": 123.57000000000698,
+      "clipped_high_fraction": 0.000194549560546875
+    },
+    {
+      "file": "1002.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 2009.439043737002,
+      "dynamic_range": 113.0,
+      "clipped_high_fraction": 0.000118255615234375
+    },
+    {
+      "file": "1003.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 2720.9022705170646,
+      "dynamic_range": 133.0,
+      "clipped_high_fraction": 0.00061798095703125
+    },
+    {
+      "file": "1004.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 2306.7630079351366,
+      "dynamic_range": 128.0,
+      "clipped_high_fraction": 0.000213623046875
+    },
+    {
+      "file": "1005.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 2253.1972710676346,
+      "dynamic_range": 139.0,
+      "clipped_high_fraction": 0.00030517578125
+    },
+    {
+      "file": "1006.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 1832.2017098251818,
+      "dynamic_range": 128.0,
+      "clipped_high_fraction": 0.00014495849609375
+    },
+    {
+      "file": "1007.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 1021.0384953670291,
+      "dynamic_range": 81.0,
+      "clipped_high_fraction": 3.0517578125e-05
+    },
+    {
+      "file": "1008.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 1317.1707072013523,
+      "dynamic_range": 147.0,
+      "clipped_high_fraction": 0.002140045166015625
+    },
+    {
+      "file": "1009.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 943.4489048363175,
+      "dynamic_range": 79.0,
+      "clipped_high_fraction": 2.6702880859375e-05
+    },
+    {
+      "file": "1010.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 2713.6336440615705,
+      "dynamic_range": 136.57000000000698,
+      "clipped_high_fraction": 0.0009613037109375
+    },
+    {
+      "file": "1011.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 2159.1170688705606,
+      "dynamic_range": 122.0,
+      "clipped_high_fraction": 0.000362396240234375
+    },
+    {
+      "file": "1012.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 1970.6873800025787,
+      "dynamic_range": 118.0,
+      "clipped_high_fraction": 0.00019073486328125
+    },
+    {
+      "file": "1013.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 2657.954613246431,
+      "dynamic_range": 132.0,
+      "clipped_high_fraction": 0.000701904296875
+    },
+    {
+      "file": "1014.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 2205.554420888424,
+      "dynamic_range": 119.0,
+      "clipped_high_fraction": 0.000148773193359375
+    },
+    {
+      "file": "1015.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 2118.4519267406868,
+      "dynamic_range": 121.0,
+      "clipped_high_fraction": 0.000316619873046875
+    },
+    {
+      "file": "1016.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 121.19685691034829,
+      "dynamic_range": 45.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "file": "1017.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 698.0699855153798,
+      "dynamic_range": 113.0,
+      "clipped_high_fraction": 4.9591064453125e-05
+    },
+    {
+      "file": "1018.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 513.3988856952492,
+      "dynamic_range": 83.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "file": "1019.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 518.7383265443495,
+      "dynamic_range": 88.0,
+      "clipped_high_fraction": 0.0
+    }
+  ],
+  "per_image": [
+    {
+      "file": "1000.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 2067.443881008716,
+      "dynamic_range": 122.0,
+      "clipped_high_fraction": 0.000247955322265625
+    },
+    {
+      "file": "1001.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 2148.8909821650013,
+      "dynamic_range": 123.57000000000698,
+      "clipped_high_fraction": 0.000194549560546875
+    },
+    {
+      "file": "1002.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 2009.439043737002,
+      "dynamic_range": 113.0,
+      "clipped_high_fraction": 0.000118255615234375
+    },
+    {
+      "file": "1003.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 2720.9022705170646,
+      "dynamic_range": 133.0,
+      "clipped_high_fraction": 0.00061798095703125
+    },
+    {
+      "file": "1004.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 2306.7630079351366,
+      "dynamic_range": 128.0,
+      "clipped_high_fraction": 0.000213623046875
+    },
+    {
+      "file": "1005.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 2253.1972710676346,
+      "dynamic_range": 139.0,
+      "clipped_high_fraction": 0.00030517578125
+    },
+    {
+      "file": "1006.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 1832.2017098251818,
+      "dynamic_range": 128.0,
+      "clipped_high_fraction": 0.00014495849609375
+    },
+    {
+      "file": "1007.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 1021.0384953670291,
+      "dynamic_range": 81.0,
+      "clipped_high_fraction": 3.0517578125e-05
+    },
+    {
+      "file": "1008.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 1317.1707072013523,
+      "dynamic_range": 147.0,
+      "clipped_high_fraction": 0.002140045166015625
+    },
+    {
+      "file": "1009.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 943.4489048363175,
+      "dynamic_range": 79.0,
+      "clipped_high_fraction": 2.6702880859375e-05
+    },
+    {
+      "file": "1010.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 2713.6336440615705,
+      "dynamic_range": 136.57000000000698,
+      "clipped_high_fraction": 0.0009613037109375
+    },
+    {
+      "file": "1011.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 2159.1170688705606,
+      "dynamic_range": 122.0,
+      "clipped_high_fraction": 0.000362396240234375
+    },
+    {
+      "file": "1012.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 1970.6873800025787,
+      "dynamic_range": 118.0,
+      "clipped_high_fraction": 0.00019073486328125
+    },
+    {
+      "file": "1013.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 2657.954613246431,
+      "dynamic_range": 132.0,
+      "clipped_high_fraction": 0.000701904296875
+    },
+    {
+      "file": "1014.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 2205.554420888424,
+      "dynamic_range": 119.0,
+      "clipped_high_fraction": 0.000148773193359375
+    },
+    {
+      "file": "1015.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 2118.4519267406868,
+      "dynamic_range": 121.0,
+      "clipped_high_fraction": 0.000316619873046875
+    },
+    {
+      "file": "1016.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 121.19685691034829,
+      "dynamic_range": 45.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "file": "1017.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 698.0699855153798,
+      "dynamic_range": 113.0,
+      "clipped_high_fraction": 4.9591064453125e-05
+    },
+    {
+      "file": "1018.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 513.3988856952492,
+      "dynamic_range": 83.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "file": "1019.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 518.7383265443495,
+      "dynamic_range": 88.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "file": "1020.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 353.02814521989785,
+      "dynamic_range": 73.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "file": "1021.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 563.2822981539503,
+      "dynamic_range": 88.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "file": "1022.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 583.2904116003629,
+      "dynamic_range": 92.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "file": "1023.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 331.01748606882757,
+      "dynamic_range": 71.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "file": "1024.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 450.29852282628417,
+      "dynamic_range": 80.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "file": "1025.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 328.45316311344504,
+      "dynamic_range": 72.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "file": "1026.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 324.32613981090253,
+      "dynamic_range": 72.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "file": "1027.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 361.76914524659514,
+      "dynamic_range": 80.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "file": "1028.png",
+      "status": "limited",
+      "reason_codes": [
+        "low_dynamic_range",
+        "scale_missing"
+      ],
+      "laplacian_variance": 135.24821461405372,
+      "dynamic_range": 39.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "file": "1029.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 63.81355614768108,
+      "dynamic_range": 41.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "file": "1030.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 146.854431372587,
+      "dynamic_range": 43.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "file": "1031.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 173.66244508324598,
+      "dynamic_range": 46.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "file": "1032.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 99.27835667686304,
+      "dynamic_range": 56.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "file": "1033.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 110.97755431657424,
+      "dynamic_range": 43.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "file": "1034.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 143.9538520701317,
+      "dynamic_range": 41.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "file": "1035.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 161.55361718166387,
+      "dynamic_range": 43.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "file": "1036.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 172.22156522091245,
+      "dynamic_range": 54.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "file": "1037.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 97.21848194155609,
+      "dynamic_range": 44.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "file": "1038.png",
+      "status": "limited",
+      "reason_codes": [
+        "low_dynamic_range",
+        "scale_missing"
+      ],
+      "laplacian_variance": 50.68641708412906,
+      "dynamic_range": 38.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "file": "1039.png",
+      "status": "limited",
+      "reason_codes": [
+        "low_dynamic_range",
+        "scale_missing"
+      ],
+      "laplacian_variance": 109.44176411436638,
+      "dynamic_range": 39.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "file": "1040.png",
+      "status": "limited",
+      "reason_codes": [
+        "low_dynamic_range",
+        "scale_missing"
+      ],
+      "laplacian_variance": 57.34231537207961,
+      "dynamic_range": 31.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "file": "1041.png",
+      "status": "limited",
+      "reason_codes": [
+        "low_dynamic_range",
+        "scale_missing"
+      ],
+      "laplacian_variance": 117.70451349386713,
+      "dynamic_range": 39.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "file": "1042.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 142.93049350008368,
+      "dynamic_range": 56.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "file": "1043.png",
+      "status": "limited",
+      "reason_codes": [
+        "low_dynamic_range",
+        "scale_missing"
+      ],
+      "laplacian_variance": 70.03014347649878,
+      "dynamic_range": 34.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "file": "1044.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 149.8210033660289,
+      "dynamic_range": 55.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "file": "1045.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 138.0051410216256,
+      "dynamic_range": 54.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "file": "1046.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 145.22184943138564,
+      "dynamic_range": 44.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "file": "1047.png",
+      "status": "limited",
+      "reason_codes": [
+        "low_dynamic_range",
+        "scale_missing"
+      ],
+      "laplacian_variance": 106.80660156853264,
+      "dynamic_range": 37.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "file": "1048.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 161.90495719667524,
+      "dynamic_range": 62.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "file": "1049.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 156.4131312528043,
+      "dynamic_range": 45.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "file": "1050.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 145.589614844881,
+      "dynamic_range": 40.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "file": "1051.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 139.94727113092085,
+      "dynamic_range": 41.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "file": "1052.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 157.74461364460876,
+      "dynamic_range": 49.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "file": "1053.png",
+      "status": "limited",
+      "reason_codes": [
+        "low_dynamic_range",
+        "scale_missing"
+      ],
+      "laplacian_variance": 98.40177769829461,
+      "dynamic_range": 39.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "file": "1054.png",
+      "status": "limited",
+      "reason_codes": [
+        "low_dynamic_range",
+        "scale_missing"
+      ],
+      "laplacian_variance": 134.60960064828396,
+      "dynamic_range": 39.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "file": "1055.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 186.97557002468966,
+      "dynamic_range": 57.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "file": "1056.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 152.99639416462742,
+      "dynamic_range": 47.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "file": "1057.png",
+      "status": "limited",
+      "reason_codes": [
+        "low_dynamic_range",
+        "scale_missing"
+      ],
+      "laplacian_variance": 58.40668272972107,
+      "dynamic_range": 35.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "file": "1058.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 115.90470069175353,
+      "dynamic_range": 46.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "file": "1059.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 161.1877141626901,
+      "dynamic_range": 61.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "file": "1060.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 160.71640674000082,
+      "dynamic_range": 49.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "file": "1061.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 68.41333679802483,
+      "dynamic_range": 44.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "file": "1062.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 271.97538495213666,
+      "dynamic_range": 56.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "file": "1063.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 280.29250335249526,
+      "dynamic_range": 54.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "file": "1064.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 136.41120152076473,
+      "dynamic_range": 51.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "file": "1065.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 121.04510228981962,
+      "dynamic_range": 62.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "file": "1066.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 338.4182166831888,
+      "dynamic_range": 53.0,
+      "clipped_high_fraction": 2.6702880859375e-05
+    },
+    {
+      "file": "1067.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 361.01829068337975,
+      "dynamic_range": 54.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "file": "1068.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 141.76344502880238,
+      "dynamic_range": 48.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "file": "1069.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 101.11619406087266,
+      "dynamic_range": 49.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "file": "1070.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 222.0227965330123,
+      "dynamic_range": 56.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "file": "1071.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 1859.921137355952,
+      "dynamic_range": 133.0,
+      "clipped_high_fraction": 0.000244140625
+    },
+    {
+      "file": "1072.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 554.4983970202593,
+      "dynamic_range": 83.0,
+      "clipped_high_fraction": 1.1444091796875e-05
+    },
+    {
+      "file": "1073.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 989.4708668676758,
+      "dynamic_range": 106.0,
+      "clipped_high_fraction": 0.000274658203125
+    },
+    {
+      "file": "1074.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 1629.4946638059191,
+      "dynamic_range": 131.0,
+      "clipped_high_fraction": 0.0001678466796875
+    },
+    {
+      "file": "1075.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 1592.5002471788175,
+      "dynamic_range": 132.0,
+      "clipped_high_fraction": 0.00011444091796875
+    },
+    {
+      "file": "1076.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 1815.6222288475838,
+      "dynamic_range": 129.0,
+      "clipped_high_fraction": 0.00016021728515625
+    },
+    {
+      "file": "1077.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 2670.4072761535645,
+      "dynamic_range": 129.0,
+      "clipped_high_fraction": 0.000537872314453125
+    },
+    {
+      "file": "1078.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 1370.8613993839826,
+      "dynamic_range": 126.0,
+      "clipped_high_fraction": 0.00022125244140625
+    },
+    {
+      "file": "1079.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 1312.0834249923355,
+      "dynamic_range": 147.0,
+      "clipped_high_fraction": 0.000278472900390625
+    },
+    {
+      "file": "1080.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 919.145747462695,
+      "dynamic_range": 131.0,
+      "clipped_high_fraction": 0.000118255615234375
+    },
+    {
+      "file": "1081.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 522.2029020608752,
+      "dynamic_range": 81.0,
+      "clipped_high_fraction": 2.288818359375e-05
+    },
+    {
+      "file": "1082.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 1614.7603746668901,
+      "dynamic_range": 118.0,
+      "clipped_high_fraction": 0.00018310546875
+    },
+    {
+      "file": "1083.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 1104.6329162908805,
+      "dynamic_range": 137.0,
+      "clipped_high_fraction": 0.000919342041015625
+    },
+    {
+      "file": "1084.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 957.9634467130527,
+      "dynamic_range": 108.0,
+      "clipped_high_fraction": 6.866455078125e-05
+    },
+    {
+      "file": "1085.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 420.49027630685305,
+      "dynamic_range": 85.0,
+      "clipped_high_fraction": 3.0517578125e-05
+    },
+    {
+      "file": "1086.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 733.8005751766614,
+      "dynamic_range": 72.0,
+      "clipped_high_fraction": 3.814697265625e-06
+    },
+    {
+      "file": "1087.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 473.13290380079707,
+      "dynamic_range": 74.0,
+      "clipped_high_fraction": 1.9073486328125e-05
+    },
+    {
+      "file": "1088.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 833.6497734004952,
+      "dynamic_range": 109.0,
+      "clipped_high_fraction": 1.52587890625e-05
+    },
+    {
+      "file": "1089.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 1685.5500250593177,
+      "dynamic_range": 117.0,
+      "clipped_high_fraction": 0.00029754638671875
+    },
+    {
+      "file": "1090.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 569.7692284594377,
+      "dynamic_range": 102.0,
+      "clipped_high_fraction": 1.1444091796875e-05
+    },
+    {
+      "file": "1091.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 1970.4661787147052,
+      "dynamic_range": 134.0,
+      "clipped_high_fraction": 0.00014495849609375
+    },
+    {
+      "file": "1092.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 1303.3670407549798,
+      "dynamic_range": 118.0,
+      "clipped_high_fraction": 0.000171661376953125
+    },
+    {
+      "file": "1093.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 711.3879833644605,
+      "dynamic_range": 103.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "file": "1094.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 1782.8471450548968,
+      "dynamic_range": 117.0,
+      "clipped_high_fraction": 0.00012969970703125
+    },
+    {
+      "file": "1095.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 1544.6885626801377,
+      "dynamic_range": 111.0,
+      "clipped_high_fraction": 0.000637054443359375
+    },
+    {
+      "file": "1096.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 653.6487968465663,
+      "dynamic_range": 77.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "file": "1097.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 954.6103859541472,
+      "dynamic_range": 112.0,
+      "clipped_high_fraction": 1.1444091796875e-05
+    },
+    {
+      "file": "1098.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 837.8206043991813,
+      "dynamic_range": 109.0,
+      "clipped_high_fraction": 2.6702880859375e-05
+    },
+    {
+      "file": "1099.png",
+      "status": "limited",
+      "reason_codes": [
+        "scale_missing"
+      ],
+      "laplacian_variance": 1185.5844289874658,
+      "dynamic_range": 112.0,
+      "clipped_high_fraction": 1.1444091796875e-05
+    }
+  ]
+}

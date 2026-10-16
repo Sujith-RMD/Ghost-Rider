@@ -1,0 +1,195 @@
+{
+  "dataset": "crack-seg (Ultralytics, 2025-08-21 archive)",
+  "root": "data\\external\\crack-seg",
+  "image_count": 4029,
+  "split_counts": {
+    "test": 112,
+    "train": 3717,
+    "val": 200
+  },
+  "extension_counts": {
+    ".jpg": 4029
+  },
+  "total_bytes": 85463577,
+  "total_mib": 81.5,
+  "decode": {
+    "decoded_ok": 4029,
+    "failures": 0,
+    "failure_examples": [],
+    "channel_counts": {
+      "3": 4029
+    },
+    "resolutions": {
+      "416x416": 4029
+    },
+    "distinct_resolutions": 1
+  },
+  "labels": {
+    "images_without_label": 0,
+    "images_without_label_examples": [],
+    "orphan_label_files": 0,
+    "orphan_label_examples": [],
+    "empty_label_files": 1,
+    "total_polygons": 5290,
+    "total_polygon_points": 667295,
+    "mean_points_per_polygon": 126.14,
+    "class_counts": {
+      "0": 5290
+    },
+    "problems": {}
+  },
+  "label_geometry": {
+    "stroke_width_sampled_images": 400,
+    "median_stroke_width_px": 8.943,
+    "p10_stroke_width_px": 4.621,
+    "p90_stroke_width_px": 16.688,
+    "interpretation": "median >= ~2 px is consistent with real-width outlines; near 1 px indicates centerline-only labels"
+  },
+  "leakage": {
+    "roboflow_parent_prefixes": 1549,
+    "parents_spanning_multiple_splits": 0,
+    "parent_examples": {},
+    "exact_duplicate_pairs": 1,
+    "exact_duplicate_examples": [
+      [
+        "images\\test\\1979.rf.d3ee9d85b659ee844d1c26680f05d419.jpg",
+        "images\\test\\1979.rf.dea5db582b997afc4acb0f68d74c3b84.jpg"
+      ]
+    ],
+    "cross_split_near_duplicate_candidates": 18,
+    "near_duplicate_max_hamming": 6,
+    "candidate_verdicts": {
+      "rejected": 18
+    },
+    "confirmed_pairs": [],
+    "probable_pairs": [],
+    "rejected_candidates": [
+      {
+        "a": "images\\test\\2043.rf.37ea25ead4d12143a2825d97dbb5c6a5.jpg",
+        "b": "images\\train\\3843.rf.bfea3461516f1ea2686f5136b6e8e17e.jpg",
+        "hamming": 5,
+        "correlation": 0.1709,
+        "verdict": "rejected"
+      },
+      {
+        "a": "images\\test\\3162.rf.c7cb7c1c601f27043c0ddb17b74edfdd.jpg",
+        "b": "images\\train\\2148.rf.e371b353fba9eec1e17f6250972c283a.jpg",
+        "hamming": 4,
+        "correlation": 0.1707,
+        "verdict": "rejected"
+      },
+      {
+        "a": "images\\test\\3275.rf.f98acf5215d6730828f485c270ae7b54.jpg",
+        "b": "images\\val\\3529.rf.d3608d4b54b1aace8925bf9748254c22.jpg",
+        "hamming": 4,
+        "correlation": 0.4188,
+        "verdict": "rejected"
+      },
+      {
+        "a": "images\\test\\3498.rf.d6a2177504b9a25c571a3c936d1ae1a8.jpg",
+        "b": "images\\val\\3249.rf.324876242a5e50163b227b7adc142e1c.jpg",
+        "hamming": 6,
+        "correlation": 0.5019,
+        "verdict": "rejected"
+      },
+      {
+        "a": "images\\train\\1661.rf.372f12c200442eeab0f7f74213b64878.jpg",
+        "b": "images\\val\\2352.rf.13d894635b7d1c9765f6d1a2404156b7.jpg",
+        "hamming": 6,
+        "correlation": 0.4436,
+        "verdict": "rejected"
+      },
+      {
+        "a": "images\\train\\1670.rf.6e0f007c2bdff95277094a5c9b8e1a72.jpg",
+        "b": "images\\val\\2119.rf.f8b52defe1f75614c58f0ea662b0ce8e.jpg",
+        "hamming": 6,
+        "correlation": 0.3389,
+        "verdict": "rejected"
+      },
+      {
+        "a": "images\\train\\1867.rf.57e7d71998271ee5a6db72d935533a04.jpg",
+        "b": "images\\val\\3265.rf.d530dba64e2f1bbab6d8e4cb64c1968a.jpg",
+        "hamming": 6,
+        "correlation": 0.1479,
+        "verdict": "rejected"
+      },
+      {
+        "a": "images\\train\\2149.rf.46a2a3abf5a7fed538f65fdf9428d92e.jpg",
+        "b": "images\\val\\2352.rf.13d894635b7d1c9765f6d1a2404156b7.jpg",
+        "hamming": 6,
+        "correlation": 0.4033,
+        "verdict": "rejected"
+      },
+      {
+        "a": "images\\train\\2278.rf.86f4e557fa5c897117532073e2ba0da7.jpg",
+        "b": "images\\val\\2181.rf.6337583054f0b69e67577f0b1aca1d49.jpg",
+        "hamming": 6,
+        "correlation": 0.2767,
+        "verdict": "rejected"
+      },
+      {
+        "a": "images\\train\\2425.rf.d8922b311826ef78126af704b7129c93.jpg",
+        "b": "images\\val\\2352.rf.13d894635b7d1c9765f6d1a2404156b7.jpg",
+        "hamming": 4,
+        "correlation": 0.4693,
+        "verdict": "rejected"
+      },
+      {
+        "a": "images\\train\\2512.rf.a1af476c4b0391bbf84175d67b244242.jpg",
+        "b": "images\\val\\2352.rf.13d894635b7d1c9765f6d1a2404156b7.jpg",
+        "hamming": 6,
+        "correlation": 0.4617,
+        "verdict": "rejected"
+      },
+      {
+        "a": "images\\train\\3330.rf.dac17d303479925eb0a7ba5696b7912b.jpg",
+        "b": "images\\val\\2050.rf.acc41eba366ee3de6c8eec2a4d3993c5.jpg",
+        "hamming": 5,
+        "correlation": 0.0498,
+        "verdict": "rejected"
+      },
+      {
+        "a": "images\\train\\3360.rf.5d464b896bf57fc6049efadcef38ed39.jpg",
+        "b": "images\\val\\2352.rf.13d894635b7d1c9765f6d1a2404156b7.jpg",
+        "hamming": 6,
+        "correlation": 0.4107,
+        "verdict": "rejected"
+      },
+      {
+        "a": "images\\train\\3360.rf.f295e8cdc9fcfe5acd2c851f561361f0.jpg",
+        "b": "images\\val\\2352.rf.13d894635b7d1c9765f6d1a2404156b7.jpg",
+        "hamming": 6,
+        "correlation": 0.5371,
+        "verdict": "rejected"
+      },
+      {
+        "a": "images\\train\\3417.rf.83c7ff2c4c6b5b27d2aa9cd1165cb352.jpg",
+        "b": "images\\val\\2050.rf.acc41eba366ee3de6c8eec2a4d3993c5.jpg",
+        "hamming": 6,
+        "correlation": 0.1043,
+        "verdict": "rejected"
+      },
+      {
+        "a": "images\\train\\3487.rf.4ec4c55187ce50b4598f3a5b2dbc0d9f.jpg",
+        "b": "images\\val\\2119.rf.f8b52defe1f75614c58f0ea662b0ce8e.jpg",
+        "hamming": 5,
+        "correlation": 0.4843,
+        "verdict": "rejected"
+      },
+      {
+        "a": "images\\train\\3803.rf.1d8054e4e827cbb1fa0fc03a3341ee33.jpg",
+        "b": "images\\val\\2050.rf.acc41eba366ee3de6c8eec2a4d3993c5.jpg",
+        "hamming": 5,
+        "correlation": 0.1352,
+        "verdict": "rejected"
+      },
+      {
+        "a": "images\\train\\3880.rf.d09820c04fd1e4c5600392082867b957.jpg",
+        "b": "images\\val\\2352.rf.13d894635b7d1c9765f6d1a2404156b7.jpg",
+        "hamming": 4,
+        "correlation": 0.4487,
+        "verdict": "rejected"
+      }
+    ]
+  }
+}
